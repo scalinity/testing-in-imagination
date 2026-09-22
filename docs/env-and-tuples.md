@@ -1,6 +1,6 @@
 # Spec: Environment formalization & world-model tuples
 
-**Status:** Draft v0 — Stage 1 design doc (not code yet)  
+**Status:** Draft v0 — Stage 1 design + code in `extension/envs/synthetic_diagnosis/`  
 **Date:** 2026-09-22  
 **Project:** Testing in Imagination
 
@@ -20,7 +20,7 @@ LA-CDM’s env is informal prose + Hydra configs. For a world model we need a cr
   - If \( a_t \in \mathcal{A}_{\mathrm{diag}} \): terminal signal (correct/incorrect) for RL; not used as WM target in planning loops.
 - **Reward** (model-free baseline): as in LA-CDM \( R_{diag} + R_{cost} \). Planning variants may use imagined returns.
 
-**Missingness (baseline):** \( o_{t+1} = \mathrm{UNAVAILABLE} \) if test not in chart. That is **not** a counterfactual of what the test *would* have shown.
+**Missingness (baseline):** \( o_{t+1} = \mathrm{UNAVAILABLE} \) if test not in chart. That is **not** a counterfactual of what the test *would have shown*.
 
 ## 3. World model objective (ours)
 
@@ -95,7 +95,7 @@ Metrics: accuracy / F1, avg cost, ECE (if hyp agent kept), **regret vs oracle**,
 
 ## 8. Immediate next engineering tasks
 
-1. Freeze string inventories for \(\mathcal{A}_{\mathrm{test}}\) and diagnoses (copy LA-CDM prompts).
+1. Freeze string inventories for \( \mathcal{A}_{\mathrm{test}} \) and diagnoses (copy LA-CDM prompts).
 2. Implement toy `SyntheticCDMEnv.step(h, a) -> o`.
 3. Logger emitting JSONL tuples.
 4. Tiny baseline: bag-of-words or small LM for \( p_\phi \) on synthetic.
