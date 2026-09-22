@@ -1,0 +1,38 @@
+# Secrets & credentials
+.env
+.env.*
+*.pem
+*.key
+credentials*
+
+# PhysioNet / MIMIC / PHI — never commit
+data/
+**/mimic*/
+**/*physionet*
+**/*.csv
+!**/lab_test_mapping.example.csv
+
+# Python / tooling
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Experiment dumps (keep results/ structure; ignore large artifacts)
+results/**/*.pt
+results/**/*.bin
+results/**/*.safetensors
+results/**/wandb/
+wandb/
+evaluation/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
