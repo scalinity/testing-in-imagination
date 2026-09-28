@@ -31,4 +31,3 @@
 
 - Never invent Table 1 / MIMIC numbers.
 - Never commit PHI, PhysioNet extracts, or credentials.
-- Do not email Liu or the group unless Daniel asks.
