@@ -21,7 +21,7 @@ A archaeology → B env freeze (CUDA) → C data (PhysioNet) → D code comprehe
 
 ## Preserve these findings in `REPRODUCTION.md`
 
-D-1 (incorrect_reward config ≠ paper), D-2 (physical-exam cost), D-3 (Mixtral vs Qwen summarizer), D-4 (no split seed), F-1/F-2/F-3 (unavailable-test economics), B-1 (Mac has no CUDA for Table 1).
+D-1 (incorrect_reward config ≠ paper), D-2 (physical-exam cost), D-3 (Mixtral vs Qwen summarizer; **ours = Nemotron for both**), D-4 (no split seed), **D-5 (backbone: Qwen → `nvidia/Llama-3.1-Nemotron-Nano-8B-v1`, HiPerGator CoC)**, F-1/F-2/F-3 (unavailable-test economics), B-1 (Mac has no CUDA for Table 1).
 
 ## First coding milestone
 

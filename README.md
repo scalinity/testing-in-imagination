@@ -27,7 +27,13 @@
 | `tools/` | Offline verification scripts |
 | `results/` | Logged metrics only |
 
+
+## Default agent backbone (HiPerGator)
+
+**`nvidia/Llama-3.1-Nemotron-Nano-8B-v1`** — US base (Meta Llama 3.1 8B Instruct) + NVIDIA post-train. Upstream LA-CDM’s Qwen2.5-7B is **not** allowed on HiPerGator (UF CoC). See `REPRODUCTION.md` § D-5.
+
 ## Hard rules
 
 - Never invent Table 1 / MIMIC numbers.
 - Never commit PHI, PhysioNet extracts, or credentials.
+- Do not email Liu or the group unless Daniel asks.

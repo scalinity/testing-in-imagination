@@ -29,16 +29,36 @@
 |----|---------|--------|
 | **D-1** | Paper/code narrative uses `incorrect_reward = -1.0`, but shipped Hydra config sets `0.0`. Wrong diagnosis == undiagnosed reward under default. **Reproduce with shipped config; treat −1.0 vs 0.0 as later ablation — do not silent-fix.** | Confirmed (config read) |
 | **D-2** | Physical examination cost missing from Appendix C Table 4 but present in config (−0.0294 ≈ $300). Twelve costs sum to 1.0 as claimed. | Confirmed; verify with `tools/verify_cost_normalization.py` when added |
-| **D-3** | Paper summarizes HPI with Mixtral-8x7B; repo `prepare_data.py` defaults to Qwen2.5-7B-Instruct. Input-text divergence. | Confirmed |
+| **D-3** | Paper summarizes HPI with Mixtral-8x7B; upstream repo `prepare_data.py` defaults to Qwen2.5-7B-Instruct. **Our stack:** same Llama-Nemotron Nano 8B for summarizer + policy (CoC + one-stack simplicity). Mixtral remains a legal non-China option if Liu/RC want closer-to-paper text later. | Confirmed; our choice logged under D-5 |
 | **D-4** | No canonical 80/10/10 split seed. Expect Table 1 mismatch; quantify with ≥3 split seeds. | Confirmed |
 | **F-1** | Unavailable tests share the same `trajectory.error` flag as unknown action / bad test name / bad diagnosis — conflated. | Confirmed (code read) |
 | **F-2** | Cost uses `provided_tests` only → unavailable requests are **free**; headline $1295.61 is cost of tests that returned data. | Confirmed |
 | **F-3** | Unavailable path skips hypothesis update (stale hypothesis one turn) + burns a step. `max_steps: 13` vs 12 tests → little pressure to avoid unavailable requests. | Confirmed |
 | **B-1** | Full stack needs CUDA (vLLM). Local Mac (Apple Silicon) cannot produce Table 1. Local OK for Phase E + synthetic. Prefer HiPerGator; cloud A40 ~$0.49/hr ≈ ~$35 paper-length — **ask before renting**. | Confirmed |
+| **D-5** | **Backbone swap (HiPerGator CoC):** upstream LA-CDM defaults to `Qwen/Qwen2.5-7B-Instruct` (PRC-origin → **not permitted** on HiPerGator). **Our default:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` (Meta Llama 3.1 8B Instruct **US base** + NVIDIA post-train for reasoning / tool-calling). UFIT RC confirmed NVIDIA models OK when the base is US. This is a documented reproduction deviation — do **not** claim Table 1 bit-for-bit weight match. Stock `meta-llama/Llama-3.1-8B-Instruct` remains the fallback ablation (same family, no Nemotron post-train). | Confirmed (Canvas CoC + RC; 2026-09-28) |
 
 **Thesis implication:** baseline env makes unavailability cheap and uninformative; a world model changes the economics so every planned action yields an observation. Confirm F-1–F-3 on a smoke episode before write-up.
 
 **Upstream license:** none listed. Submodule only; never vendor.
+
+
+## Backbone (our stack) — D-5
+
+| Role | Upstream (paper/repo) | **Ours (HiPerGator)** | Notes |
+|------|----------------------|------------------------|-------|
+| Main agent / GRPO policy | `Qwen/Qwen2.5-7B-Instruct` | **`nvidia/Llama-3.1-Nemotron-Nano-8B-v1`** | US base (Meta Llama 3.1 8B) + NVIDIA post-train. HF: https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-8B-v1 · release 2025-03-18 · NVIDIA Open Model License + Llama 3.1 Community |
+| HPI summarizer | Mixtral-8x7B (paper) / Qwen (repo) | **Same Nemotron Nano 8B** | One US stack; log D-3. Mixtral OK under CoC (non-China) but not US — optional later |
+| World model \(p_\phi\) | n/a (model-free paper) | Tiny bag-of-words / small classifier first | Do not default \(p_\phi\) to 8B/70B |
+| Fallback ablation | — | `meta-llama/Llama-3.1-8B-Instruct` | Same architecture family without Nemotron post-train |
+| Banned on HiPerGator | — | Qwen, DeepSeek, Yi, InternLM, other CoC-country bases + derivatives | LoRA / “re-release” does not fix a banned base |
+
+### Hydra / job checklist (before any GRPO or vLLM run)
+
+1. Override every Hydra/`prepare_data` default that still points at Qwen.
+2. Pin exact HF revision (or HiPerGator local path) in configs; prefer RC mirrors when present.
+3. For Nemotron Nano agent loops: start with **reasoning off** (`detailed thinking off` system prompt) for tool-style diagnose/order-test actions; treat reasoning-on as a later ablation.
+4. Confirm checkpoint path with UFIT RC if leaving mirrored Llama paths.
+5. Log this file’s D-5 row + HF revision in every W&B / results run.
 
 ## Setup claims
 
@@ -84,7 +104,7 @@ Trainless sanity targets:
 
 | ID | Claim | Status |
 |----|-------|--------|
-| I1 | Backbone Qwen-2.5-7B-Instruct + LoRA | ☐ |
+| I1 | Upstream: Qwen-2.5-7B-Instruct + LoRA. **Ours:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` + LoRA (D-5) | ☐ |
 | I2 | Cyclic 100 steps: action GRPO → hyp SFT → conf GRPO | ☐ |
 | I3 | Adam lr 1e-5, batch 2, seed **269** (code) | ☐ |
 | I4 | Costs from BIDMC CMS table (Appendix Table 4) | ☐ (see D-2) |
