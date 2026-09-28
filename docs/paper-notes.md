@@ -79,7 +79,7 @@ src/
 ## Practical barriers for UF reproduction
 
 1. PhysioNet / MIMIC credentialed access (MIMIC-IV-Ext-CDM).
-2. GPU: paper used A40 48 GB; Qwen-2.5-7B + vLLM + GRPO is heavy.
+2. GPU: paper used A40 48 GB; Qwen-2.5-7B + vLLM + GRPO is heavy. **Our HiPerGator backbone:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` (see `REPRODUCTION.md` D-5) — not Qwen.
 3. Data prep needs LLM summarization GPU pass.
 4. Seeds / exact Hydra overrides for Table 1 may need logging from our runs — not fully pinned in the paper beyond Appendix C.
 
