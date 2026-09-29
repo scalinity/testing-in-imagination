@@ -1,0 +1,159 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.12}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Milestone Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante \quad Hugo Resendez \quad Edwin Salcedo\\[0.4em]
+\small Advisor: Xuefeng Liu \quad Course: CAI6734 (University of Florida)}
+\date{September 29, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+We extend LA-CDM from retrospective, model-free test selection to world-model--based \emph{testing in imagination}: an agent that can evaluate counterfactual diagnostic actions via a learned transition model \(p_\phi(o_{t+1}\mid h_t,a_t)\). This milestone summarizes problem framing, baseline archaeology, HiPerGator-compliant model choices, Stage~1 synthetic environment scaffolding, and next deliverables. Full MIMIC Table~1 reproduction is deferred until PhysioNet access and CUDA jobs are available; we log honest gaps rather than invent metrics.
+\end{abstract}
+
+\section{Project goal}
+
+Language agents for clinical decision-making (CDM) typically either assume all patient information is available up front or interact with a retrospective chart where many tests were never ordered. LA-CDM trains a LoRA-adapted language agent with GRPO to iteratively request tests and diagnose under cost pressure, but it remains \emph{model-free}: when a test is unavailable in the chart, the environment returns ``unavailable,'' which is \textbf{not} a counterfactual of what that test would have shown.
+
+Our research question is whether a learned world model \(p_\phi(o_{t+1}\mid h_t,a_t)\) enables planners to \emph{test in imagination}---and whether a flawed world model can make planning \emph{worse} than model-free baselines (a publishable negative result). We compare model-free LA-CDM-style agents, world-model planners, and an oracle world model (available only in synthetic or imputed settings).
+
+\paragraph{Team \& repository.}
+Private GitHub: \url{https://github.com/scalinity/testing-in-imagination} (usernames: \texttt{scalinity}, \texttt{EdwinASalcedo}, \texttt{haresendez}). Advisor: Xuefeng Liu.
+
+\section{Baseline: LA-CDM (reproduce carefully)}
+
+\textbf{Paper:} Bani-Harouni et al., \emph{Language Agents for Hypothesis-driven Clinical Decision Making with Reinforcement Learning}, ICLR 2026 (arXiv:2506.13474).\\
+\textbf{Code:} \url{https://github.com/dharouni/LA-CDM}.
+
+Upstream method (shared LLM weights):
+\begin{itemize}
+  \item \textbf{Hypothesis agent} \(\mathcal{H}: p_j \mapsto \{h_j,c_j\}\) (diagnosis hypothesis + confidence 0--10).
+  \item \textbf{Decision agent} \(\mathcal{D}\) (ReAct) that orders a test or commits a diagnosis.
+  \item Cyclic training: action GRPO \(\rightarrow\) hypothesis SFT \(\rightarrow\) confidence GRPO; LoRA on an \(\sim\)7--8B instruct backbone.
+\end{itemize}
+
+Headline paper claims (Table~1) we will only fill from logged runs: mean Acc \(81.3\), Micro F1 \(84.1\), Macro F1 \(81.3\), avg test cost \(\$1295.61\). We treat GitHub clone \(\neq\) reproduced until config, seed, and metric artifacts are logged (\texttt{REPRODUCTION.md}).
+
+\subsection{Archaeology findings (honest gaps)}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{0.72\textwidth}@{}}
+\toprule
+\textbf{ID} & \textbf{Finding} \\
+\midrule
+D-1 & Paper narrative uses \texttt{incorrect\_reward = -1.0}; shipped Hydra config uses \(0.0\). Reproduce shipped config first. \\
+D-2 & Physical-exam cost present in config (\(\approx\$300\)) but missing from Appendix cost table; twelve costs sum to \(1.0\). \\
+D-3 & Paper HPI summarizer = Mixtral-8x7B; upstream \texttt{prepare\_data.py} defaults to Qwen2.5-7B. \\
+D-4 & No canonical 80/10/10 split seed \(\Rightarrow\) expect Table~1 mismatch; quantify with \(\ge 3\) seeds. \\
+F-1--F-3 & Unavailable tests share error flags with bad actions; unavailable requests are \emph{free} and skip hypothesis update; weak pressure to avoid them. \\
+B-1 & Full stack needs CUDA/vLLM; local Mac cannot produce Table~1. Prefer HiPerGator. \\
+D-5 & \textbf{CoC backbone swap} (below). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Thesis implication.}
+The baseline environment makes unavailability cheap and uninformative. A world model changes the economics so every planned action yields a predicted observation---including counterfactuals the chart never recorded.
+
+\section{HiPerGator constraint and backbone choice}
+
+UF countries-of-concern guidance prohibits PRC-origin LLMs on HiPerGator (Qwen, DeepSeek, Yi, InternLM, and derivatives), even via LoRA or ``re-releases.'' Upstream LA-CDM defaults to \texttt{Qwen/Qwen2.5-7B-Instruct}, so bit-for-bit weight match to their Table~1 setup is not feasible on the cluster.
+
+\paragraph{Our default (logged as D-5).}
+\begin{itemize}
+  \item \textbf{Policy + HPI summarizer:} \texttt{nvidia/Llama-3.1-Nemotron-Nano-8B-v1}\\
+  Meta Llama~3.1 8B Instruct \textbf{US base} + NVIDIA post-training (reasoning / tool-calling). UFIT RC confirmed NVIDIA models are allowed when the base is US.
+  \item \textbf{Fallback ablation:} \texttt{meta-llama/Llama-3.1-8B-Instruct} (same family, no Nemotron post-train).
+  \item \textbf{World model \(p_\phi\):} tiny bag-of-words / small classifier first---not another frontier LLM.
+\end{itemize}
+
+This is a documented reproduction deviation. We do not claim Table~1 bit-for-bit weight match. Hydra/\texttt{prepare\_data} defaults that still point at Qwen must be overridden before any GRPO or vLLM job; HF revision / RC mirror path will be pinned when cluster access is confirmed.
+
+\section{Stage 1 progress (implementation)}
+
+\subsection{Documentation \& research process}
+\begin{itemize}
+  \item Standing constitution (\texttt{ONBOARDING.md}), claims ledger (\texttt{REPRODUCTION.md}), paper notes, env/tuple specs, open questions.
+  \item Formalized POMDP-style interface: history \(h_t\), actions \(\mathcal{A}_{\mathrm{test}}\cup\mathcal{A}_{\mathrm{diag}}\), observation \(o_{t+1}\), objective \(p_\phi(o_{t+1}\mid h_t,a_t)\).
+\end{itemize}
+
+\subsection{Synthetic CDM environment (scaffolded)}
+Under \texttt{extension/envs/synthetic\_diagnosis/} (no MIMIC/PHI; pure Python + pytest):
+\begin{itemize}
+  \item Latent disease \(y\) over \(\{\)appendicitis, cholecystitis, diverticulitis, pancreatitis\(\}\).
+  \item Twelve LA-CDM-aligned test actions with template observations \(g_a(y,\epsilon)\).
+  \item Always-available v0 (no \texttt{UNAVAILABLE}) for clean world-model tuple collection; \texttt{oracle\_observe} for counterfactual probes.
+  \item JSONL tuple export CLI (\texttt{collect.py}): random / expert stub policies; diagnosis steps filtered out of WM training tuples.
+  \item Unit tests under \texttt{extension/tests}.
+\end{itemize}
+
+\subsection{What we deliberately deferred}
+\begin{itemize}
+  \item Full PhysioNet / MIMIC-IV-Ext-CDM prep and Table~1 GRPO runs (awaiting credentials + HiPerGator GPU).
+  \item Treating AnyJev/Jev (typed calibrated decisions) as a new research question---useful as optional decision plumbing later, but would dilute Stage~1's world-model claim.
+\end{itemize}
+
+\section{Evaluation plan (next milestones)}
+
+\begin{enumerate}
+  \item \textbf{Phase E:} unit tests for LA-CDM parsers, rewards, unavailable branch, stub metrics (Mac-OK).
+  \item \textbf{Tiny \(p_\phi\):} bag-of-words / small classifier on synthetic JSONL; plug into a simple imagination planner.
+  \item \textbf{Comparisons:} model-free vs WM-planner vs oracle WM; include a deliberately degraded \(\phi\) that can hurt planning.
+  \item \textbf{Partial baseline (B):} zero-shot / smoke eval on HiPerGator with Nemotron Nano once data + CUDA are ready; full train only under logged seed/config.
+  \item Pin Nemotron HF revision / RC mirror; override all Qwen Hydra defaults before any cluster job.
+\end{enumerate}
+
+\section{Division of labor (working)}
+
+\begin{itemize}
+  \item \textbf{Daniel Escalante:} research scaffolding, reproduction ledger, CoC backbone decision \& docs, synthetic env design coordination, repo stewardship (\texttt{scalinity/testing-in-imagination}).
+  \item \textbf{Hugo Resendez / Edwin Salcedo:} collaborator onboarding via shared GitHub; next: Phase~E tests, Hydra overrides, and HiPerGator job wiring as access is confirmed.
+\end{itemize}
+\noindent\textit{Roles will be refined as MIMIC access and GPU allocation land; this report reflects work completed through Week~5.}
+
+\section{Risks and mitigations}
+
+\begin{itemize}
+  \item \textbf{CoC / cluster:} mitigated by Nemotron Nano (US base) + RC confirmation; keep stock Llama~3.1 8B as ablation.
+  \item \textbf{Table~1 mismatch:} expected (D-4, D-5); document deviations; never invent numbers.
+  \item \textbf{Scope creep:} keep AnyJev optional; Stage~1 claim stays world-model planning on synthetic CDM then MIMIC.
+  \item \textbf{PHI:} no PhysioNet extracts in the public-facing workflow; synthetic-first path avoids early PHI risk.
+\end{itemize}
+
+\section*{References}
+\begin{enumerate}[leftmargin=1.6em,itemsep=0.35em]
+  \item D.~Bani-Harouni, C.~Pellegrini, E.~\"{O}zsoy, M.~Keicher, and N.~Navab.
+  \newblock Language Agents for Hypothesis-driven Clinical Decision Making with Reinforcement Learning.
+  \newblock In \emph{ICLR}, 2026. arXiv:2506.13474. Code: \url{https://github.com/dharouni/LA-CDM}.
+  \item Private course repository: \url{https://github.com/scalinity/testing-in-imagination}.
+\end{enumerate}
+
+\end{document}
