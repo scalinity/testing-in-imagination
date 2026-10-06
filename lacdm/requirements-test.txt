@@ -1,0 +1,8 @@
+# Mac-safe test dependencies for lacdm/tests. Versions match the pins in
+# lacdm/upstream/pyproject.toml wherever upstream pins the package.
+numpy==1.26.4
+hydra-core==1.3.2
+omegaconf==2.3.0
+antlr4-python3-runtime==4.9.3
+pyyaml==6.0.2
+pytest==8.4.2

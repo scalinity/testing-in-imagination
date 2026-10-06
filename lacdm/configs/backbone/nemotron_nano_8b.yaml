@@ -1,0 +1,25 @@
+# @package _global_
+#
+# D-5 backbone override, layered onto lacdm/upstream/configs without editing it:
+#
+#   python -m src.train \
+#     'hydra.searchpath=[file://<repo>/lacdm/configs]' +backbone=nemotron_nano_8b
+#
+# `model.model_name` is upstream's only Hydra-level Qwen default; the HF model,
+# the tokenizer and the vLLM engine all derive from it (src/utils/setup.py:54,
+# src/trainer/cdm_grpo_trainer.py:162,288).
+#
+# Rewards are deliberately NOT overridden. The shipped
+# DiagnosisReward.incorrect_reward = 0.0 stays, against the paper's -1.0 (D-1).
+
+model:
+  model_name: nvidia/Llama-3.1-Nemotron-Nano-8B-v1
+  # Placeholder: pin to a commit SHA before any run. Upstream passes no revision
+  # to from_pretrained, AutoTokenizer or vLLM, so this needs a launcher shim.
+  revision: null
+
+environment:
+  # Nemotron's reasoning toggle is a system message. Applies to every agent turn
+  # (decision, hypothesis, confidence). Upstream sends user-only messages and has
+  # no hook for this, so it is declarative until a launcher shim injects it.
+  system_prompt: detailed thinking off

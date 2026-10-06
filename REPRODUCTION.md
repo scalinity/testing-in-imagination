@@ -2,7 +2,7 @@
 
 **Rule:** GitHub clone ≠ reproduced. A claim is reproduced only under **logged config + seed + metric artifact**, or we mark an honest gap.
 
-**Upstream:** https://github.com/dharouni/LA-CDM · commit pin: _fill after submodule_ · paper: arXiv:2506.13474 · OpenReview: https://openreview.net/forum?id=7vHUQCMAzG
+**Upstream:** https://github.com/dharouni/LA-CDM · commit pin: `3f435a10f569c3255172c1ef8fe7880c6edb7fee` · paper: arXiv:2506.13474 · OpenReview: https://openreview.net/forum?id=7vHUQCMAzG
 
 **Milestone:** M0 (onboarding + ledger opened). Phase A archaeology extended below; no training run yet.
 
@@ -16,7 +16,7 @@
 | CUDA / driver | |
 | Python | 3.11–3.12 (required) |
 | Install | `uv sync` |
-| Upstream SHA | |
+| Upstream SHA | `3f435a10f569c3255172c1ef8fe7880c6edb7fee` (lacdm/upstream) |
 | `VLLM_USE_V1` | `0` |
 | Data source | PhysioNet MIMIC-IV-Ext-CDM path |
 | Split seed | (none canonical — see D-4) |
@@ -27,17 +27,18 @@
 
 | ID | Finding | Status |
 |----|---------|--------|
-| **D-1** | Paper/code narrative uses `incorrect_reward = -1.0`, but shipped Hydra config sets `0.0`. Wrong diagnosis == undiagnosed reward under default. **Reproduce with shipped config; treat −1.0 vs 0.0 as later ablation — do not silent-fix.** | Confirmed (config read) |
+| **D-1** | Paper/code narrative uses `incorrect_reward = -1.0`, but shipped Hydra config sets `0.0`. Wrong diagnosis == undiagnosed reward under default. **At episode-total level** (Diagnosis+Format+Cost unit weights): shipped (`0.0`) scores Correct=2, Wrong(well-formed)=1, Undiagnosed(invalid)=0 — prefers wrong guess over timeout; paper (`−1.0`) makes Wrong and Undiagnosed **tie** at 0 (`lacdm/tests/test_rewards.py`). **Reproduce with shipped config; treat −1.0 vs 0.0 as later ablation — do not silent-fix.** | Confirmed (config + episode totals) |
 | **D-2** | Physical examination cost missing from Appendix C Table 4 but present in config (−0.0294 ≈ $300). Twelve costs sum to 1.0 as claimed. | Confirmed; verify with `tools/verify_cost_normalization.py` when added |
-| **D-3** | Paper summarizes HPI with Mixtral-8x7B; upstream repo `prepare_data.py` defaults to Qwen2.5-7B-Instruct. **Our stack:** same Llama-Nemotron Nano 8B for summarizer + policy (CoC + one-stack simplicity). Mixtral remains a legal non-China option if Liu/RC want closer-to-paper text later. | Confirmed; our choice logged under D-5 |
+| **D-3** | Paper summarizes HPI with Mixtral-8x7B. At pinned upstream `3f435a10`, `prepare_data.py` **defaults to** `mistralai/Mixtral-8x7B-Instruct-v0.1` (Qwen only in a docstring example / `create_data_with_summaries.py` help where `--model` is required). **Narrowed 2026-10-06:** risk is following the docstring, not the real default — pass `--model` explicitly and log it. **Our stack:** same Llama-Nemotron Nano 8B for summarizer + policy (CoC + one-stack simplicity). | Confirmed (Mixtral default at pin); choice logged under D-5 |
 | **D-4** | No canonical 80/10/10 split seed. Expect Table 1 mismatch; quantify with ≥3 split seeds. | Confirmed |
 | **F-1** | Unavailable tests share the same `trajectory.error` flag as unknown action / bad test name / bad diagnosis — conflated. | Confirmed (code read) |
 | **F-2** | Cost uses `provided_tests` only → unavailable requests are **free**; headline $1295.61 is cost of tests that returned data. | Confirmed |
-| **F-3** | Unavailable path skips hypothesis update (stale hypothesis one turn) + burns a step. `max_steps: 13` vs 12 tests → little pressure to avoid unavailable requests. | Confirmed |
+| **F-3** | Unavailable path skips hypothesis update (stale hypothesis one turn) + burns a step. Budget is **14 actions, not 13**: `step()` ends only when `step > max_steps` (`environment.py:311`), steps from 0; `max_steps: 13` vs 12 tests → little pressure to avoid unavailable requests. | Confirmed (code + unit tests) |
+| **F-4** | Stale-turn confidence scale mismatch: fresh turns show raw 0–10 integer; on error turns `environment.py:376` reuses `trajectory.confidence[-1]` already ÷10, so the same belief appears as `(confidence: 0.7)` against a 0–10 prompt. Confirmed by `lacdm/tests/test_unavailable_tests.py`. | Confirmed (executed unit) |
 | **B-1** | Full stack needs CUDA (vLLM). Local Mac (Apple Silicon) cannot produce Table 1. Local OK for Phase E + synthetic. Prefer HiPerGator; cloud A40 ~$0.49/hr ≈ ~$35 paper-length — **ask before renting**. | Confirmed |
 | **D-5** | **Backbone swap (HiPerGator CoC):** upstream LA-CDM defaults to `Qwen/Qwen2.5-7B-Instruct` (PRC-origin → **not permitted** on HiPerGator). **Our default:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` (Meta Llama 3.1 8B Instruct **US base** + NVIDIA post-train for reasoning / tool-calling). UFIT RC confirmed NVIDIA models OK when the base is US. This is a documented reproduction deviation — do **not** claim Table 1 bit-for-bit weight match. Stock `meta-llama/Llama-3.1-8B-Instruct` remains the fallback ablation (same family, no Nemotron post-train). | Confirmed (Canvas CoC + RC; 2026-09-28) |
 
-**Thesis implication:** baseline env makes unavailability cheap and uninformative; a world model changes the economics so every planned action yields an observation. Confirm F-1–F-3 on a smoke episode before write-up.
+**Thesis implication:** baseline env makes unavailability cheap and uninformative; a world model changes the economics so every planned action yields an observation. F-1–F-4 executed at unit level against upstream `3f435a10` via `lacdm/tests` (2026-10-06); still confirm on a smoke episode (rung F2) before write-up.
 
 **Upstream license:** none listed. Submodule only; never vendor.
 

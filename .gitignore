@@ -32,6 +32,10 @@ results/**/wandb/
 wandb/
 evaluation/
 
+# lacdm metric output: generated locally, never commit
+lacdm/artifacts/*
+!lacdm/artifacts/.gitkeep
+
 # OS / editor
 .DS_Store
 .idea/
