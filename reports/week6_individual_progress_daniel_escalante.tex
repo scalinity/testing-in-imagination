@@ -1,0 +1,80 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.12}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Week~6 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{October 6, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This individual progress report covers my work for Week~6 on the Testing in Imagination / LA-CDM reproduction project. I write in the first person and report only verified progress---no fabricated metrics or PHI.
+
+\section{Progress this week}
+
+\subsection{CITI / PhysioNet prerequisites}
+On 2026-10-06 I completed the CITI \emph{Human Research -- Data or Specimens Only Research} course (MIT Affiliates; Record ID 80147027; score 100\%). This is a PhysioNet prerequisite. I have \textbf{not} yet downloaded any PhysioNet dataset.
+
+I also started PhysioNet credentialing. My supervisor reference is Xuefeng Liu (\texttt{xuefeng.liu@ufl.edu}). The research-topic text I am using describes reproduction of MIMIC-IV-Ext CDM / LA-CDM for CAI6734 (Testing in Imagination).
+
+\subsection{LA-CDM reproduction scaffold}
+I built the \texttt{lacdm/} reproduction scaffold in our course repository:
+\begin{itemize}
+  \item Upstream LA-CDM pinned as a submodule at commit \texttt{3f435a10}.
+  \item Nemotron Hydra overrides for the CoC-compliant backbone (logged deviation D-5): \texttt{nvidia/Llama-3.1-Nemotron-Nano-8B-v1}.
+  \item Phase~E unit tests: \textbf{83 passed} on my Mac (no CUDA required).
+\end{itemize}
+
+\subsection{Git history cleanup and merge}
+I resolved a temporary local orphan / unrelated-histories situation by porting the \texttt{lacdm} content onto \texttt{origin/main} rather than merging unrelated histories. That work landed on \texttt{main} at commit \texttt{95ce5fc}.
+
+\paragraph{Local working path.}
+\texttt{Documents/AIBHS/Applied Generative AI in Medicine/Testing in Imagination}
+(private repo: \url{https://github.com/scalinity/testing-in-imagination}).
+
+\section{Setbacks and how I addressed them}
+
+\begin{itemize}
+  \item \textbf{Full Table~1 / GRPO blocked.} My Mac has no CUDA; PhysioNet credentialing is still pending; I need a HiPerGator path before any real GRPO or vLLM job. I kept progress on Mac-OK work (scaffold, Hydra overrides, Phase~E tests) and documented the GPU/data gate rather than inventing run numbers.
+  \item \textbf{Temporary local orphan git history vs GitHub.} Early local history diverged from \texttt{origin/main}. I fixed this by porting content onto \texttt{origin/main} (feat branch then merge) instead of an unrelated-histories merge, so \texttt{main} stays a single linear project history ending at \texttt{95ce5fc}.
+\end{itemize}
+
+\section{Next steps}
+
+\begin{enumerate}
+  \item Finish PhysioNet credentialing and request MIMIC-IV-Ext CDM; confirm authorization with Edwin and Hugo before any data prep that could involve PHI.
+  \item Pin Nemotron on HiPerGator; override any remaining Qwen Hydra defaults before the first cluster job (D-5).
+  \item After data access: run S2 \texttt{prepare\_data} / smoke eval; meanwhile continue the synthetic CDM path under \texttt{extension/}.
+\end{enumerate}
+
+\section*{Notes}
+No Table~1 accuracy, F1, or cost figures are reported this week---those require PhysioNet-authorized data and CUDA training/eval that I have not run. Repository stewardship and Mac-side Phase~E verification are the deliverables I completed.
+
+\end{document}
