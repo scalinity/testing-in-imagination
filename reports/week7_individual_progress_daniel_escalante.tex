@@ -1,0 +1,70 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.12}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Week~7 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{October 13, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~7 (October 7--13, 2026). It was a light week for code: progress was mainly on data-access coordination while we wait for PhysioNet credentialing. I report only verified progress, with no made-up metrics and no PHI.
+
+\section{Progress this week}
+
+\subsection{PhysioNet access coordination}
+\begin{itemize}
+  \item My PhysioNet credentialing application (CITI finished October~6; supervisor reference Xuefeng Liu) is still \textbf{pending}. I have not received approval, so I have not requested or downloaded MIMIC-IV-Ext CDM.
+  \item Edwin Salcedo was approved for the dataset on October~6. PhysioNet requires every collaborator to be authorized, so the team cannot share data until Hugo and I are approved too.
+  \item On October~8 I followed up with Hugo Resendez. He planned to finish CITI and submit his request by Friday, October~9. I also reminded him to accept the GitHub invitation to the project repository so all three of us can work in it.
+\end{itemize}
+
+\subsection{Repository state}
+No new commits landed this week. \texttt{main} is still at the Week~6 state (\texttt{6a5b680}): the \texttt{lacdm/} scaffold with upstream LA-CDM pinned at \texttt{3f435a10}, the Nemotron Hydra overrides (D-5), and 83 passing Phase~E unit tests. In \texttt{REPRODUCTION.md}, S1--S4 are unchanged.
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{Data access is still gated.} Without my own PhysioNet credential I cannot run S2 \texttt{prepare\_data}. Using Edwin's access to share data with me would violate the DUA, so I did not do that. Instead, I followed up with the team so all members can be authorized as soon as possible.
+  \item \textbf{No GPU work possible.} My Mac has no CUDA and the HiPerGator path is not set up yet, so GRPO and vLLM runs remain deferred. I did not report any experiment numbers.
+  \item \textbf{Limited implementation time.} I made no new code commits this week. I am treating the synthetic-data path as the next unblocked task.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Check on my PhysioNet credentialing status and confirm that Xuefeng Liu's reference was submitted. Once approved, request MIMIC-IV-Ext CDM and sign its DUA.
+  \item Confirm Hugo's authorization request and his repository access.
+  \item Start the synthetic CDM data path under \texttt{extension/} (Edwin's suggestion) so the environment and Phase~E tests can run end-to-end without PHI.
+  \item Set up a HiPerGator allocation and pin the Nemotron model there before the first cluster job.
+\end{enumerate}
+
+\section*{Notes}
+No Table~1 accuracy, F1, or cost figures are reported. They require PhysioNet-authorized data and CUDA runs that have not happened yet.
+
+\end{document}
