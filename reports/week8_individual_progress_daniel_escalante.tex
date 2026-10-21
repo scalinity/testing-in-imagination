@@ -1,0 +1,76 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.12}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Week~8 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{October 20, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~8 (October 14--20, 2026). Like last week, this was a data-access week rather than a coding week. My main task was fixing and re-submitting my PhysioNet credentialing application. I report only verified progress, with no made-up metrics and no PHI.
+
+\section{Progress this week}
+
+\subsection{PhysioNet credentialing: diagnosed and re-submitted}
+\begin{itemize}
+  \item PhysioNet did not approve my October~6 application (decision dated October~11). The reason was that my research description named my collaborators but did not state that each of them needs their own credentialed access, or that restricted data will not be shared between us.
+  \item On October~15 I submitted a new application with a revised research description. It now says that every collaborator holds their own credential and that no restricted data is shared. Xuefeng Liu is again my supervisor reference. The application is \textbf{pending}.
+  \item The same evening I asked Dr.~Liu to respond to PhysioNet's supervisor-reference request when it arrives. He replied that night and agreed to respond promptly.
+\end{itemize}
+
+\subsection{Team access status}
+\begin{itemize}
+  \item On October~20 Hugo Resendez told the team that PhysioNet approved his access to the dataset on October~19. Edwin Salcedo was approved on October~6. That leaves my credential as the only one still outstanding on the team.
+  \item Because I am not credentialed yet, I have not requested or downloaded MIMIC-IV-Ext CDM.
+\end{itemize}
+
+\subsection{Repository state}
+No new commits landed this week on any branch. \texttt{main} is at \texttt{2fd68e8} (Week~7 report). Below that are the \texttt{lacdm/} reproduction scaffold (upstream \texttt{dharouni/LA-CDM} pinned at \texttt{3f435a10}), the Nemotron Nano 8B Hydra overrides (D-5), 83 passing Phase~E unit tests, and the synthetic CDM environment with JSONL tuple export under \texttt{extension/}. There are no open pull requests or issues.
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{Rejected credentialing application.} This cost about a week. I traced the rejection to the collaborator wording in my research description, rewrote that section, and re-submitted. I also lined up my supervisor reference in advance so the review is not held up on that step.
+  \item \textbf{Data access is still gated for me.} Hugo and Edwin are both approved now, but I still cannot use the data through either of them, because the DUA requires each person to hold their own credential. So I did not run S2 \texttt{prepare\_data} and did not touch any restricted data.
+  \item \textbf{No implementation or training progress.} I made no code commits and ran no experiments this week. I report no experiment numbers.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Watch the new PhysioNet application. Once it is approved, request MIMIC-IV-Ext CDM, sign its DUA, and run S2 \texttt{prepare\_data} for the LA-CDM baseline reproduction.
+  \item Reply to Hugo's ``plan going forward'' question. Since he and Edwin are credentialed, propose that they start the data-preparation step on their own accounts while my application is pending.
+  \item Continue the synthetic CDM environment under \texttt{extension/}: generate world-model transition tuples and run the Phase~E tests end-to-end without PHI.
+  \item Set up a HiPerGator allocation, pin \texttt{nvidia/Llama-3.1-Nemotron-Nano-8B-v1} there, and prepare the first LA-CDM baseline reproduction job.
+\end{enumerate}
+
+\section*{Notes}
+No Table~1 accuracy, F1, or cost figures are reported. They require PhysioNet-authorized data and CUDA runs that have not happened yet.
+
+\end{document}
