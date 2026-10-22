@@ -1,0 +1,39 @@
+# replication-of-original/: block restricted data and large artifacts.
+# (Root .gitignore also blocks data/, **/*.csv, .env, credentials.)
+
+# Data files — never commit MIMIC-IV / MIMIC-IV-Ext CDM or derived tables
+*.csv
+*.csv.gz
+*.tsv
+*.parquet
+*.feather
+*.pkl
+*.pickle
+*.jsonl
+*.jsonl.gz
+**/data/
+
+# Raw model generations / patient-level outputs
+**/outputs/
+**/generations/
+**/evaluation/
+
+# Checkpoints and weights
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+**/checkpoints/
+**/wandb/
+
+# Secrets / local config
+.env
+.env.*
+*.local.yaml
+*.local.yml
+
+# Small results are fine: results/*.json, *.md
+!**/results/
+!**/results/*.json
+!*.md
