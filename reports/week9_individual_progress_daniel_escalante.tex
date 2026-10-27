@@ -1,0 +1,82 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.12}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Week~9 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{October 27, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~9 (October 21--27, 2026). The main news is that my PhysioNet credential was approved, which clears the blocker from Weeks~6--8. I also set up a shared folder structure for the team's replication of the original paper. I report only verified progress, with no made-up metrics and no PHI.
+
+\section{Progress this week}
+
+\subsection{PhysioNet credentialing: approved}
+\begin{itemize}
+  \item My PhysioNet account was \textbf{credentialed on October~19, 2026} (11:49~PM ET), as shown on my credentialing settings page. The approval followed my October~15 re-submission, which clarified that each collaborator holds their own credentialed access and that no restricted data is shared, and Dr.~Liu's response to the supervisor-reference request. This resolves the blocker I reported in Weeks~6--8.
+\end{itemize}
+
+\subsection{Dataset access: one more step needed}
+\begin{itemize}
+  \item When I went to request MIMIC-IV-Ext Clinical Decision Making v1.1 (Hager, Jungmann, Rueckert; \href{https://physionet.org/content/mimic-iv-ext-cdm/1.1/}{physionet.org/content/mimic-iv-ext-cdm/1.1}), I found that credentialing alone does not unlock the files. This Credentialed Access project also requires (1) a completed \emph{CITI Data or Specimens Only Research} course, including the HIPAA module, submitted on my PhysioNet Training page with the CITI completion report, and (2) signing the project's data use agreement.
+  \item As of October~27 my Training page shows no training submitted, so I have \textbf{not yet} been granted the dataset and have not downloaded any data.
+\end{itemize}
+
+\subsection{Replication folder for the team}
+\begin{itemize}
+  \item I added a \texttt{replication-of-original/} folder to \texttt{main} (commit \texttt{9c1e006}, October~21). Its README sets the rules: each member works only in their own folder; MIMIC data and patient-level outputs are never committed; and a run counts as reproduced only if its config, seed, upstream commit (\texttt{dharouni/LA-CDM} at \texttt{3f435a10}), model, hardware, and metrics are logged. It notes the D-5 setup (Nemotron Nano 8B on HiPerGator) and includes a run-log table. There are per-member subfolders (\texttt{daniel-escalante/}, \texttt{hugo-resendez/}, \texttt{edwin-salcedo/}), each with a starter README, plus a \texttt{.gitignore} that blocks data files.
+\end{itemize}
+
+\subsection{Team coordination and repository state}
+\begin{itemize}
+  \item On October~20 Hugo Resendez reported that his access was approved on October~19 and asked about the plan. On October~21 I replied, asking whether that was general PhysioNet approval or access to the dataset itself (two separate steps), and asking him to put his replication code in his own folder under \texttt{replication-of-original/}. No reply yet.
+  \item \texttt{9c1e006} was the only commit this week. There were no commits from Hugo or Edwin and no pull requests or issues. The synthetic CDM environment under \texttt{extension/} was unchanged.
+\end{itemize}
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{Credentialing is not the same as dataset access.} I expected approval to let me request the dataset directly, but MIMIC-IV-Ext CDM also requires a submitted CITI training report and a signed DUA. I identified both requirements and made them my immediate next step.
+  \item \textbf{No implementation or training progress.} Without the data I did not run S2 \texttt{prepare\_data}, start HiPerGator jobs, or train any model. I report no experiment numbers.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Upload my CITI completion report to the PhysioNet Training page and, once it is accepted, sign the MIMIC-IV-Ext CDM data use agreement.
+  \item Download MIMIC-IV-Ext CDM v1.1 to credentialed-access storage (never into the repository), then run LA-CDM data preparation (S2 \texttt{prepare\_data}) with the config and seed logged.
+  \item Set up a HiPerGator allocation with Nemotron Nano 8B for the first baseline reproduction, and record runs in the \texttt{daniel-escalante/} run log.
+  \item Follow up with Hugo and Edwin on their dataset access and their replication folders.
+  \item Continue generating synthetic world-model transition tuples under \texttt{extension/}.
+\end{enumerate}
+
+\section*{Notes}
+No Table~1 accuracy, F1, or cost figures are reported. They require PhysioNet-authorized data and CUDA runs that have not happened yet.
+
+\end{document}
