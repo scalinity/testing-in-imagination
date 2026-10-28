@@ -15,7 +15,16 @@ from .actions import (
     is_test,
     is_valid_action,
 )
-from .generators import generate
+from .generators import _stable_noise_seed, generate, render_finding
+from .profiles import (
+    AVAILABILITY,
+    LIKELIHOOD,
+    P_ATYPICAL,
+    PRIOR_MIMIC_CDM,
+    V1_MAX_STEPS,
+    phenotype_given_y,
+    sample_categorical,
+)
 
 # Reward shaping (sensible LA-CDM-like baseline; not paper-exact GRPO scale)
 R_CORRECT = 1.0
@@ -30,6 +39,15 @@ class SyntheticCDMEnv:
 
     Latent y ~ categorical over 4 diagnoses. Every test always returns
     observation text via g_a(y, eps). Diagnosis actions terminate the episode.
+
+    ``version="v1"`` (see ``profiles.py``) instead samples y from the
+    MIMIC-CDM class prior, a presenting phenotype e, and one discrete finding
+    per test from a test-specific likelihood, so tests differ in how much
+    they reveal. ``step`` then reports the finding in ``info["finding"]``.
+    With ``missingness=True`` each test is in the chart with probability
+    ``AVAILABILITY[test]``; requesting a missing one returns UNAVAILABLE,
+    costs nothing and burns a step, as in LA-CDM (F-2, F-3). v1 episodes end
+    undiagnosed after ``max_steps`` actions (default 14, F-3).
     """
 
     def __init__(
@@ -38,9 +56,24 @@ class SyntheticCDMEnv:
         split: str = "train",
         max_tests: int = 12,
         cost_scale: float = COST_SCALE,
+        version: str = "v0",
+        missingness: bool = False,
+        p_atypical: float = P_ATYPICAL,
+        max_steps: Optional[int] = None,
     ) -> None:
         if split not in ("train", "val", "test"):
             raise ValueError(f"split must be train|val|test, got {split!r}")
+        if version not in ("v0", "v1"):
+            raise ValueError(f"version must be v0|v1, got {version!r}")
+        if missingness and version != "v1":
+            raise ValueError("missingness requires version='v1'")
+        self.version = version
+        self.missingness = bool(missingness)
+        self.p_atypical = float(p_atypical)
+        if max_steps is None and version == "v1":
+            max_steps = V1_MAX_STEPS
+        self.max_steps = max_steps
+        self._phenotype_given_y = phenotype_given_y(self.p_atypical)
         self.seed = int(seed)
         self.split = split
         self.max_tests = int(max_tests)
@@ -56,6 +89,9 @@ class SyntheticCDMEnv:
         self._eps_seed: Optional[int] = None
         self._history_lines: List[str] = []
         self._tests_taken: List[str] = []
+        self._unavailable_requested: List[str] = []
+        self.phenotype: Optional[str] = None
+        self._in_chart: frozenset = frozenset(A_TEST)
         self._t: int = 0
         self._done: bool = False
         self._cumulative_cost_norm: float = 0.0
@@ -69,11 +105,27 @@ class SyntheticCDMEnv:
         self.patient_seed = self._episode_rng.randint(0, 2**31 - 1)
         self._eps_seed = self.patient_seed
         if y is None:
-            self.y_true = self._episode_rng.choice(list(A_DIAG))
+            if self.version == "v1":
+                self.y_true = sample_categorical(PRIOR_MIMIC_CDM, self._episode_rng)
+            else:
+                self.y_true = self._episode_rng.choice(list(A_DIAG))
         else:
             if y not in A_DIAG:
                 raise ValueError(f"Unknown y: {y!r}")
             self.y_true = y
+        if self.version == "v1":
+            # Drawn whether or not y was fixed, so the rng stream (and thus
+            # the patient) does not depend on how reset was called.
+            self.phenotype = sample_categorical(
+                self._phenotype_given_y[self.y_true], self._episode_rng
+            )
+            chart_draws = {a: self._episode_rng.random() for a in A_TEST}
+            if self.missingness:
+                self._in_chart = frozenset(
+                    a for a in A_TEST if chart_draws[a] < AVAILABILITY[a]
+                )
+            else:
+                self._in_chart = frozenset(A_TEST)
 
         self._episode_id = (
             f"syn-{self.split}-s{self.seed}-e{self._episode_counter:04d}"
@@ -87,6 +139,7 @@ class SyntheticCDMEnv:
             "diverticulitis, pancreatitis."
         ]
         self._tests_taken = []
+        self._unavailable_requested = []
         self._t = 0
         self._done = False
         self._cumulative_cost_norm = 0.0
@@ -114,9 +167,13 @@ class SyntheticCDMEnv:
 
     @property
     def available_tests(self) -> List[str]:
-        """Tests not yet ordered (all always 'available' in chart sense)."""
-        taken = set(self._tests_taken)
-        return [a for a in A_TEST if a not in taken]
+        """Tests not yet requested (the agent does not see chart contents)."""
+        requested = set(self._tests_taken) | set(self._unavailable_requested)
+        return [a for a in A_TEST if a not in requested]
+
+    @property
+    def unavailable_requested(self) -> List[str]:
+        return list(self._unavailable_requested)
 
     def step(
         self, action: str
@@ -125,6 +182,29 @@ class SyntheticCDMEnv:
 
         Returns (observation_or_terminal_msg, reward, done, info).
         """
+        obs, reward, done, info = self._step(action)
+        if (
+            not done
+            and self.max_steps is not None
+            and self._t >= self.max_steps
+        ):
+            # Budget exhausted without a diagnosis: LA-CDM's invalid outcome.
+            self._done = done = True
+            reward += R_INVALID
+            info.update(
+                {
+                    "undiagnosed": True,
+                    "y_true": self.y_true,
+                    "correct": False,
+                    "cumulative_cost_norm": self._cumulative_cost_norm,
+                    "n_tests": len(self._tests_taken),
+                }
+            )
+        return obs, reward, done, info
+
+    def _step(
+        self, action: str
+    ) -> Tuple[str, float, bool, Dict[str, Any]]:
         if self._done:
             raise RuntimeError("Episode is done; call reset().")
         if self.y_true is None or self._eps_seed is None:
@@ -149,7 +229,7 @@ class SyntheticCDMEnv:
             return obs, reward, False, info
 
         if is_test(action):
-            if action in self._tests_taken:
+            if action in self._tests_taken or action in self._unavailable_requested:
                 obs = (
                     f"[{action}] Already obtained earlier in this encounter; "
                     "repeating the same order yields no new information."
@@ -160,7 +240,23 @@ class SyntheticCDMEnv:
                 info["duplicate_test"] = True
                 return obs, reward, False, info
 
-            obs = generate(action, self.y_true, self._eps_seed)
+            if action not in self._in_chart:
+                obs = (
+                    f"[{action}] UNAVAILABLE: this test was not performed "
+                    "for this patient."
+                )
+                self._unavailable_requested.append(action)
+                self._append_obs(action, obs)
+                self._t += 1
+                # Free, and no information (F-2): cost counts provided tests only.
+                info.update({"unavailable": True, "finding": None})
+                return obs, 0.0, False, info
+
+            if self.version == "v1":
+                finding, obs = self._v1_observe(action)
+                info["finding"] = finding
+            else:
+                obs = generate(action, self.y_true, self._eps_seed)
             cost_n = COST_NORM[action]
             cost_usd = COST_USD[action]
             reward = -self.cost_scale * cost_n
@@ -214,9 +310,30 @@ class SyntheticCDMEnv:
             raise RuntimeError("Call reset() before oracle_observe().")
         if test_name not in A_TEST_SET:
             raise ValueError(f"Not a test action: {test_name!r}")
+        if self.version == "v1":
+            return self._v1_observe(test_name)[1]
         return generate(test_name, self.y_true, self._eps_seed)
 
+    def oracle_finding(self, test_name: str) -> str:
+        """v1 counterfactual finding, even for tests missing from the chart."""
+        if self.version != "v1":
+            raise RuntimeError("oracle_finding requires version='v1'")
+        if self.y_true is None or self._eps_seed is None:
+            raise RuntimeError("Call reset() before oracle_finding().")
+        if test_name not in A_TEST_SET:
+            raise ValueError(f"Not a test action: {test_name!r}")
+        return self._v1_observe(test_name)[0]
+
     # --------------------------------------------------------------- helpers
+
+    def _v1_observe(self, test_name: str) -> Tuple[str, str]:
+        """Deterministic (finding, text) for this patient and test."""
+        assert self.phenotype is not None and self._eps_seed is not None
+        rng = random.Random(
+            _stable_noise_seed(self.phenotype, test_name, self._eps_seed)
+        )
+        finding = sample_categorical(LIKELIHOOD[test_name][self.phenotype], rng)
+        return finding, render_finding(test_name, finding, rng)
 
     def _append_obs(self, action: str, obs: str) -> None:
         self._history_lines.append(f"Action: {action}")

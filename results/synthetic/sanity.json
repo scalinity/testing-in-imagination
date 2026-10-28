@@ -1,0 +1,139 @@
+{
+  "paper": {
+    "sft_all_mean_acc": 92.8,
+    "sft_all_avg_cost_usd": 3792.79,
+    "la_cdm_mean_acc": 81.3,
+    "la_cdm_avg_cost_usd": 1295.61
+  },
+  "n_episodes": 4000,
+  "seed": 0,
+  "class_prior": {
+    "appendicitis": {
+      "target_mimic_cdm": 0.39875,
+      "sampled": 0.397
+    },
+    "cholecystitis": {
+      "target_mimic_cdm": 0.27,
+      "sampled": 0.27225
+    },
+    "diverticulitis": {
+      "target_mimic_cdm": 0.10708333333333334,
+      "sampled": 0.10275
+    },
+    "pancreatitis": {
+      "target_mimic_cdm": 0.22416666666666665,
+      "sampled": 0.228
+    }
+  },
+  "all_tests_always_available": {
+    "mean_acc": 0.9130979263342657,
+    "overall_acc": 0.91925,
+    "avg_cost_usd": 10190.0,
+    "acc_appendicitis": 0.924433249370277,
+    "acc_cholecystitis": 0.931129476584022,
+    "acc_diverticulitis": 0.8856447688564477,
+    "acc_pancreatitis": 0.9111842105263158
+  },
+  "all_tests_missingness": {
+    "mean_acc": 0.8222215897373022,
+    "overall_acc": 0.84375,
+    "avg_cost_usd": 3769.75775,
+    "acc_appendicitis": 0.8721662468513854,
+    "acc_cholecystitis": 0.8705234159779615,
+    "acc_diverticulitis": 0.7347931873479319,
+    "acc_pancreatitis": 0.8114035087719298
+  },
+  "bayes_cap_overall_acc_approx": 0.9299999999999999,
+  "expected_all_available_cost_usd": 3779.55,
+  "single_test": {
+    "MRI": {
+      "cost_usd": 4866.0,
+      "availability": 0.1,
+      "info_gain_nats": 0.7232772024668871,
+      "mean_acc_alone": 0.8272152402975362,
+      "overall_acc_alone": 0.833
+    },
+    "CT": {
+      "cost_usd": 1306.0,
+      "availability": 0.75,
+      "info_gain_nats": 0.693586580350203,
+      "mean_acc_alone": 0.8196023872348744,
+      "overall_acc_alone": 0.82
+    },
+    "Ultrasound": {
+      "cost_usd": 1288.0,
+      "availability": 0.5,
+      "info_gain_nats": 0.4871027923460073,
+      "mean_acc_alone": 0.6393867688685355,
+      "overall_acc_alone": 0.6995
+    },
+    "Liver Function Panel": {
+      "cost_usd": 413.0,
+      "availability": 0.7,
+      "info_gain_nats": 0.223781565483554,
+      "mean_acc_alone": 0.46037469908303946,
+      "overall_acc_alone": 0.591
+    },
+    "Physical Examination": {
+      "cost_usd": 300.0,
+      "availability": 1.0,
+      "info_gain_nats": 0.21978133112707932,
+      "mean_acc_alone": 0.5101406461938458,
+      "overall_acc_alone": 0.55975
+    },
+    "Comprehensive Metabolic Panel": {
+      "cost_usd": 636.0,
+      "availability": 0.55,
+      "info_gain_nats": 0.07711016180960506,
+      "mean_acc_alone": 0.3628711058610976,
+      "overall_acc_alone": 0.48825
+    },
+    "Basic Metabolic Panel": {
+      "cost_usd": 298.0,
+      "availability": 0.75,
+      "info_gain_nats": 0.03835402100097385,
+      "mean_acc_alone": 0.30800641532661105,
+      "overall_acc_alone": 0.43475
+    },
+    "Complete Blood Count": {
+      "cost_usd": 71.0,
+      "availability": 0.95,
+      "info_gain_nats": 0.036453666896486325,
+      "mean_acc_alone": 0.281270397811171,
+      "overall_acc_alone": 0.4165
+    },
+    "Renal Function Panel": {
+      "cost_usd": 394.0,
+      "availability": 0.45,
+      "info_gain_nats": 0.02556305024026506,
+      "mean_acc_alone": 0.2926233996202192,
+      "overall_acc_alone": 0.428
+    },
+    "Electrolyte Panel": {
+      "cost_usd": 134.0,
+      "availability": 0.6,
+      "info_gain_nats": 0.01943990786728733,
+      "mean_acc_alone": 0.28325490675019394,
+      "overall_acc_alone": 0.4095
+    },
+    "Urinalysis": {
+      "cost_usd": 50.0,
+      "availability": 0.6,
+      "info_gain_nats": 0.013529109914602655,
+      "mean_acc_alone": 0.25,
+      "overall_acc_alone": 0.3975
+    },
+    "Radiograph": {
+      "cost_usd": 434.0,
+      "availability": 0.35,
+      "info_gain_nats": 0.012567702027495908,
+      "mean_acc_alone": 0.2809916630009999,
+      "overall_acc_alone": 0.41225
+    }
+  },
+  "no_test_majority_baseline": {
+    "predict": "appendicitis",
+    "overall_acc": 0.39875,
+    "mean_acc": 0.25
+  }
+}
