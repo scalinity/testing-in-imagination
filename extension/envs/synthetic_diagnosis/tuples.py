@@ -58,11 +58,15 @@ class TupleRecord:
             raise ValueError("a_t must be a non-empty string")
         if not isinstance(self.o_t1, str) or not self.o_t1:
             raise ValueError("o_t1 must be a non-empty string")
-        if "UNAVAILABLE" in self.o_t1 and self.source == "synthetic":
-            # Soft check: v0 synthetic should not emit UNAVAILABLE; warn via error
-            # for training cleanliness. Allow only if explicitly intended later.
+        if (
+            "UNAVAILABLE" in self.o_t1
+            and self.source == "synthetic"
+            and not self.meta.get("missingness")
+        ):
+            # Only v1 runs with missingness=True may emit UNAVAILABLE rows.
             raise ValueError(
-                "v0 synthetic tuples must not contain UNAVAILABLE observations"
+                "synthetic tuples without missingness must not contain "
+                "UNAVAILABLE observations"
             )
 
 
