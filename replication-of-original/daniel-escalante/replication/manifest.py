@@ -3,12 +3,15 @@
 from contextlib import contextmanager
 from datetime import datetime
 import hashlib
+import fcntl
 import importlib.metadata
 import importlib.util
 import json
 import os
 from pathlib import Path
 import platform
+import re
+import socket
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
@@ -51,7 +54,7 @@ def command(args):
 
 
 def source_fingerprint() -> str:
-    files = [p for p in OWN.rglob("*") if p.is_file() and p.suffix in (".py", ".sh", ".slurm", ".toml", ".lock", ".json", ".md")
+    files = [p for p in OWN.rglob("*") if p.is_file() and p.suffix in (".py", ".sh", ".slurm", ".toml", ".lock", ".json")
              and not any(part.startswith(".") or part in ("__pycache__", "results") for part in p.relative_to(OWN).parts)]
     files.extend([OWN / "results/paper_values.json", OWN / "results/REPORT_TEMPLATE.md"])
     return digest({str(p.relative_to(OWN)): file_digest(p) for p in sorted(set(files)) if p.exists()})
@@ -73,7 +76,9 @@ def runtime_info() -> dict:
             versions[name] = "NOT_INSTALLED"
     try:
         gpu = command(["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"])
-        cuda = command(["nvidia-smi"])
+        report = command(["nvidia-smi"])
+        match = re.search(r"CUDA Version:\s*([\d.]+)", report)
+        cuda = match.group(1) if match else "UNREPORTED"
     except (OSError, RuntimeError):
         gpu = "NOT_AVAILABLE"
         cuda = "NOT_AVAILABLE"
@@ -83,6 +88,7 @@ def runtime_info() -> dict:
 
 
 def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dict:
+    from .gpu import COMPATIBILITY_DEVIATIONS
     upstream = command(["git", "-C", str(UPSTREAM), "rev-parse", "HEAD"])
     if upstream != UPSTREAM_SHA:
         raise RuntimeError("upstream checkout does not match the required pin")
@@ -99,7 +105,14 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
              "overrides": overrides_against_defaults(cfg), "runtime": runtime_info(),
              "inputs": inputs, "dry_run": dry_run, "wandb_run_ids": [],
              "bootstrap_resamples": settings.bootstrap_resamples}
-    value["manifest_id"] = digest(value)
+    value["local_compatibility_deviations"] = COMPATIBILITY_DEVIATIONS + [
+        "Empty physical-examination strings become the upstream not-available sentinel before CSV parsing.",
+        "The absent xgrammar 0.1.16 package release is sourced from its publisher's immutable same-version commit.",
+    ]
+    # Observations document the launch, while immutable code/config/lock/input
+    # identities determine resume. S0 deliberately transitions from bootstrap
+    # Python to the locked CUDA environment; its observed packages will differ.
+    value["manifest_id"] = digest({key: item for key, item in value.items() if key not in ("runtime", "git_sha", "git_dirty", "wandb_run_ids")})
     return value
 
 
@@ -107,16 +120,19 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
 def stage_lock(work_dir: Path, stage: str):
     path = work_dir / "locks" / f"{stage}.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError:
-        raise RuntimeError(f"stage is already running or interrupted; inspect the private lock: {path}") from None
-    try:
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError(f"stage is already running; inspect the private lock: {path}") from None
+        os.ftruncate(fd, 0)
+        os.write(fd, canonical({"pid": os.getpid(), "host": socket.gethostname(), "job_id": os.environ.get("SLURM_JOB_ID"), "started_at": eastern_now()}).encode())
         yield
     finally:
-        path.unlink(missing_ok=True)
+        # Keep the inode stable; kernel ownership is released even after SIGKILL.
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
 def stamp_metrics(name: str, metrics: dict, source: str, out_dir: Path, written_at=None):
@@ -130,8 +146,7 @@ def stamp_metrics(name: str, metrics: dict, source: str, out_dir: Path, written_
     path = module.write_metrics(name, metrics, source, out_dir=out_dir)
     payload = json.loads(path.read_text())
     payload["label"] = LABEL
-    if written_at is not None:
-        payload["written_at"] = written_at
+    payload["written_at"] = written_at if written_at is not None else eastern_now()
     write_json(path, payload)
     return path
 
@@ -142,7 +157,7 @@ def eastern_now() -> str:
 
 FORBIDDEN_KEYS = {"patient_id", "patient id", "hadm_id", "subject_id", "patient history",
                   "patient_history", "patient history summary", "laboratory tests", "radiology",
-                  "test_results", "generations", "completions", "prompts", "rows"}
+                  "physical examination", "physical_examination", "test_results", "generations", "completions", "prompts", "rows"}
 
 
 def assert_aggregate(value):

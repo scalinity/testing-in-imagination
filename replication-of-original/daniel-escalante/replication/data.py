@@ -129,7 +129,7 @@ def _mapping(data_dir: Path) -> tuple[pd.DataFrame, set[int], dict]:
     for label, refs in rows.values():
         if label in LAB_TESTS:
             panel_ids.update(refs)
-    return pd.DataFrame(normalized), panel_ids, {
+    return pd.DataFrame(normalized), set(rows), {
         "format": mapping_format, "rows": len(rows), "panels": len(LAB_TESTS),
         "resolved_itemids": len(panel_ids), "all_references_resolved": True,
     }
@@ -469,7 +469,8 @@ def prepare_splits(
         frame.to_csv(output_dir / f"{split}.csv", index=False)
         frames[split] = frame
     audit = {"raw": raw_audit, "split_seed": SPLIT_SEED, "summarizer": summary_kind,
-             "primary": assert_disjoint(output_dir)}
+             "primary": assert_disjoint(output_dir),
+             "compatibility_transformations": ["Empty physical-examination strings become the upstream not-available sentinel before CSV parsing; the upstream parser otherwise reads empty CSV cells as non-string NaN."]}
     paths["grouped"] = {}
     if raw_audit["subjects"]["status"] == "assessable":
         grouped, method = _grouped_frames(pd.concat(frames.values(), ignore_index=True))

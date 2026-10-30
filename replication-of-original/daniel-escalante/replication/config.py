@@ -84,8 +84,8 @@ class Settings:
         if not seeds or len(set(seeds)) != len(seeds) or seeds[0] != 269:
             raise ValueError("training seeds must be distinct, with primary seed 269 first")
         n = int(values.get("CDM_SYNTHETIC_N", "2400"))
-        if n < 80:
-            raise ValueError("at least 80 synthetic admissions are needed for stratification")
+        if n < 120:
+            raise ValueError("at least 120 synthetic admissions are needed for the full split and statistics pipeline")
         return cls(source=source, data_dir=data, work_dir=work, seeds=seeds, synthetic_n=n)
 
 

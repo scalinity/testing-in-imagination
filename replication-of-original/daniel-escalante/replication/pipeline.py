@@ -55,6 +55,11 @@ def _receipt(settings, stage):
     receipt = read_json(path)
     if receipt["source"] != settings.source:
         raise RuntimeError("work directory contains a different data source; choose a fresh work directory")
+    index = STAGES.index(stage)
+    if index:
+        previous = _receipt(settings, STAGES[index - 1])
+        if receipt.get("previous_receipt_id") != previous["receipt_id"]:
+            raise RuntimeError("stage dependency receipt changed")
     for output, expected in receipt["outputs"].items():
         if not Path(output).is_file() or file_digest(Path(output)) != expected:
             raise RuntimeError(f"completed stage {stage} has a missing or changed artifact")
@@ -116,8 +121,8 @@ def s1(settings):
         from .gpu import make_summarizer
         summarizer = make_summarizer(model=MODEL, revision=REVISION, seed=settings.seed)
     split_audit = prepare_splits(settings.data_dir, prepared(settings), seed=settings.seed,
-                                 fake_summarizer=settings.mock, summarizer=summarizer)
-    out = private_write(settings.work_dir / "data-audit.json", {"schema": audit, "split": split_audit}, settings.source)
+                                 fake_summarizer=settings.mock, summarizer=summarizer, source=settings.source)
+    out = private_write(settings.work_dir / "data-audit.json", {"schema": audit, "split": split_audit["audit"]}, settings.source)
     return [out, *sorted(prepared(settings).rglob("*.csv")), *sorted(settings.data_dir.glob("*.pkl")), *sorted(settings.data_dir.glob("*.csv"))]
 
 
@@ -203,24 +208,30 @@ def s4(settings):
                 directory = settings.work_dir / "models" / protocol / str(seed) / arm
                 selection = directory / "selection.json"
                 cfg = cfg_for(settings, arm, protocol, seed)
+                run_manifest = make_manifest(settings, f"training-{protocol}-{seed}-{arm}", cfg,
+                                             {"data_files": tree_fingerprint(prepared(settings, protocol)), "training_seed": seed})
                 if selection.exists():
                     saved = read_json(selection)
-                    if saved.get("config_hash") != digest(OmegaConf.to_container(cfg, resolve=True)):
-                        raise RuntimeError("training config changed after checkpoint selection")
-                    outputs.append(selection)
+                    if saved.get("training_manifest_id") != run_manifest["manifest_id"]:
+                        raise RuntimeError("training config or data changed after checkpoint selection")
+                    for path, expected in saved["run_outputs"].items():
+                        if not Path(path).is_file() or file_digest(Path(path)) != expected:
+                            raise RuntimeError("selected model or cached training artifact changed")
+                    outputs.extend([selection, *map(Path, saved["run_outputs"])])
                     continue
                 entry = {"protocol": protocol, "seed": seed, "arm": arm, "status": "RUNNING", "started_at": eastern_now()}
                 ledger["runs"].append(entry)
                 write_json(ledger_path, ledger)
                 try:
-                    run_manifest = make_manifest(settings, f"training-{protocol}-{seed}-{arm}", cfg,
-                                                 {"data_files": tree_fingerprint(prepared(settings, protocol)), "training_seed": seed})
-                    outputs.append(write_json(directory / "manifest.json", run_manifest))
+                    manifest_path = directory / "manifest.json"
+                    if manifest_path.exists() and read_json(manifest_path)["manifest_id"] != run_manifest["manifest_id"]:
+                        raise RuntimeError("training inputs changed since the interrupted checkpoint")
+                    arm_outputs = [write_json(manifest_path, run_manifest)]
                     if settings.mock:
                         train_rows = _evaluate(settings, arm, protocol, seed, "train")
                         val_rows = _evaluate(settings, arm, protocol, seed, "val")
-                        outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "train"), train_rows, settings.source))
-                        outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "val"), val_rows, settings.source))
+                        arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "train"), train_rows, settings.source))
+                        arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "val"), val_rows, settings.source))
                         info = {"adapter_dir": None, "execution": "mock", "learning": "NOT_RUN",
                                 "selection": "fixed mock policy; validation exercised; no test access",
                                 "wandb_run_ids": [], "training_patients": len(train_rows), "validation_patients": len(val_rows)}
@@ -228,9 +239,19 @@ def s4(settings):
                         _require_cuda()
                         from .gpu import train
                         info = train(cfg, output_dir=directory, data_dir=prepared(settings, protocol), seed=seed)
+                        adapter = Path(info["adapter_dir"])
+                        selected = sorted(path for path in adapter.rglob("*") if path.is_file())
+                        if not selected or not any(path.suffix in (".safetensors", ".bin") for path in selected):
+                            raise RuntimeError("selected adapter has no weight files")
+                        arm_outputs.extend(selected)
+                    run_manifest["wandb_run_ids"] = info.get("wandb_run_ids", [])
+                    write_json(manifest_path, run_manifest)
                     info.update({"source": settings.source, "arm": arm, "seed": seed,
-                                 "config_hash": digest(OmegaConf.to_container(cfg, resolve=True)), "selection_split": "val"})
+                                 "config_hash": digest(OmegaConf.to_container(cfg, resolve=True)), "selection_split": "val",
+                                 "training_manifest_id": run_manifest["manifest_id"],
+                                 "run_outputs": {str(path): file_digest(path) for path in arm_outputs}})
                     outputs.append(write_json(selection, info))
+                    outputs.extend(arm_outputs)
                     entry["status"] = "PASS"
                     entry["selection"] = str(selection)
                 except BaseException as error:
@@ -250,14 +271,19 @@ def s5(settings):
         for seed in settings.seeds:
             for arm in ARMS:
                 selection = read_json(settings.work_dir / "models" / protocol / str(seed) / arm / "selection.json")
+                for path, expected in selection["run_outputs"].items():
+                    if not Path(path).is_file() or file_digest(Path(path)) != expected:
+                        raise RuntimeError("selected model changed before test admission")
                 outputs.extend(_saved_evaluation(settings, arm, protocol, seed, adapter_dir=selection["adapter_dir"]))
     return outputs
 
 
 def s6(settings):
     from .data import assert_disjoint
-    from .stats import summary, paired_bootstrap, single_arm_intervals, exact_mcnemar, seed_difference_ci
+    from .stats import summary, paired_bootstrap, single_arm_intervals, seed_difference_ci, upper_bound_invariant
     from .reporting import render_report
+    from .gpu import COMPATIBILITY_DEVIATIONS
+    import pandas as pd
     results = {"source": settings.source, "execution": "mock" if settings.mock else "cuda",
                "label": "re-implementation on a different backbone", "model_revision": REVISION,
                "upstream_sha": read_json(settings.work_dir / "manifests/s0.json")["upstream_sha"],
@@ -265,28 +291,76 @@ def s6(settings):
                "training": read_json(settings.work_dir / "training-ledger.json"),
                "data_audit": private_read(settings.work_dir / "data-audit.json", settings.source),
                "bootstrap_resamples": settings.bootstrap_resamples, "training_seeds": list(settings.seeds)}
+    outputs, report_parts = [], []
     for protocol in protocols(settings):
         current = {"seeds": {}, "leakage": assert_disjoint(prepared(settings, protocol))}
+        frame = pd.read_csv(prepared(settings, protocol) / "test.csv")
+        subjects = dict(zip(frame["Patient ID"].map(str), frame["subject_id"])) if "subject_id" in frame else None
         for seed in settings.seeds:
             cfg = cfg_for(settings, protocol=protocol, seed=seed)
             rows = {arm: private_read(_rows_path(settings, protocol, seed, arm), settings.source) for arm in (*ARMS, "zero_shot")}
-            arms = {arm: {"summary": summary(data, cfg), "intervals": single_arm_intervals(data, cfg, seed=stream_seed(seed, "test", "bootstrap"), n_resamples=settings.bootstrap_resamples)} for arm, data in rows.items()}
+            clusters = [int(subjects[str(r["patient_id"])]) for r in rows["primary"]] if subjects else None
+            arms = {arm: {"summary": summary(data, cfg), "intervals": single_arm_intervals(data, cfg, seed=stream_seed(seed, "test", "bootstrap"), n_resamples=settings.bootstrap_resamples, cluster_ids=clusters)} for arm, data in rows.items()}
+            for arm in ARMS:
+                if not upper_bound_invariant([r["reward"] for r in rows[arm]], cfg_for(settings, arm, protocol, seed), arm)["holds"]:
+                    raise RuntimeError("episode reward exceeded its mathematically justified ceiling")
             comparisons = {}
             for arm in ("zero_shot", "decision_only", "no_cost", "incorrect_minus1"):
-                paired = paired_bootstrap(rows["primary"], rows[arm], cfg, seed=stream_seed(seed, "test", "bootstrap"), n_resamples=settings.bootstrap_resamples)
-                discordance = exact_mcnemar([r["prediction"] == r["label"] for r in rows["primary"]], [r["prediction"] == r["label"] for r in rows[arm]])
-                comparisons[arm] = {"paired": paired, "mcnemar": discordance}
+                paired = paired_bootstrap(rows["primary"], rows[arm], cfg, seed=stream_seed(seed, "test", "bootstrap"), n_resamples=settings.bootstrap_resamples, cluster_ids=clusters)
+                comparisons[arm] = paired
             current["seeds"][str(seed)] = {"arms": arms, "comparisons": comparisons}
+        current["seed_differences"] = {
+            f"primary_vs_{arm}/{metric}": seed_difference_ci([current["seeds"][str(seed)]["comparisons"][arm]["metrics"][metric]["estimate"] for seed in settings.seeds])
+            for arm in ("zero_shot", "decision_only", "no_cost", "incorrect_minus1") for metric in ("T5", "T6", "T7", "T8", "pooled_accuracy")}
         results["protocols"][protocol] = current
+        for seed in settings.seeds:
+            run = current["seeds"][str(seed)]
+            selection = read_json(settings.work_dir / "models" / protocol / str(seed) / "primary/selection.json")
+            report_input = {
+                "arms": {arm: values["summary"] for arm, values in run["arms"].items()},
+                "intervals": {arm: values["intervals"] for arm, values in run["arms"].items()},
+                "paired": {f"primary_vs_{arm}": value for arm, value in run["comparisons"].items()},
+                "seed_differences": current["seed_differences"],
+                "leakage": {"admission_overlap": sum(current["leakage"]["admission_overlap"].values()),
+                            "subject_overlap": current["leakage"]["subjects"]["any_overlap"],
+                            "grouped_sensitivity": "full arm matrix reported separately below" if len(protocols(settings)) == 2 else "unassessable: subject IDs absent"},
+                "implementation": {"I1": "mock; no weights trained" if settings.mock else "pinned LoRA runtime completed",
+                                   "I2": "configured; learning NOT_RUN" if settings.mock else "100/100/100 optimizer-update phases",
+                                   "I3": "configured; Adam NOT_RUN" if settings.mock else "Adam, lr 1e-5, batch 2, declared seed",
+                                   "I4": "configured upstream USD schedule; provenance taken from paper ledger",
+                                   "I5": "twelve normalized costs sum to one (tested)"},
+                "run": {"seed": seed, "seeds": list(settings.seeds), "backbone": MODEL, "revision": REVISION,
+                        "upstream_sha": results["upstream_sha"], "training_completed": not settings.mock,
+                        "git_sha": read_json(settings.work_dir / "manifests/s0.json")["git_sha"]},
+                "validation_dynamics": selection.get("validation_history", []),
+                "gaps": ["Local compatibility changes: " + text for text in COMPATIBILITY_DEVIATIONS] +
+                         ["Packaging: no upstream lockfile; same-version xgrammar source build is pinned in the local lock.",
+                          "A paper delta treats the published value as fixed; its interval does not incorporate unknown paper-run uncertainty.",
+                          "Empty physical-examination strings become the existing unavailable sentinel before CSV parsing, avoiding non-string NaN observations.",
+                          "Primary parity admissions may share subjects with training; the grouped protocol tests sensitivity to that leakage."]}
+            path = render_report(report_input, settings.work_dir / "reports" / f"{protocol}-{seed}.md", source=settings.source)
+            outputs.append(path)
+            report_parts.append(f"# Protocol: {protocol}; training seed: {seed}\n\n" + path.read_text())
     # Patient resampling quantifies held-out uncertainty; seeds quantify training variation.
     results["between_seed_uncertainty"] = {"status": "not estimable from one training seed" if len(settings.seeds) == 1 else "paired t intervals reported per comparison"}
     private = settings.work_dir / "aggregates.json"
     # Ledger selections include private paths: aggregate export records outcomes, not paths.
     results["training"] = [{key: entry[key] for key in ("protocol", "seed", "arm", "status")}
                            for entry in results["training"]["runs"]]
+    raw_audit = results["data_audit"]["schema"]
+    results["data_audit"] = {"source": settings.source, "raw_admissions": raw_audit["total"],
+                             "class_counts": raw_audit["class_counts"], "schema_valid": raw_audit["schema"]["valid"],
+                             "subject_audit": raw_audit["subjects"], "mapping_rows": raw_audit["mapping"]["rows"]}
+    launch = read_json(settings.work_dir / "manifests/s0.json")
+    results["provenance"] = {"git_sha": launch["git_sha"], "source_fingerprint": launch["source_fingerprint"],
+                             "stage_manifest_ids": {stage: read_json(settings.work_dir / "manifests" / f"{stage}.json")["manifest_id"] for stage in STAGES},
+                             "runtime_lock_sha256": file_digest(OWN / "runtime/uv.lock"),
+                             "wandb_run_ids": sorted({run_id for protocol in protocols(settings) for seed in settings.seeds for arm in ARMS
+                                                      for run_id in read_json(settings.work_dir / "models" / protocol / str(seed) / arm / "selection.json").get("wandb_run_ids", [])})}
     private_write(private, results, settings.source)
-    report = render_report(results, settings.work_dir / "REPORT.md", source=settings.source)
-    return [private, report]
+    report = settings.work_dir / "REPORT.md"
+    report.write_text("\n\n---\n\n".join(report_parts))
+    return [private, report, *outputs]
 
 
 def run_stage(settings, stage, dry_run=False):
@@ -320,6 +394,7 @@ def run_stage(settings, stage, dry_run=False):
             outputs = globals()[stage](settings)
             receipt = {"source": settings.source, "stage": stage, "manifest_id": manifest["manifest_id"],
                        "status": "PASS", "started_at": started_at, "finished_at": eastern_now(),
+                       "previous_receipt_id": inputs.get("previous_stage"),
                        "outputs": {str(p): file_digest(p) for p in outputs}}
             receipt["receipt_id"] = digest(receipt)
             write_json(receipt_path, receipt)
@@ -334,6 +409,9 @@ def run_stage(settings, stage, dry_run=False):
 def export_aggregates(settings):
     _receipt(settings, "s6")
     value = private_read(settings.work_dir / "aggregates.json", settings.source)
+    allowed = {"source", "execution", "label", "model_revision", "upstream_sha", "protocols", "baseline_gaps", "training", "data_audit", "bootstrap_resamples", "training_seeds", "between_seed_uncertainty", "provenance"}
+    if set(value) != allowed or value["source"] != settings.source:
+        raise ValueError("aggregate export does not match the expected result structure")
     assert_aggregate(value)
     destination = OWN / "results" / settings.source
     stamp_metrics("metrics", value, settings.source, destination)
