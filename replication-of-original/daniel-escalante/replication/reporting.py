@@ -86,7 +86,7 @@ def render_report(summary_dict, output_path, source):
     scope = (f"Every observed result below is a **{LABEL}** ({source}). "
              "Paper references come only from `REPRODUCTION.md`; no matching tolerance or reproduction verdict is inferred. "
              "Reported values alone do not verify data access, model revision, training completion or CUDA acceptance.")
-    setup = (f"Source: **{source}**. Policy and HPI summarizer: `{_text(run.get('backbone', 'unreported'))}`. "
+    setup = (f"Source: **{source}**. Configured CUDA policy and HPI summarizer: `{_text(run.get('backbone', 'unreported'))}`. "
              f"Revision: `{_text(run.get('revision', 'unreported'))}`. Code commit: `{_text(run.get('git_sha', 'unreported'))}`. "
              f"Upstream: `{_text(run.get('upstream_sha', 'unreported'))}`.\n\n"
              "D-5 is a backbone deviation and D-3 replaces the paper's summarizer with that same pinned backbone. "
@@ -134,14 +134,15 @@ def render_report(summary_dict, output_path, source):
                  "These held-out endpoints are not a measured training curve. "
                  "C3 needs paired accuracy and cost evidence; a similar point accuracy does not establish equivalence.")
     dynamics += (f"\n\nPrimary hypothesis observations: {_value(after.get('triplet_count'), 0)} actual triplets; "
-                 f"{_value(after.get('ece_triplet_count'), 0)} eligible for ECE ({result_label}).")
+                 f"{_value(after.get('ece_triplet_count'), 0)} eligible for ECE; "
+                 f"{_value(after.get('invalid_confidence_count'), 0)} finite out-of-range confidences retained for hypothesis accuracy and excluded from ECE by upstream ({result_label}).")
     if source == "synthetic":
         dynamics += " Synthetic comparisons demonstrate wiring only; they do not establish training improvement or a scientific mechanism."
     validation = summary_dict.get("validation_dynamics", [])
     if validation:
         dynamics += "\n\nValidation trajectory (never used test data):\n\n" + _table(
             ("Validation observation", "Hypothesis accuracy (%)", "ECE", "Optimizer step"),
-            [(index, _value(percent(event.get("eval_hypothesis_accuracy"))), _value(event.get("eval_ece"), 4), event.get("step", "endpoint"))
+            [(index, _value(percent(event.get("eval_hypothesis_accuracy"))), _value(None if event.get("eval_ece_eligible_triplets") == 0 else event.get("eval_ece"), 4), event.get("step", "endpoint"))
              for index, event in enumerate(validation)])
     else:
         dynamics += "\n\nC1/C2 validation training curves are unassessable in this run."

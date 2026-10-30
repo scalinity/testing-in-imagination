@@ -122,6 +122,14 @@ def test_full_synthetic_shell_run_and_deterministic_resume(tmp_path, monkeypatch
     assert again.stdout.count("RESUMED") == 7
     after = {str(p.relative_to(work)): file_digest(p) for p in work.rglob("*") if p.is_file() and "locks" not in p.relative_to(work).parts}
     assert before == after
+    manifest = work / "manifests/s0.json"
+    original_manifest = manifest.read_bytes()
+    changed = json.loads(original_manifest)
+    changed["git_sha"] = "f" * 40
+    manifest.write_text(json.dumps(changed))
+    provenance = subprocess.run(["bash", str(OWN / "scripts/stage.sh"), "s6"], env=env, capture_output=True, text=True, timeout=60)
+    assert provenance.returncode != 0 and "changed artifact" in provenance.stderr
+    manifest.write_bytes(original_manifest)
     # Direct S6 admission must validate the earlier baseline's owning receipt.
     baseline = work / "episodes/parity/269/zero_shot-test.json"
     original = baseline.read_bytes()

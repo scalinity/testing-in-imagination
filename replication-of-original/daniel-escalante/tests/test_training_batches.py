@@ -77,3 +77,21 @@ def test_independent_objective_batches_match_reference_gradient(count, phase):
     (4 * mean).backward()
     assert parameter.grad.item() == pytest.approx(reference.grad.item())
     assert loss.item() == pytest.approx(mean.item())
+
+
+def test_checkpoint_restores_actual_environment_pair_rng(tmp_path):
+    from replication.gpu import _environment_rng_callback, _restore_environment_rng
+    from replication.shim import prepare_environment
+    environment = prepare_environment(compose())
+    patients = [SimpleNamespace(hypothesis=["appendicitis", "cholecystitis", "pancreatitis"],
+                               hypothesis_prompt=["invented A", "invented B", "invented C"])]
+    for _ in range(13):
+        environment._sample_pair(patients)
+    callback = _environment_rng_callback(object, environment, "synthetic")
+    callback.on_save(SimpleNamespace(output_dir=str(tmp_path)), SimpleNamespace(global_step=13), None)
+    expected = [environment._sample_pair(patients) for _ in range(30)]
+    restored = prepare_environment(compose())
+    _restore_environment_rng(restored, tmp_path / "checkpoint-13", "synthetic")
+    assert [restored._sample_pair(patients) for _ in range(30)] == expected
+    with pytest.raises(RuntimeError, match="lacks the environment RNG"):
+        _restore_environment_rng(restored, tmp_path / "missing", "synthetic")

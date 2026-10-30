@@ -20,6 +20,7 @@ import types
 from typing import Callable
 
 import pandas as pd
+from pandas._libs.parsers import STR_NA_VALUES
 from sklearn.model_selection import train_test_split
 
 
@@ -464,13 +465,13 @@ def prepare_splits(
         frame["Patient History Summary"] = summaries
         # The upstream parser only fills unavailable lab/imaging tests itself.
         frame["Physical Examination"] = frame["Physical Examination"].map(
-            lambda value: value if value.strip() else "not available.\n"
+            lambda value: value if value.strip() and value.strip() not in STR_NA_VALUES else "not available.\n"
         )
         frame.to_csv(output_dir / f"{split}.csv", index=False)
         frames[split] = frame
     audit = {"raw": raw_audit, "split_seed": SPLIT_SEED, "summarizer": summary_kind,
              "primary": assert_disjoint(output_dir),
-             "compatibility_transformations": ["Empty physical-examination strings become the upstream not-available sentinel before CSV parsing; the upstream parser otherwise reads empty CSV cells as non-string NaN."]}
+             "compatibility_transformations": ["Physical-examination strings recognized as missing by the pinned CSV parser become the upstream not-available sentinel; its default NA recognition would otherwise produce non-string NaN."]}
     paths["grouped"] = {}
     if raw_audit["subjects"]["status"] == "assessable":
         grouped, method = _grouped_frames(pd.concat(frames.values(), ignore_index=True))

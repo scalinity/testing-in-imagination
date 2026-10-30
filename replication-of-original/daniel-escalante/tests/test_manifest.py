@@ -37,6 +37,15 @@ def test_metrics_reuse_shared_writer_without_mutating_it(tmp_path):
         stamp_metrics("invalid", {}, "fixture", tmp_path)
 
 
+def test_export_uses_recorded_run_revision_without_querying_live_checkout(tmp_path, monkeypatch):
+    from replication.config import UPSTREAM_SHA
+    def unexpected(*args, **kwargs):
+        raise AssertionError("historical export must not query the current checkout")
+    monkeypatch.setattr(subprocess, "run", unexpected)
+    path = stamp_metrics("historical", {"upstream_sha": UPSTREAM_SHA}, "synthetic", tmp_path, run_upstream_sha=UPSTREAM_SHA)
+    assert json.loads(path.read_text())["upstream_sha"] == UPSTREAM_SHA
+
+
 @pytest.mark.parametrize("value", [{"patient_id": 1}, {"nested": [{"subject_id": 2}]}, {"patient_history": "invented"}, {"Physical Examination": "invented clinical narrative"}, {"rows": []}])
 def test_aggregate_export_rejects_patient_fields(value):
     with pytest.raises(ValueError):

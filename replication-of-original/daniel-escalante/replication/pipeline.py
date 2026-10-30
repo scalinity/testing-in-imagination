@@ -63,6 +63,9 @@ def _receipt(settings, stage):
     for output, expected in receipt["outputs"].items():
         if not Path(output).is_file() or file_digest(Path(output)) != expected:
             raise RuntimeError(f"completed stage {stage} has a missing or changed artifact")
+    manifest_path = settings.work_dir / "manifests" / f"{stage}.json"
+    if str(manifest_path) not in receipt["outputs"] or read_json(manifest_path)["manifest_id"] != receipt["manifest_id"]:
+        raise RuntimeError("stored stage manifest is not bound to its receipt")
     return receipt
 
 
@@ -173,7 +176,7 @@ def _saved_evaluation(settings, arm, protocol, seed, split="test", adapter_dir=N
     manifest = make_manifest(settings, f"evaluation-{protocol}-{seed}-{arm}-{split}", cfg_for(settings, arm, protocol, seed), inputs)
     if receipt_path.exists():
         receipt = read_json(receipt_path)
-        if receipt["manifest_id"] != manifest["manifest_id"] or not path.exists() or file_digest(path) != receipt["sha256"]:
+        if receipt["manifest_id"] != manifest["manifest_id"] or not path.exists() or file_digest(path) != receipt["sha256"] or not manifest_path.exists() or file_digest(manifest_path) != receipt["manifest_sha256"]:
             raise RuntimeError("evaluation receipt or final model changed; preserve this run and use a fresh work directory")
         return [path, manifest_path, receipt_path]
     if path.exists() or manifest_path.exists():
@@ -181,7 +184,7 @@ def _saved_evaluation(settings, arm, protocol, seed, split="test", adapter_dir=N
     write_json(manifest_path, manifest)
     rows = _evaluate(settings, arm, protocol, seed, split, adapter_dir)
     private_write(path, rows, settings.source)
-    write_json(receipt_path, {"source": settings.source, "manifest_id": manifest["manifest_id"], "sha256": file_digest(path)})
+    write_json(receipt_path, {"source": settings.source, "manifest_id": manifest["manifest_id"], "sha256": file_digest(path), "manifest_sha256": file_digest(manifest_path)})
     return [path, manifest_path, receipt_path]
 
 
@@ -336,7 +339,7 @@ def s6(settings):
                 "gaps": ["Local compatibility changes: " + text for text in COMPATIBILITY_DEVIATIONS] +
                          ["Packaging: no upstream lockfile; same-version xgrammar source build is pinned in the local lock.",
                           "A paper delta treats the published value as fixed; its interval does not incorporate unknown paper-run uncertainty.",
-                          "Empty physical-examination strings become the existing unavailable sentinel before CSV parsing, avoiding non-string NaN observations.",
+                          "Physical-examination CSV missing-value literals become the existing unavailable sentinel, avoiding non-string NaN observations.",
                           "Primary parity admissions may share subjects with training; the grouped protocol tests sensitivity to that leakage."]}
             path = render_report(report_input, settings.work_dir / "reports" / f"{protocol}-{seed}.md", source=settings.source)
             outputs.append(path)
@@ -392,6 +395,7 @@ def run_stage(settings, stage, dry_run=False):
         started_at = eastern_now()
         try:
             outputs = globals()[stage](settings)
+            outputs.append(manifest_path)
             receipt = {"source": settings.source, "stage": stage, "manifest_id": manifest["manifest_id"],
                        "status": "PASS", "started_at": started_at, "finished_at": eastern_now(),
                        "previous_receipt_id": inputs.get("previous_stage"),
@@ -414,7 +418,7 @@ def export_aggregates(settings):
         raise ValueError("aggregate export does not match the expected result structure")
     assert_aggregate(value)
     destination = OWN / "results" / settings.source
-    stamp_metrics("metrics", value, settings.source, destination)
+    stamp_metrics("metrics", value, settings.source, destination, run_upstream_sha=value["upstream_sha"])
     shutil.copyfile(settings.work_dir / "REPORT.md", destination / "REPORT.md")
     print(f"aggregate-only results exported: {destination}")
 

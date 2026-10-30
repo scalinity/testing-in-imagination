@@ -93,8 +93,10 @@ direct reference for 1/3/8/11 hypothesis examples. The phase is fixed for each
 optimizer update, giving exactly 100/100/100; upstream switches on the final
 microbatch at a phase boundary. Saved global_step restores phase on resume.
 Inactive objectives skip unused forwards, changing dropout RNG consumption relative
-to upstream. Inference weight-transfer errors propagate. Empty physical-examination
-strings become the existing unavailable sentinel before CSV parsing. F-1–F-4 remain
+to upstream. Inference weight-transfer errors propagate. Physical-examination CSV
+missing-value literals become the existing unavailable sentinel. Checkpoints save
+the environment's independent confidence-pair RNG. Out-of-range generated confidence
+is retained for hypothesis accuracy and excluded from ECE as upstream specifies. F-1–F-4 remain
 unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
 
 ## Implementation ownership

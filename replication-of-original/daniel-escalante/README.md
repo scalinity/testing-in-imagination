@@ -125,6 +125,9 @@ arm's actual config. Completed artifacts are hash checked before resume; an
 interrupted evaluation after admission is left for inspection, because blindly
 replaying it would violate the once-only test protocol. An interrupted training
 run resumes from its owned checkpoints. Failures stay in the ledger.
+Each checkpoint includes the environment's separate confidence-pair RNG state.
+Continuation refuses a checkpoint without that state rather than restarting its
+sampling stream.
 Kernel advisory locks release ownership after scheduler termination; no stale PID
 file needs to be removed to resume training. Evaluation admission markers remain
 separate and preserve the once-only test rule after interruption.
@@ -169,8 +172,11 @@ requested 100/100/100 updates; upstream changes phase on the last microbatch of 
 boundary update. The phase derives from saved optimizer-step count on resume.
 Inactive objectives do not run extra forwards, which changes dropout RNG use from
 the broken upstream batching path. Weight-transfer failures propagate explicitly.
-Empty physical-examination strings become the existing unavailable-test sentinel
-before CSV parsing, preventing a non-string NaN from being treated as test text.
+Physical-examination strings recognized as missing by the pinned CSV parser
+(including empty strings, `N/A` and `NULL`) become the existing unavailable-test
+sentinel, preventing a non-string NaN from being treated as test text. Finite
+out-of-range model confidences stay in hypothesis observations and are counted;
+upstream excludes them from ECE without dropping patients or clamping values.
 These changes preserve F-1–F-4 and the shipped primary reward. CUDA numerical
 qualification of the repaired training path remains outstanding.
 

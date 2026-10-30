@@ -98,6 +98,24 @@ def test_mock_runs_upstream_and_preserves_missing_test_cost(cfg):
     assert shim.evaluate_dataset(cfg, [patient(cfg)], "test", 269, trained=True) == [row]
 
 
+def test_actual_out_of_range_hypothesis_confidence_does_not_drop_patient(cfg):
+    from replication.stats import summary
+    class HighConfidence(shim.MockPolicy):
+        def generate(self, prompts, **kwargs):
+            outputs = super().generate(prompts, **kwargs)
+            for output in outputs:
+                response = output.outputs[0]
+                response.text = response.text.replace("Confidence: 7", "Confidence: 11")
+                response.token_ids = self.tokenizer.encode(response.text) + [self.tokenizer.eos_token_id]
+            return outputs
+    rows = shim._evaluate_with_model(cfg, [patient(cfg)], HighConfidence(), shim.generation_settings(False))
+    assert all(triplet[1] == 1.1 for triplet in rows[0]["ece_triplets"])
+    measured = summary(rows, cfg)
+    assert measured["n"] == 1 and measured["hypothesis"]["accuracy"] == 1
+    assert measured["hypothesis"]["invalid_confidence_count"] > 0
+    assert measured["hypothesis"]["ece"] is None
+
+
 def test_no_label_leak_and_identical_arm_policies(cfg):
     before, = shim.evaluate_dataset(cfg, [patient(cfg)], "test", 269)
     changed, = shim.evaluate_dataset(cfg, [patient(cfg, condition="pancreatitis")], "test", 269)
@@ -191,6 +209,7 @@ def fake_loaders(monkeypatch):
     transformers = ModuleType("transformers")
     transformers.AutoModelForCausalLM = Model
     transformers.AutoTokenizer = Tokenizer
+    transformers.TrainerCallback = type("TrainerCallback", (), {})
     vllm = ModuleType("vllm")
     vllm.LLM = LLM
     trainer = ModuleType("src.trainer.cdm_grpo_trainer")
@@ -300,6 +319,11 @@ def test_train_uses_adam_fixed_budget_train_val_only_and_resume(
     transformers.set_seed = lambda seed: events.update(seed=seed)
     trainer_utils = ModuleType("transformers.trainer_utils")
     trainer_utils.get_last_checkpoint = lambda path: str(tmp_path / "checkpoint-3")
+    import json
+    import random
+    checkpoint = tmp_path / "checkpoint-3"
+    checkpoint.mkdir()
+    (checkpoint / "environment-rng.json").write_text(json.dumps({"source": "mimic", "rng_state": random.Random(269).getstate()}))
     monkeypatch.setitem(sys.modules, "transformers.trainer_utils", trainer_utils)
     vllm.SamplingParams = lambda **kwargs: SimpleNamespace(**kwargs)
     upstream_trainer.CDMGRPOTrainer = object

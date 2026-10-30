@@ -106,7 +106,7 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
              "inputs": inputs, "dry_run": dry_run, "wandb_run_ids": [],
              "bootstrap_resamples": settings.bootstrap_resamples}
     value["local_compatibility_deviations"] = COMPATIBILITY_DEVIATIONS + [
-        "Empty physical-examination strings become the upstream not-available sentinel before CSV parsing.",
+        "Physical-examination CSV missing-value literals become the upstream not-available sentinel before parsing.",
         "The absent xgrammar 0.1.16 package release is sourced from its publisher's immutable same-version commit.",
     ]
     # Observations document the launch, while immutable code/config/lock/input
@@ -135,7 +135,7 @@ def stage_lock(work_dir: Path, stage: str):
         os.close(fd)
 
 
-def stamp_metrics(name: str, metrics: dict, source: str, out_dir: Path, written_at=None):
+def stamp_metrics(name: str, metrics: dict, source: str, out_dir: Path, written_at=None, run_upstream_sha=None):
     if source not in ("synthetic", "mimic"):
         raise ValueError("metrics require an explicit synthetic or mimic source")
     # A private module instance extends the source vocabulary without changing shared code.
@@ -143,6 +143,10 @@ def stamp_metrics(name: str, metrics: dict, source: str, out_dir: Path, written_
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.SOURCES = ("synthetic", "mimic")
+    recorded_sha = run_upstream_sha or metrics.get("upstream_sha", UPSTREAM_SHA)
+    if recorded_sha != UPSTREAM_SHA or metrics.get("upstream_sha", recorded_sha) != recorded_sha:
+        raise ValueError("exported upstream identity must match the completed pinned run")
+    module.upstream_sha = lambda: recorded_sha
     path = module.write_metrics(name, metrics, source, out_dir=out_dir)
     payload = json.loads(path.read_text())
     payload["label"] = LABEL

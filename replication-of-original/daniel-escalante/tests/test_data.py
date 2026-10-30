@@ -72,6 +72,25 @@ def test_default_mix_missing_tests_and_repeated_subjects(tmp_path):
     assert not audit["count_guard"]["enforced"]
 
 
+@pytest.mark.parametrize("missing", ["N/A", "NULL", "NaN", "None", ""])
+def test_csv_missing_exam_literals_remain_upstream_unavailable(raw, tmp_path, cfg, missing):
+    from replication.config import compose
+    from replication.shim import prepare_environment, MockTokenizer, _environment_module
+    for condition in CLASSES:
+        path, records = _raw_records(raw, condition)
+        for record in records.values():
+            record["Physical Examination"] = missing
+        _rewrite(path, records)
+    output = tmp_path / "prepared-na"
+    prepare_splits(raw, output)
+    item = load_dataset(output, "test", cfg)[0]
+    assert item["test_results"]["Physical Examination"] == "not available.\n"
+    trajectory = _environment_module().Trajectory("invented history", item["test_results"], item["patient_history"])
+    trajectory.last_completion = "Thought: Examine the patient.\nAction: Test\nAction Input: Physical Examination\n"
+    prepare_environment(compose()).step(trajectory, 0, MockTokenizer())
+    assert trajectory.error is True and trajectory.provided_tests == []
+
+
 def test_generation_and_all_split_bytes_are_deterministic(tmp_path):
     first = generate_synthetic(tmp_path / "raw1", seed=37, n=240)
     second = generate_synthetic(tmp_path / "raw2", seed=37, n=240)

@@ -22,6 +22,7 @@ COMPATIBILITY_DEVIATIONS = [
     "Loss phase is fixed for each optimizer update: exactly 100/100/100 updates; upstream switches on the final microbatch of the boundary update. Phase derives from saved global_step on resume.",
     "Policy-to-inference weight transfer errors are propagated instead of suppressed upstream.",
     "Inactive loss objectives skip unused forwards; dropout RNG consumption differs from the broken upstream minibatch path.",
+    "Checkpoint sidecars preserve the environment's independent confidence-pair RNG; standard framework RNG files do not contain it.",
 ]
 
 
@@ -73,6 +74,28 @@ def _sampling(vllm, cfg, training, seed):
         max_tokens=cfg.training.max_completion_length,
         stop=["Observation:"], include_stop_str_in_output=False,
     )
+
+
+def _restore_environment_rng(environment, checkpoint, source):
+    path = Path(checkpoint) / "environment-rng.json"
+    if not path.is_file():
+        raise RuntimeError("checkpoint lacks the environment RNG state; continuation would not be reproducible")
+    payload = json.loads(path.read_text())
+    if payload.get("source") != source:
+        raise ValueError("checkpoint RNG data source differs from this run")
+    def tuples(value):
+        return tuple(tuples(item) for item in value) if isinstance(value, list) else value
+    environment._rng.setstate(tuples(payload["rng_state"]))
+
+
+def _environment_rng_callback(base, environment, source):
+    class EnvironmentRNGCallback(base):
+        def on_save(self, args, state, control, **kwargs):
+            path = Path(args.output_dir) / f"checkpoint-{state.global_step}" / "environment-rng.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({"source": source, "rng_state": environment._rng.getstate()}) + "\n")
+            return control
+    return EnvironmentRNGCallback()
 
 
 @contextmanager
@@ -240,6 +263,8 @@ def _trainer_class(base, cfg, seed):
                 values = calculate_classification_metrics(
                     self.eval_preds, self.eval_labels, self.eval_ece_triplets)
                 metrics = {f"{metric_key_prefix}_{name}": value for name, value in values.items()}
+                metrics[f"{metric_key_prefix}_hypothesis_triplets"] = len(self.eval_ece_triplets)
+                metrics[f"{metric_key_prefix}_ece_eligible_triplets"] = sum(h not in (None, "unknown") and confidence is not None and 0 <= confidence <= 1 for h, confidence, _ in self.eval_ece_triplets)
                 self.log(metrics)
                 self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, metrics)
                 return metrics
@@ -284,18 +309,22 @@ def train(cfg, output_dir, data_dir, seed):
             optimizer = torch.optim.Adam((p for p in model.parameters() if p.requires_grad),
                                          lr=cfg.training.learning_rate)
             trainer_type = _trainer_class(upstream.CDMGRPOTrainer, cfg, seed)
+            environment = prepare_environment(cfg)
             trainer = trainer_type(
                 model=model, args=args, train_dataset=train_data, eval_dataset=val_data,
-                processing_class=tokenizer, environment=prepare_environment(cfg),
+                processing_class=tokenizer, environment=environment,
                 reward_funcs=setup.prepare_reward_functions(cfg),
                 conf_cal_reward_func=setup.prepare_conf_cal_reward_func(cfg),
                 loss_type=cfg.training.loss_type, loss_schedule=cfg.training.loss_schedule,
                 test_costs_usd=dict(cfg.evaluation.test_costs_usd), optimizers=(optimizer, None),
+                callbacks=[_environment_rng_callback(transformers.TrainerCallback, environment, "mimic")],
             )
             vllm = import_module("vllm")
             trainer.sampling_params = _sampling(vllm, cfg, True, seed)
             trainer._last_loaded_step = -1
             checkpoint = import_module("transformers.trainer_utils").get_last_checkpoint(str(output_dir))
+            if checkpoint:
+                _restore_environment_rng(environment, checkpoint, "mimic")
             initial_path = output_dir / "initial-validation.json"
             if initial_path.exists():
                 initial_val_metrics = json.loads(initial_path.read_text())

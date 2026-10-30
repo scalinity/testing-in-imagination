@@ -71,7 +71,9 @@ def _validate(rows, cfg):
             if hypothesis not in (*CLASSES, "unknown", None) or label != row["label"]:
                 raise ValueError("triplet must use a valid hypothesis and the patient label")
             if confidence is not None:
-                _number(confidence, "confidence", 0, 1)
+                # Model-generated finite out-of-range values are observations,
+                # not corrupt rows. Upstream excludes them from ECE only.
+                _number(confidence, "confidence")
     return rows, costs
 
 
@@ -93,7 +95,7 @@ def _calculate(rows, costs):
     repeated_cost = [requested_cost - provided_cost - missing_cost
                      for requested_cost, provided_cost, missing_cost in zip(requested, provided, unavailable_cost)]
     claims["T8"] = float(np.mean(provided))
-    eligible = sum(h not in (None, "unknown") and p is not None for h, p, _ in triplets)
+    eligible = sum(h not in (None, "unknown") and p is not None and 0 <= p <= 1 for h, p, _ in triplets)
     return {
         "n": len(rows), "upstream": upstream, "claims": claims,
         "pooled_accuracy": 100 * upstream["all/accuracy"],
@@ -102,6 +104,7 @@ def _calculate(rows, costs):
             "accuracy": upstream["hypothesis_accuracy"] if triplets else None,
             "ece": upstream["ece"] if eligible else None,
             "unknown_fraction": upstream["unknown_hypothesis_fraction"] if triplets else None,
+            "invalid_confidence_count": sum(p is not None and not 0 <= p <= 1 for _, p, _ in triplets),
         },
         "cost": {
             "provided_mean_usd": claims["T8"], "provided_total_usd": float(sum(provided)),

@@ -80,11 +80,23 @@ def test_unknowns_count_for_hypothesis_accuracy_but_not_ece(rows, cfg):
     assert result["hypothesis"]["ece"] is None
 
 
-@pytest.mark.parametrize("confidence", [-.1, 1.1, float("nan"), float("inf"), "0.5", True])
+@pytest.mark.parametrize("confidence", [float("nan"), float("inf"), "0.5", True])
 def test_invalid_probabilities_rejected(rows, cfg, confidence):
     rows[0]["ece_triplets"][0] = ("appendicitis", confidence, "appendicitis")
     with pytest.raises(ValueError):
         summary(rows, cfg)
+
+
+@pytest.mark.parametrize("confidence", [-.1, 1.1])
+def test_out_of_range_generated_confidence_is_retained_but_not_calibrated(rows, cfg, confidence):
+    for row in rows:
+        row["ece_triplets"] = [(row["label"], confidence, row["label"])]
+    result = summary(rows, cfg)
+    assert result["n"] == len(rows)
+    assert result["hypothesis"]["accuracy"] == 1
+    assert result["hypothesis"]["invalid_confidence_count"] == len(rows)
+    assert result["hypothesis"]["ece_triplet_count"] == 0
+    assert result["hypothesis"]["ece"] is None
 
 
 def test_empty_duplicate_invalid_and_missing_cost_rows_rejected(rows, cfg):
