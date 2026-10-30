@@ -91,6 +91,7 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
     value = {"schema_version": 1, "stage": stage, "source": settings.source,
              "label": LABEL, "execution": "mock" if settings.mock else "cuda",
              "git_sha": command(["git", "-C", str(ROOT), "rev-parse", "HEAD"]),
+             "git_dirty": bool(command(["git", "-C", str(ROOT), "status", "--porcelain", "--", str(OWN.relative_to(ROOT))])),
              "source_fingerprint": source_fingerprint(), "upstream_sha": upstream,
              "model": MODEL, "model_revision": REVISION, "split_seed": 269,
              "training_seeds": list(settings.seeds), "rng_scheme": "sha256(seed,split,stage)",
@@ -155,29 +156,40 @@ def assert_aggregate(value):
             assert_aggregate(item)
 
 
-def tracked_data_violations() -> list[str]:
-    output = command(["git", "-C", str(ROOT), "ls-files", "-z", "--", str(OWN.relative_to(ROOT))])
+def tracked_data_violations(root=ROOT, own=OWN) -> list[str]:
+    root, own = Path(root), Path(own)
+    output = command(["git", "-C", str(root), "ls-files", "-z", "--", str(own.relative_to(root))])
     violations = []
     for relative in output.split("\0"):
         if not relative:
             continue
-        path = ROOT / relative
+        path = root / relative
         suffix = path.suffix.lower()
         reason = None
         if suffix in (".pkl", ".pickle", ".parquet", ".jsonl", ".safetensors", ".pt", ".pth", ".bin"):
             reason = "data or weights suffix"
         elif path.name.startswith(".env") and path.name != ".env.example":
             reason = "private configuration"
-        elif suffix == ".csv":
-            if path.stat().st_size > 4096:
+        # Inspect the index as well as the working file: staged data must not escape
+        # detection merely because the working copy was replaced with an empty file.
+        indexed = subprocess.run(["git", "-C", str(root), "show", f":{relative}"], capture_output=True, check=False)
+        contents = [indexed.stdout] if indexed.returncode == 0 else []
+        if path.is_file():
+            contents.append(path.read_bytes())
+        for content in contents:
+            if content[:4] == b"PAR1" or content[:2] in (b"\x80\x04", b"\x80\x05"):
+                reason = "data format signature"
+            if suffix in (".csv", ".tsv") and len(content) > 4096:
                 reason = "CSV exceeds 4 KiB"
-            elif any(key in path.read_text().splitlines()[0].lower() for key in FORBIDDEN_KEYS):
+            text = content.decode("utf-8", errors="replace")
+            first = text.splitlines()[0].lower() if text.splitlines() else ""
+            if suffix not in (".py", ".md", ".toml", ".lock", ".sh", ".slurm") and any(key in first for key in FORBIDDEN_KEYS) and ("," in first or "\t" in first):
                 reason = "patient columns"
-        elif suffix == ".json":
-            try:
-                assert_aggregate(json.loads(path.read_text()))
-            except ValueError:
-                reason = "patient-level JSON"
+            if suffix == ".json":
+                try:
+                    assert_aggregate(json.loads(text))
+                except ValueError:
+                    reason = "patient-level JSON"
         if reason:
             violations.append(f"{relative}: {reason}")
     return violations

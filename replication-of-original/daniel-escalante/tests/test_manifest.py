@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -44,3 +45,19 @@ def test_aggregate_export_rejects_patient_fields(value):
 
 def test_no_tracked_data():
     assert tracked_data_violations() == []
+
+
+def test_staged_patient_rows_and_renamed_binary_data_are_detected(tmp_path):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    own = tmp_path / "replication"
+    own.mkdir()
+    path = own / "innocent.txt"
+    path.write_text("hadm_id,subject_id,patient_history\n1,2,invented\n")
+    binary = own / "renamed.dat"
+    binary.write_bytes(b"PAR1" + b"\0" * 20)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "replication"], check=True)
+    path.write_text("empty working copy")
+    violations = tracked_data_violations(root=tmp_path, own=own)
+    assert len(violations) == 2
+    assert any("patient columns" in item for item in violations)
+    assert any("data format signature" in item for item in violations)

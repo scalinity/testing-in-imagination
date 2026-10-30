@@ -16,6 +16,9 @@ metrics and the write-up may be exported to `results/`.
   the fully composed upstream Hydra configuration. The pin has no `uv.lock`:
   generate a local runtime project from its exact dependency declarations, lock
   it locally and use `uv sync --frozen` there; never change upstream.
+  The index no longer serves `xgrammar==0.1.16`; retain that exact version using
+  publisher source commit `989222175c2a30fb7987d8bcce35bec1bf6817f2` in the local lock.
+  Source-build installation on HiPerGator remains unverified.
 - S1 validates raw files before GPU admission; invokes upstream seed-269 splitter,
   copies/converts the lab mapping, summarizes HPI with the explicit approved model,
   and builds a separate subject-grouped sensitivity split when subject IDs exist.
