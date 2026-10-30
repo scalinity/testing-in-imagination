@@ -193,4 +193,25 @@ check, never a clinical or paper-matching result.
 
 | Date | Person | Upstream commit | Model | Config | Seed | Dataset version | Metric | Value | Paper value | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Pending qualification | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary + ablations, parity + grouped | 269 | synthetic | default-population S0–S6 | NOT_RUN | n/a | 120-admission shell integration and 232 tests passed; no learned weights |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, grouped | 269 | synthetic (2,400 raw) | T5: Mean of four class recalls | 25 | 81.3 | SYNTHETIC mock; 95% CI [25.000000, 25.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, grouped | 269 | synthetic (2,400 raw) | T8: Average provided-test cost | 979.367089 | 1295.61 | SYNTHETIC mock; 95% CI [894.620234, 1064.108022]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T1: Appendicitis recall | 100 | 93.1 | SYNTHETIC mock; 95% CI [100.000000, 100.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T2: Cholecystitis recall | 0 | 83.6 | SYNTHETIC mock; 95% CI [0.000000, 0.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T3: Diverticulitis recall | 0 | 75.0 | SYNTHETIC mock; 95% CI [0.000000, 0.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T4: Pancreatitis recall | 0 | 73.5 | SYNTHETIC mock; 95% CI [0.000000, 0.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T5: Mean of four class recalls | 25 | 81.3 | SYNTHETIC mock; 95% CI [25.000000, 25.000000]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T6: Micro F1 | 40 | 84.1 | SYNTHETIC mock; 95% CI [39.506173, 40.336134]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T7: Macro F1 | 14.285714 | 81.3 | SYNTHETIC mock; 95% CI [14.159292, 14.371257]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T8: Average provided-test cost | 1037.866667 | 1295.61 | SYNTHETIC mock; 95% CI [954.023237, 1117.478992]; no weight updates |
+| 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | zero_shot, parity | 269 | synthetic (2,400 raw) | B1: mean class recall | 25.0 | 64.5 | SYNTHETIC mock; no trained baseline or learning claim |
+
+Verification: **242 tests passed**, including all 83 existing tests in `lacdm/tests`.
+The default-population synthetic run completed S0–S6 on committed code
+`e56e0de83444b0c5925dc3f1ed436323d2540024`. Both protocols ran all five arms with
+10,000 paired resamples. The parity test set has 240 admissions; the grouped test
+set has 237. The parity audit found 175 subjects shared across at least two splits
+(80 shared between train and test); the grouped audit found zero subject overlap.
+No learning, CUDA execution or clinical result is established by this run.
+
+Aggregate artifacts: [report](results/synthetic/REPORT.md) and
+[full-precision metrics](results/synthetic/metrics.json).
