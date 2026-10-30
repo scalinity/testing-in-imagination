@@ -82,6 +82,21 @@ checks explicitly.
 - A source-only implementation can close wiring blockers, not establish CUDA numerical
   acceptance. No synthetic result will be called a reproduced paper result.
 
+## Local compatibility repairs
+
+Every manifest lists the repairs rather than implying stock execution. Evaluation
+runs singleton episodes to avoid first-patient labels being assigned across a batch.
+Deduplicated hypothesis SFT examples have independent batch-two forwards and immediate
+backwards, with a token-weighted whole-group objective at the upstream summed
+microbatch gradient scale. CPU tensor tests compare the loss and gradients with a
+direct reference for 1/3/8/11 hypothesis examples. The phase is fixed for each
+optimizer update, giving exactly 100/100/100; upstream switches on the final
+microbatch at a phase boundary. Saved global_step restores phase on resume.
+Inactive objectives skip unused forwards, changing dropout RNG consumption relative
+to upstream. Inference weight-transfer errors propagate. Empty physical-examination
+strings become the existing unavailable sentinel before CSV parsing. F-1–F-4 remain
+unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
+
 ## Implementation ownership
 
 `replication/config.py`, `manifest.py`, `pipeline.py`, shell/SLURM entry points and

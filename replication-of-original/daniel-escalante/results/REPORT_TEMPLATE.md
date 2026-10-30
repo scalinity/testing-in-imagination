@@ -4,6 +4,10 @@ ${banner}
 
 ${scope}
 
+## Setup and deviations
+
+${setup}
+
 ## T1–T8: held-out metrics
 
 ${main_table}

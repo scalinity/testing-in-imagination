@@ -86,6 +86,16 @@ def render_report(summary_dict, output_path, source):
     scope = (f"Every observed result below is a **{LABEL}** ({source}). "
              "Paper references come only from `REPRODUCTION.md`; no matching tolerance or reproduction verdict is inferred. "
              "Reported values alone do not verify data access, model revision, training completion or CUDA acceptance.")
+    setup = (f"Source: **{source}**. Policy and HPI summarizer: `{_text(run.get('backbone', 'unreported'))}`. "
+             f"Revision: `{_text(run.get('revision', 'unreported'))}`. Code commit: `{_text(run.get('git_sha', 'unreported'))}`. "
+             f"Upstream: `{_text(run.get('upstream_sha', 'unreported'))}`.\n\n"
+             "D-5 is a backbone deviation and D-3 replaces the paper's summarizer with that same pinned backbone. "
+             "D-1 keeps incorrect reward 0 in the primary run and −1 only in its named ablation. "
+             "D-2 includes the $300 physical exam in the twelve-test inventory. "
+             "Configured common budgets are 14 actions, 256 tokens per completion and 4,096 trajectory tokens; "
+             "training uses eight sampled rollouts and batch-two forwards, while validation and test generation are greedy. "
+             "All local compatibility repairs are enumerated under Honest gaps. "
+             + ("This run used an observation-only mock policy, fake HPI summaries and no weight updates." if source == "synthetic" else "CUDA training/evaluation were requested; inspect the recorded hardware and successful stage receipts before accepting these as completed runs."))
     rows = []
     for claim, reference in paper["table1"].items():
         value = primary.get("claims", {}).get(claim)
@@ -127,6 +137,14 @@ def render_report(summary_dict, output_path, source):
                  f"{_value(after.get('ece_triplet_count'), 0)} eligible for ECE ({result_label}).")
     if source == "synthetic":
         dynamics += " Synthetic comparisons demonstrate wiring only; they do not establish training improvement or a scientific mechanism."
+    validation = summary_dict.get("validation_dynamics", [])
+    if validation:
+        dynamics += "\n\nValidation trajectory (never used test data):\n\n" + _table(
+            ("Validation observation", "Hypothesis accuracy (%)", "ECE", "Optimizer step"),
+            [(index, _value(percent(event.get("eval_hypothesis_accuracy"))), _value(event.get("eval_ece"), 4), event.get("step", "endpoint"))
+             for index, event in enumerate(validation)])
+    else:
+        dynamics += "\n\nC1/C2 validation training curves are unassessable in this run."
     ablation_rows = []
     for arm, meaning in (("primary", "incorrect reward 0 (shipped primary)"), ("decision_only", "hypothesis/confidence agents disabled"),
                          ("no_cost", "cost reward disabled; USD costs still measured"), ("incorrect_minus1", "incorrect reward −1 (ablation)")):
@@ -215,7 +233,7 @@ def render_report(summary_dict, output_path, source):
     gaps_list.extend(summary_dict.get("gaps", []))
     gaps = "\n".join("- " + _text(item) for item in gaps_list)
     text = Template((RESULTS / "REPORT_TEMPLATE.md").read_text()).substitute(
-        banner=banner, scope=scope, main_table=main_table, metric_notes=metric_notes, baselines=baselines,
+        banner=banner, scope=scope, setup=setup, main_table=main_table, metric_notes=metric_notes, baselines=baselines,
         dynamics=dynamics, ablations=ablations, significance=significance, leakage=leakage,
         cost=cost, environment_notes=environment_notes, implementation=implementation, gaps=gaps)
     output_path = Path(output_path)
