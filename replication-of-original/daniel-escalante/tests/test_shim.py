@@ -310,6 +310,7 @@ def test_train_uses_adam_fixed_budget_train_val_only_and_resume(
     class Trainer:
         def __init__(self, **kwargs):
             events["trainer_kwargs"] = kwargs
+            self.state = SimpleNamespace(log_history=[])
 
         def train(self, **kwargs):
             events["resume"] = kwargs
@@ -336,7 +337,7 @@ def test_train_uses_adam_fixed_budget_train_val_only_and_resume(
     assert events["trainer_kwargs"]["optimizers"] == (optimizer, None)
     assert weights.peft_config["default"].revision == "a" * 40
     assert result["selection"]["method"] == "fixed_budget"
-    assert result["wandb_ids"] == ["fixture-run-id"]
+    assert result["wandb_run_ids"] == ["fixture-run-id"]
     assert events["finish"] == {"exit_code": 0}
 
 
@@ -457,7 +458,7 @@ def test_schedule_has_full_hundred_step_phases_and_resume(cfg):
     assert gpu._phase_weights(phases, 300)[0]["da_loss_weight"] == 1
 
 
-def test_ha_shape_blocker_is_explicit(cfg):
+def test_ha_examples_keep_their_independent_count(cfg):
     class Base:
         def _prepare_inputs(self, inputs):
             return {"prompt_ids": SimpleNamespace(shape=(8, 10)),
@@ -466,8 +467,7 @@ def test_ha_shape_blocker_is_explicit(cfg):
     trainer = gpu._trainer_class(Base, cfg, 269)()
     trainer.args = SimpleNamespace(num_generations=8)
     trainer.environment = SimpleNamespace(generate_hypothesis=True)
-    with pytest.raises(RuntimeError, match="3 deduplicated HA examples for 8 DA rollouts"):
-        trainer._prepare_inputs(None)
+    assert trainer._prepare_inputs(None)["ha_prompt_label_ids"].shape[0] == 3
 
 
 def test_wrong_models_and_mutable_revisions_rejected():

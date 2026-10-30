@@ -16,6 +16,14 @@ from replication.shim import (
     pinned_loaders, prepare_environment, validate_model,
 )
 
+COMPATIBILITY_DEVIATIONS = [
+    "Singleton validation/evaluation prevents upstream inputs[0] label reuse across patients.",
+    "HA SFT examples are batched independently, without dropping deduplicated examples; token-weighted group loss retains upstream sum-of-minibatch gradient scaling.",
+    "Loss phase is fixed for each optimizer update: exactly 100/100/100 updates; upstream switches on the final microbatch of the boundary update. Phase derives from saved global_step on resume.",
+    "Policy-to-inference weight transfer errors are propagated instead of suppressed upstream.",
+    "Inactive loss objectives skip unused forwards; dropout RNG consumption differs from the broken upstream minibatch path.",
+]
+
 
 def _cuda_runtime():
     if not (3, 11) <= sys.version_info[:2] <= (3, 12):
@@ -111,16 +119,64 @@ def _trainer_class(base, cfg, seed):
             group = self.args.num_generations
             if prepared["prompt_ids"].shape[0] != group:
                 raise RuntimeError("Pinned trainer requires exactly one patient's eight-rollout group")
-            # Upstream slices all objectives using the DA group size, although HA
-            # prompts are deduplicated independently. Reject lost/empty HA slices.
-            if self.environment.generate_hypothesis:
-                count = prepared["ha_prompt_label_ids"].shape[0]
-                if count != group:
-                    raise RuntimeError(
-                        f"Pinned HA minibatch integration is blocked: {count} deduplicated "
-                        f"HA examples for {group} DA rollouts. A separate HA batching design "
-                        "must be validated before training; no examples were silently dropped.")
             return prepared
+
+        def _set_phase(self):
+            if self.loss_scheduler is not None:
+                schedule = self.loss_scheduler
+                weights, rate = _phase_weights([vars(phase) for phase in schedule.phases], self.state.global_step, schedule.repeat)
+                for name, value in weights.items():
+                    setattr(self, name, value)
+                for group in self.optimizer.param_groups:
+                    group["lr"] = rate
+
+        def training_step(self, model, inputs, num_items_in_batch=None):
+            """Accumulate each objective independently with batch-two forwards.
+
+            DA and confidence retain their eight-rollout grouping. HA averages all
+            deduplicated label tokens, scaled by the four DA microbatches. This
+            equals upstream's summed microbatch objective in the equal-token
+            eight-example case and defines the otherwise broken unequal case.
+            Each microbatch is backpropagated immediately to bound graph memory.
+            """
+            torch = import_module("torch")
+            model.train()
+            prepared = self._prepare_inputs(inputs)
+            self._set_phase()
+            size = int(self.args.per_device_train_batch_size)
+            group = int(prepared["prompt_ids"].shape[0])
+            batches = (group + size - 1) // size
+            total = torch.zeros((), device=prepared["prompt_ids"].device)
+            ha_keys = ("ha_prompt_label_ids", "ha_label_mask", "ha_attention_mask")
+
+            def accumulate(loss, multiplier):
+                nonlocal total
+                if not torch.is_tensor(loss):
+                    return
+                weighted = loss * multiplier
+                self.accelerator.backward(weighted)
+                total = total + weighted.detach()
+
+            for start in range(0, group, size):
+                part = {key: value[start:start + size] if torch.is_tensor(value) and key not in ha_keys else value
+                        for key, value in prepared.items()}
+                last = start + size >= group
+                with self.compute_loss_context_manager():
+                    if self.da_loss_weight:
+                        accumulate(super()._compute_loss_da(model, part, last), self.da_loss_weight)
+                    if self.ha_conf_cal_loss_weight and self.environment.generate_confidence_calibration:
+                        accumulate(super()._compute_loss_ha_conf_cal(model, part, last), self.ha_conf_cal_loss_weight)
+            if self.ha_sft_loss_weight and self.environment.generate_hypothesis:
+                count = int(prepared[ha_keys[0]].shape[0])
+                tokens = prepared["ha_label_mask"].sum()
+                if count == 0 or tokens.item() <= 0:
+                    raise RuntimeError("HA SFT phase has no labelled examples")
+                for start in range(0, count, size):
+                    part = {key: prepared[key][start:start + size] for key in ha_keys}
+                    multiplier = self.ha_sft_loss_weight * batches * part["ha_label_mask"].sum() / tokens
+                    with self.compute_loss_context_manager():
+                        accumulate(super()._compute_loss_ha(model, part, start + size >= count), multiplier)
+            return total / batches
 
         def compute_loss(self, model, inputs, *args, **kwargs):
             # Set phase once by optimizer step. Validation never consumes a phase,
@@ -240,6 +296,14 @@ def train(cfg, output_dir, data_dir, seed):
             trainer.sampling_params = _sampling(vllm, cfg, True, seed)
             trainer._last_loaded_step = -1
             checkpoint = import_module("transformers.trainer_utils").get_last_checkpoint(str(output_dir))
+            initial_path = output_dir / "initial-validation.json"
+            if initial_path.exists():
+                initial_val_metrics = json.loads(initial_path.read_text())
+            elif checkpoint:
+                initial_val_metrics = None
+            else:
+                initial_val_metrics = trainer.evaluate()
+                initial_path.write_text(json.dumps(initial_val_metrics, indent=2, default=float) + "\n")
             trainer.train(resume_from_checkpoint=checkpoint)
             val_metrics = trainer.evaluate()
             adapter_dir = output_dir / "adapter"
@@ -250,7 +314,9 @@ def train(cfg, output_dir, data_dir, seed):
                 "selection": {"method": "fixed_budget", "epochs": cfg.training.num_train_epochs,
                               "checkpoint": "final", "validation_metrics": val_metrics},
                 "resume_from_checkpoint": checkpoint,
-                "wandb_ids": [wandb.run.id] if wandb.run is not None else [],
+                "wandb_run_ids": [wandb.run.id] if wandb.run is not None else [],
+                "validation_history": [event for event in [initial_val_metrics, *[event for event in trainer.state.log_history if any("hypothesis_accuracy" in key or key.endswith("_ece") for key in event)], val_metrics] if event is not None],
+                "compatibility_deviations": COMPATIBILITY_DEVIATIONS,
             }
             success = True
             return result
@@ -329,3 +395,8 @@ def summarize(text, split, model, revision, seed=269):
         output = weights.generate(tokens, max_new_tokens=512, do_sample=True, temperature=1.0,
                                   top_p=1.0, pad_token_id=tokenizer.pad_token_id)
     return tokenizer.decode(output[0, tokens.shape[-1]:], skip_special_tokens=True)
+
+
+def make_summarizer(model, revision, seed=269):
+    validate_model(model, revision)
+    return lambda text, split: summarize(text, split, model=model, revision=revision, seed=seed)

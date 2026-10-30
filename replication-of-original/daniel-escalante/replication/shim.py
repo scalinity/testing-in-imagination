@@ -160,14 +160,25 @@ def prepare_environment(cfg):
             return result
 
         def _generate_hypothesis(self, trajectories, model, sampling_params, processing_class):
-            return super()._generate_hypothesis(
-                trajectories, model, sampling_params, _SystemTokenizer(processing_class))
+            def chat(example, tokenizer):
+                return {**example, "prompt": tokenizer.apply_chat_template(example["prompt"], tokenize=False, add_generation_prompt=True)}
+            with patch.object(_environment_module(), "maybe_apply_chat_template", chat):
+                return super()._generate_hypothesis(
+                    trajectories, model, sampling_params, _SystemTokenizer(processing_class))
+
+        def step(self, trajectory, step, tokenizer):
+            if not hasattr(trajectory, "request_events"):
+                trajectory.request_events = []
+            valid, action, name = self.parse_actions_and_check_validity(trajectory)
+            if step <= self.max_steps and valid and action == "test" and name in trajectory.test_results:
+                trajectory.request_events.append(name)
+            return super().step(trajectory, step, tokenizer)
 
         def _collect_reward_function_kwargs(self, trajectories):
             self.captured = [{
                 "provided_tests": list(t.provided_tests),
-                "requested_tests": list(t.requested_tests),
-                "unavailable_requests": [name for name in t.requested_tests
+                "requested_tests": list(getattr(t, "request_events", t.requested_tests)),
+                "unavailable_requests": [name for name in getattr(t, "request_events", t.requested_tests)
                                          if t.test_results[name] == "not available.\n"],
             } for t in trajectories]
             return super()._collect_reward_function_kwargs(trajectories)
@@ -281,6 +292,7 @@ def _evaluate_with_model(cfg, dataset, model, sampling_params):
             "patient_id": int(item["patient_id"]), "label": item["condition"],
             "prediction": kwargs["diagnosis"], **environment.captured[0], "reward": float(reward),
             "hypotheses": output.ha_hypotheses_lists[0], "confidences": output.ha_confidences_lists[0],
+            "ece_triplets": list(output.ece_calc_triplets),
         })
     return rows
 
