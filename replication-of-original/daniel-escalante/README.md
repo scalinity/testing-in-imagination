@@ -128,6 +128,9 @@ run resumes from its owned checkpoints. Failures stay in the ledger.
 Each checkpoint includes the environment's separate confidence-pair RNG state.
 Continuation refuses a checkpoint without that state rather than restarting its
 sampling stream.
+Training generation derives a separate seed for each optimizer step, generation
+call and rollout position. Eight identical GRPO prompts therefore receive eight
+independent request streams; continuation reconstructs them from the saved step.
 Kernel advisory locks release ownership after scheduler termination; no stale PID
 file needs to be removed to resume training. Evaluation admission markers remain
 separate and preserve the once-only test rule after interruption.

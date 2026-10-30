@@ -95,3 +95,26 @@ def test_checkpoint_restores_actual_environment_pair_rng(tmp_path):
     assert [restored._sample_pair(patients) for _ in range(30)] == expected
     with pytest.raises(RuntimeError, match="lacks the environment RNG"):
         _restore_environment_rng(restored, tmp_path / "missing", "synthetic")
+
+
+def test_training_rollouts_use_independent_reconstructable_request_seeds():
+    import random
+    from replication.gpu import _SeededTrainingPolicy
+    class Engine:
+        def generate(self, prompts, sampling_params, **kwargs):
+            assert len(prompts) == len(sampling_params)
+            self.seeds = [param.seed for param in sampling_params]
+            return [random.Random(param.seed).random() for param in sampling_params]
+    prompts = ["identical invented prompt"] * 8
+    params = SimpleNamespace(seed=269, temperature=1.0, n=1)
+    engine = Engine()
+    policy = _SeededTrainingPolicy(engine, 269, 100)
+    first = policy.generate(prompts, params)
+    assert len(set(engine.seeds)) == 8 and len(set(first)) == 8
+    second = policy.generate(prompts, params)
+    assert first != second
+    restored = _SeededTrainingPolicy(Engine(), 269, 100)
+    assert restored.generate(prompts, params) == first
+    assert restored.generate(prompts, params) == second
+    assert _SeededTrainingPolicy(Engine(), 269, 101).generate(prompts, params) != first
+    assert params.seed == 269  # Shared configuration is not mutated.

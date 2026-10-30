@@ -23,6 +23,7 @@ COMPATIBILITY_DEVIATIONS = [
     "Policy-to-inference weight transfer errors are propagated instead of suppressed upstream.",
     "Inactive loss objectives skip unused forwards; dropout RNG consumption differs from the broken upstream minibatch path.",
     "Checkpoint sidecars preserve the environment's independent confidence-pair RNG; standard framework RNG files do not contain it.",
+    "Training generation uses distinct deterministic request seeds by optimizer step, call and rollout; a single shared request seed would collapse identical GRPO prompts to identical draws.",
 ]
 
 
@@ -74,6 +75,27 @@ def _sampling(vllm, cfg, training, seed):
         max_tokens=cfg.training.max_completion_length,
         stop=["Observation:"], include_stop_str_in_output=False,
     )
+
+
+class _SeededTrainingPolicy:
+    """Independent request streams that can be reconstructed after a checkpoint."""
+
+    def __init__(self, model, seed, optimizer_step):
+        self.model, self.seed, self.optimizer_step = model, seed, optimizer_step
+        self.call = 0
+
+    def __getattr__(self, key):
+        return getattr(self.model, key)
+
+    def generate(self, prompts, sampling_params, **kwargs):
+        from replication.config import stream_seed
+        parameters = []
+        for index, _ in enumerate(prompts):
+            params = deepcopy(sampling_params)
+            params.seed = stream_seed(self.seed, "train", f"generation:{self.optimizer_step}:{self.call}:{index}")
+            parameters.append(params)
+        self.call += 1
+        return self.model.generate(prompts, sampling_params=parameters, **kwargs)
 
 
 def _restore_environment_rng(environment, checkpoint, source):
@@ -134,8 +156,15 @@ class _WeightTransferFailure(BaseException):
 def _trainer_class(base, cfg, seed):
     class Trainer(base):
         def _run_environment(self, *args, **kwargs):
-            with generation_mode(self, self.model.training):
-                return super()._run_environment(*args, **kwargs)
+            original = getattr(self, "llm", None)
+            if self.model.training and original is not None:
+                self.llm = _SeededTrainingPolicy(original, seed, self.state.global_step)
+            try:
+                with generation_mode(self, self.model.training):
+                    return super()._run_environment(*args, **kwargs)
+            finally:
+                if original is not None:
+                    self.llm = original
 
         def _prepare_inputs(self, inputs):
             prepared = super()._prepare_inputs(inputs)
