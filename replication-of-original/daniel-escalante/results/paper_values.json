@@ -1,0 +1,44 @@
+{
+  "source": "REPRODUCTION.md",
+  "upstream_sha": "3f435a10f569c3255172c1ef8fe7880c6edb7fee",
+  "table1": {
+    "T1": {"label": "Appendicitis recall", "value": 93.1, "unit": "%"},
+    "T2": {"label": "Cholecystitis recall", "value": 83.6, "unit": "%"},
+    "T3": {"label": "Diverticulitis recall", "value": 75.0, "unit": "%"},
+    "T4": {"label": "Pancreatitis recall", "value": 73.5, "unit": "%"},
+    "T5": {"label": "Mean of four class recalls", "value": 81.3, "unit": "%"},
+    "T6": {"label": "Micro F1", "value": 84.1, "unit": "%"},
+    "T7": {"label": "Macro F1", "value": 81.3, "unit": "%"},
+    "T8": {"label": "Average provided-test cost", "value": 1295.61, "unit": "USD"}
+  },
+  "baselines": {
+    "B1": {"label": "LA-CDM (ZS) mean recall", "value": 64.5, "unit": "%"},
+    "B2": {"label": "ReAct mean recall", "value": 74.9, "unit": "%"}
+  },
+  "dynamics": {
+    "C1": {"label": "Hypothesis accuracy", "before": 75.7, "after": 81.9, "unit": "%"},
+    "C2": {"label": "ECE", "before": 0.069, "after": 0.037, "unit": "fraction"},
+    "C3": {"label": "Without/with cost reward", "before_cost_usd": 1427.85, "after_cost_usd": 1295.61, "before_mean_recall": 82.3, "after_mean_recall": 81.3},
+    "C4": {"label": "Hypothesis agent versus decision-only", "table": 3, "primary_mean_recall": null, "decision_only_mean_recall": null}
+  },
+  "table3": {"decision_only_mean_recall": null, "primary_mean_recall": null, "note": "Exact Table 3 values are absent from REPRODUCTION.md."},
+  "implementation": {
+    "learning_rate": 0.00001,
+    "batch_size": 2,
+    "code_seed": 269,
+    "split_seed_ledger": null,
+    "cyclic_stage_steps": 100,
+    "incorrect_reward_primary": 0.0,
+    "incorrect_reward_ablation": -1.0,
+    "physical_examination_usd_approx": 300,
+    "physical_examination_normalized_cost": -0.0294,
+    "max_steps_configured": 13,
+    "effective_action_budget": 14,
+    "unique_tests": 12,
+    "confidence_scale_raw_max": 10
+  },
+  "reward_episode_examples_before_test_cost": {
+    "primary": {"correct": 2, "wrong_well_formed": 1, "undiagnosed_invalid": 0},
+    "incorrect_minus1": {"correct": 2, "wrong_well_formed": 0, "undiagnosed_invalid": 0}
+  }
+}
