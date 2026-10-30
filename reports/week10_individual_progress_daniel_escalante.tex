@@ -1,0 +1,106 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{1.03}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\title{\textbf{CAI6734 Week~10 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{October 30, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~10 (October 28 -- November 3, 2026), written through October~30. The main progress is a tested LA-CDM replication pipeline (upstream \texttt{dharouni/LA-CDM} at \texttt{3f435a10}), ready for MIMIC-IV-Ext CDM v1.1 once my access is approved. I also reviewed Edwin's world-model study and finished my dataset-access steps. Pipeline numbers come from \textbf{invented synthetic data} and are checks, not results. No PHI, no made-up metrics.
+
+\section{Progress this week}
+
+\subsection{Replication pipeline built and merged}
+\begin{itemize}
+  \item I merged \href{https://github.com/scalinity/testing-in-imagination/pull/2}{PR~\#2} into \texttt{main} on October~30 at 12:44~PM ET (merge commit \texttt{41b9520}). It contains 12 commits, all dated October~30 (\texttt{70f7457} through \texttt{c863c6a}), and changes 46 files (+12,722 / $-$6 lines), all inside \texttt{replication-of-original/daniel-escalante/}.
+  \item The pipeline has seven stages: S0 environment; S1 raw-schema validation and splits; S2 config wiring; S3 zero-shot baseline; S4 training of the primary arm plus three ablations; S5 once-only final-test evaluation; and S6 reporting. Each stage writes a resumable manifest. S6 computes paired bootstrap statistics and writes an automatic \texttt{REPORT.md}. SLURM launch files for HiPerGator are included.
+  \item The backbone is \texttt{nvidia/Llama-3.1-Nemotron-Nano-8B-v1}, pinned at revision \texttt{54641c16} and used as both the policy and the HPI summarizer (documented deviations D-5 and D-3). The primary arm keeps the shipped \texttt{incorrect\_reward = 0}; the $-1$ reward runs as a separate ablation arm (D-1). Details are in the folder's \texttt{README.md} and \texttt{PLAN.md}.
+\end{itemize}
+
+\subsection{Verification on synthetic data}
+\begin{itemize}
+  \item \textbf{Tests:} 242 tests passed, including all 83 existing tests in \texttt{lacdm/tests} (PR~\#2 description).
+  \item \textbf{End-to-end run:} a full synthetic S0--S6 run completed on 2,400 invented admissions with the 957/648/257/538 class mix, missing tests, and repeated subjects. All five arms (primary, zero-shot, decision-only, no-cost, incorrect~$=-1$) ran under both split protocols (the seed-269 parity split and a subject-grouped split), with 10,000 paired bootstrap resamples.
+  \item \textbf{Resume check:} all seven stages resumed with verified artifact hashes and no recomputed episodes. The aggregate outputs (\texttt{REPORT.md}, \texttt{metrics.json} under \texttt{results/synthetic/}) carry an explicit ``SYNTHETIC --- invented data, mock updates are not learning'' banner.
+\end{itemize}
+
+\subsection{Data-leakage audit and a ledger/code discrepancy}
+\begin{itemize}
+  \item The seed-269 parity split has 0 admission-ID overlap across train/val/test, but 175 subjects appear in more than one split (80 of them shared between train and test). The subject-grouped split has 0 subject overlap, and the full arm matrix is reported for it as a sensitivity analysis (``Leakage and split sensitivity'' tables in \texttt{REPORT.md}).
+  \item The shared ledger's finding D-4 (\texttt{REPRODUCTION.md}) says there is no canonical split seed, but the pinned upstream splitter hardcodes \texttt{RANDOM\_STATE = 269}. The pipeline uses 269 for parity and records the discrepancy in the README and report rather than hiding it.
+\end{itemize}
+
+\subsection{Documented gaps, compatibility repairs, and the day-one procedure}
+\begin{itemize}
+  \item Every manifest and report lists the local compatibility repairs to the upstream training path, for example per-patient validation batches (so one patient's label is not reused), hypothesis SFT batches kept separate from the eight decision rollouts, and one phase per optimizer update. Known upstream issues F-1 to F-4 and the shipped primary reward are preserved.
+  \item The ReAct baseline (B2) is recorded as a gap, because the pinned upstream ships no ReAct implementation. I did not invent a substitute baseline.
+  \item The README now has a ``Day one: credentialed MIMIC data on HiPerGator'' section: set \texttt{.env} (data and work directories outside the repository, SLURM account and partition), validate the schema before requesting GPU time, do a SLURM dry run, then submit. Only aggregate metrics and \texttt{REPORT.md} are ever exported to the repository. Synthetic run-log rows dated 2026-10-30 are labeled SYNTHETIC, no weight updates.
+\end{itemize}
+
+\subsection{Peer review of Edwin's PR~\#1 (synthetic world-model study)}
+\begin{itemize}
+  \item On October~29 (about 9:18~PM ET) I posted a comment review with 15 line comments on Edwin's \href{https://github.com/scalinity/testing-in-imagination/pull/1}{PR~\#1} (commit dated October~28). Main points, offered as suggestions:
+  \begin{enumerate}[label=(\alph*),itemsep=0.05em,topsep=0.1em]
+    \item The ``held-out'' log-likelihoods are not held out: the environment's RNG ignores the split, so validation replays the first 500 training patients.
+    \item The imagination planner charges full cost for tests that turn out to be missing, so the Oracle arm is not a true upper bound.
+    \item With 3 unpaired seeds, the 0.024 world-model-over-model-free gap is suggestive (Welch $p \approx 0.07$); I suggested paired per-seed differences over 10--20 seeds.
+    \item The model-free baseline is a 16-state tabular one-step Q computed through the learned model.
+    \item History and informative missingness can be added to the synthetic environment now rather than waiting for MIMIC.
+  \end{enumerate}
+\end{itemize}
+
+\subsection{Dataset access and team coordination}
+\begin{itemize}
+  \item I completed the two dataset steps listed as next steps in Week~9: I submitted my CITI ``Data or Specimens Only Research'' completion report to the PhysioNet Training page (October~27, after the Week~9 report was filed) and signed the MIMIC-IV-Ext CDM v1.1 data use agreement (October~29), requesting dataset access, as I told Hugo and Edwin by email on October~29. Approval is still pending (PhysioNet lists the training report as under review), and no data has been downloaded.
+  \item On October~29 (9:56~PM ET) I confirmed to Hugo that his October~27 screenshots show access to the dataset itself, not just a PhysioNet account, and asked him to start the replication in his own folder. At 9:59~PM I asked Hugo and Edwin how long their dataset approval took. Hugo replied at 10:16~PM that it took about a business week; Edwin has not replied yet.
+\end{itemize}
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{Dataset approval still pending.} I still cannot run anything on real data. Based on Hugo's experience, approval should take roughly a business week from the request. Instead of waiting, I built and tested the pipeline on synthetic data and wrote a day-one procedure. S1 on real v1.1 files has not run; the HiPerGator \texttt{.env} paths and SLURM settings are not set; no CUDA install (incl.\ the \texttt{xgrammar} source build) or SLURM job has run.
+  \item \textbf{Subject leakage in the parity split, and the D-4 seed mismatch.} The seed-269 parity split is admission-disjoint but shares 175 subjects across splits (80 between train and test). I kept it for parity with the paper and added a subject-grouped split (0 subject overlap) that runs the full arm matrix as a sensitivity analysis. Because the ledger (D-4) says there is no canonical seed while the pinned code hardcodes 269, I used 269 and recorded the discrepancy openly.
+  \item \textbf{ReAct baseline (B2) cannot be assessed} at the pinned upstream; it is recorded as a gap, not replaced with an invented baseline.
+  \item \textbf{Issues found in the PR~\#1 review} (items a--e above) were shared with Edwin as suggestions, with an offer to pair on fixes.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Once access is approved, download MIMIC-IV-Ext CDM v1.1 to private HiPerGator storage (never the repository) and set the \texttt{.env} paths and SLURM settings.
+  \item Run schema validation, then the SLURM dry run, then submit S0--S6 on the real data.
+  \item Log the first real-data run in the README run log (aggregate metrics only).
+  \item Follow up with Edwin (approval time and the PR~\#1 review findings), and support Hugo in starting his replication folder; both folders still hold only starter READMEs.
+\end{enumerate}
+
+\section*{Notes}
+The synthetic run (mock policy, fake HPI summaries, no weight updates) shows only that the pipeline executes, resumes, and reports; not learning, clinical validity, or paper reproduction. Real v1.1 files, CUDA, training, and scheduler execution are unverified. No Table~1 accuracy, F1, or cost figures are reported.
+
+\end{document}
