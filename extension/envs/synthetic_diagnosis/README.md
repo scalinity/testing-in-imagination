@@ -47,6 +47,26 @@ o3, r, done, info = env.step("appendicitis")  # diagnosis terminates
 Rewards: `+1` / `-1` for correct / incorrect diagnosis; test steps get
 `-COST_NORM[test]` (normalized costs sum to 1.0 over the inventory).
 
+## v1: graded informativeness + missingness
+
+`SyntheticCDMEnv(version="v1")` (v0 stays the default). Parameters live in `profiles.py`:
+
+- y from the MIMIC-CDM class prior; a presenting phenotype e (atypical with p = 0.07 → e ≠ y).
+- Each test returns one finding s ∈ {4 diseases, nonspecific} from `LIKELIHOOD[test][e]`, rendered
+  as text with the v0 templates; `info["finding"]` carries s. CT/MRI strong, radiograph/UA weak.
+- `missingness=True`: each test is in the chart with `AVAILABILITY[test]` (expected cost of all
+  available tests ≈ $3.8k, the paper's SFT-all cost). A missing test returns UNAVAILABLE, is free
+  and burns a step (F-2, F-3). `oracle_finding` still returns the counterfactual.
+- Episodes end undiagnosed after 14 actions (F-3).
+
+```bash
+python -m extension.envs.synthetic_diagnosis.collect \
+  --n-episodes 200 --seed 0 --out /tmp/v1.jsonl --env-version v1 --missingness
+```
+
+World models, agents and experiments built on v1: `extension/world_model/`,
+`extension/planners/`, `extension/experiments/` (results in `results/synthetic/SUMMARY.md`).
+
 ## Policies in `collect`
 
 - `random`: unused tests until N or random diagnose trigger.

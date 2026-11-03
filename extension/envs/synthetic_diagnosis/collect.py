@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import random
 import sys
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from .actions import A_DIAG, A_TEST
 from .env import SyntheticCDMEnv
@@ -121,6 +121,15 @@ def rollout_episode(
                     "policy": policy,
                 },
             )
+            if env.version == "v1":
+                rec.meta.update(
+                    {
+                        "env_version": "v1",
+                        "missingness": env.missingness,
+                        "finding": info.get("finding"),
+                        "unavailable": bool(info.get("unavailable")),
+                    }
+                )
             records.append(rec)
 
         if done:
@@ -140,8 +149,9 @@ def collect(
     split: str = "train",
     diagnose_prob: float = 0.15,
     max_tests_before_diag: int = 5,
+    env_kwargs: Optional[Dict[str, Any]] = None,
 ) -> int:
-    env = SyntheticCDMEnv(seed=seed, split=split)
+    env = SyntheticCDMEnv(seed=seed, split=split, **(env_kwargs or {}))
     rng = random.Random(seed + 17)
     total = 0
     with JSONLWriter(out_path) as writer:
@@ -156,6 +166,32 @@ def collect(
             writer.write_many(recs)
             total += len(recs)
     return total
+
+
+def collect_rows(
+    n_episodes: int,
+    seed: int,
+    policy: str = "random",
+    split: str = "train",
+    diagnose_prob: float = 0.15,
+    max_tests_before_diag: int = 5,
+    env_kwargs: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """Same rollouts as ``collect``, returned as validated dicts in memory."""
+    env = SyntheticCDMEnv(seed=seed, split=split, **(env_kwargs or {}))
+    rng = random.Random(seed + 17)
+    rows: List[Dict[str, Any]] = []
+    for _ in range(n_episodes):
+        for rec in rollout_episode(
+            env,
+            policy,
+            rng,
+            diagnose_prob=diagnose_prob,
+            max_tests_before_diag=max_tests_before_diag,
+        ):
+            rec.validate()
+            rows.append(rec.to_dict())
+    return rows
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -179,6 +215,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--diagnose-prob", type=float, default=0.15)
     p.add_argument("--max-tests-before-diag", type=int, default=5)
+    p.add_argument("--env-version", type=str, default="v0", choices=("v0", "v1"))
+    p.add_argument(
+        "--missingness",
+        action="store_true",
+        help="v1 only: tests can be missing from the chart (UNAVAILABLE).",
+    )
     return p
 
 
@@ -192,6 +234,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         split=args.split,
         diagnose_prob=args.diagnose_prob,
         max_tests_before_diag=args.max_tests_before_diag,
+        env_kwargs={"version": args.env_version, "missingness": args.missingness},
     )
     print(f"Wrote {n} tuples → {args.out}")
     return 0

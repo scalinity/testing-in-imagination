@@ -291,6 +291,50 @@ def generate(test_name: str, y: str, eps_seed: int) -> str:
     return GENERATORS[test_name](y, rng)
 
 
+# --- v1: render a discrete finding as observation text ---
+
+_NONSPECIFIC_SIGNALS: Dict[str, str] = {
+    "Physical Examination": (
+        "Diffuse mild abdominal tenderness without localizing signs. No "
+        "rebound or guarding. Bowel sounds present."
+    ),
+    "CT": "CT abdomen/pelvis: no acute intra-abdominal process identified.",
+    "MRI": "MRI abdomen: no focal inflammatory change. Organs unremarkable.",
+    "Radiograph": (
+        "Abdominal radiograph: nonspecific bowel gas pattern. No free air."
+    ),
+    "Ultrasound": (
+        "Abdominal ultrasound: limited study, no definite acute abnormality."
+    ),
+    "Complete Blood Count": "WBC 9.1 x10^9/L. Hb 13.5. Plt 240. Unremarkable.",
+    "Basic Metabolic Panel": (
+        "Na 139, K 4.2, Cl 103, CO2 25, BUN 12, Cr 0.8, Glucose 95 — normal."
+    ),
+    "Comprehensive Metabolic Panel": (
+        "Glucose 96, Na 139, K 4.1, Cl 103, CO2 25, BUN 12, Cr 0.8, Ca 9.4 — normal."
+    ),
+    "Renal Function Panel": "BUN 12, Cr 0.8, eGFR >90 — normal renal function.",
+    "Liver Function Panel": "AST 24, ALT 22, ALP 80, TBili 0.6 — within normal limits.",
+    "Urinalysis": "UA: unremarkable. LE negative, nitrites negative, no blood.",
+    "Electrolyte Panel": "Na 139, K 4.2, Cl 103, CO2 25 — normal.",
+}
+
+
+def render_finding(test_name: str, finding: str, rng: random.Random) -> str:
+    """v1 text for a discrete finding (a disease label or ``nonspecific``).
+
+    A disease finding reuses that disease's v0 template for the test, so the
+    text looks like the patient has it, whatever their true label is.
+    """
+    if test_name not in GENERATORS:
+        raise ValueError(f"Unknown test: {test_name!r}")
+    if finding == "nonspecific":
+        return _wrap(test_name, _NONSPECIFIC_SIGNALS[test_name], rng)
+    if finding not in A_DIAG:
+        raise ValueError(f"Unknown finding: {finding!r}")
+    return GENERATORS[test_name](finding, rng)
+
+
 def assert_all_tests_covered() -> None:
     missing = [a for a in A_TEST if a not in GENERATORS]
     if missing:
