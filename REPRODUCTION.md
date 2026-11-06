@@ -12,10 +12,10 @@
 |-------|-------|
 | Date | 2026-11-05 (America/New_York) |
 | Operator | Daniel Escalante |
-| Machine / GPU | UF HiPerGator. S0 on login node `login7`; GPU probe SLURM job 49867089 on `c0603a-s14`, NVIDIA L4 (compute capability 8.9, 23,034 MiB) |
-| CUDA / driver | Driver 580.178.04. Pinned runtime: torch 2.6.0+cu124, CUDA 12.4, vLLM 0.8.1; compiled arch list `sm_50`–`sm_90`, so no Blackwell (B200, RTX PRO 6000) kernels |
+| Machine / GPU | UF HiPerGator. S0 on login node `login7`; S1 SLURM job 49872927 on `c0800a-s5`, NVIDIA RTX PRO 6000 Blackwell Server Edition (compute capability 12.0, 97,887 MiB). Pinned-stack probe: job 49867089 on an L4 (`c0603a-s14`) |
+| CUDA / driver | Driver 580.178.04. `CDM_RUNTIME=blackwell`: torch 2.7.0+cu128, vLLM 0.9.2, TRL 0.15.2; arch list through `sm_120`. The pinned torch 2.6.0+cu124 stack stops at `sm_90` |
 | Python | 3.12.14 (uv-managed) |
-| Install | `uv sync --frozen` (CPU checks); S0 `uv sync --frozen --project runtime` (runtime lock sha256 `2e7d2e86…`, `xgrammar==0.1.16` built from source) |
+| Install | `uv sync --frozen` (CPU checks); S0 `uv sync --frozen --project runtime-blackwell` (lock sha256 `f12ce556…`, 28 substituted pins recorded in S0) |
 | Upstream SHA | `3f435a10f569c3255172c1ef8fe7880c6edb7fee` (lacdm/upstream) |
 | `VLLM_USE_V1` | `0` |
 | Data source | PhysioNet MIMIC-IV-Ext-CDM v1.1: 12/12 SHA256 digests verified; condition pickles from `scripts/build_condition_pickles.py`, byte-identical on macOS and HiPerGator |
