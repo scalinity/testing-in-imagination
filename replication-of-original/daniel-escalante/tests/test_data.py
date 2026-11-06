@@ -236,7 +236,7 @@ def test_unconfigured_imaging_modalities_are_counted_and_ignored_like_upstream(r
         for record in records.values():
             record["Radiology"] = [{"Modality": "MRCP", "Report": "FINDINGS:\nInvented finding.\nIMPRESSION:\nObserve."}]
         _rewrite(path, records)
-    assert validate_raw(raw)["schema"]["unconfigured_modalities"] == {"MRCP": 240}
+    assert validate_raw(raw)["schema"]["unconfigured_modality_reports"] == 240
     output = tmp_path / "prepared"
     prepare_splits(raw, output)
     dataset = load_dataset(output, "test", cfg)
@@ -276,6 +276,8 @@ def test_parser_follows_canonical_lab_references_and_multiple_reports(raw, tmp_p
 def test_aggregate_audit_and_failures_never_include_patient_text(raw):
     sensitive = "UNIQUE_PRIVATE_RECORD_STRING_719"
     _mutate_first(raw, lambda record: record.update({"Patient History": sensitive}))
+    assert sensitive not in json.dumps(validate_raw(raw))
+    _mutate_first(raw, lambda record: record.update({"Radiology": [{"Modality": sensitive, "Report": "Text."}]}))
     assert sensitive not in json.dumps(validate_raw(raw))
     _mutate_first(raw, lambda record: record.update({"Laboratory Tests": {sensitive: sensitive}}))
     with pytest.raises(ValueError) as error:

@@ -261,7 +261,8 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
     if source not in ("synthetic", "mimic"):
         raise ValueError("source must be synthetic or mimic")
     _, panel_ids, mapping_audit = _mapping(data_dir)
-    errors, counts, missing, fields, unconfigured = Counter(), {}, Counter(), Counter(), Counter()
+    errors, counts, missing, fields = Counter(), {}, Counter(), Counter()
+    unconfigured = 0
     admissions, subjects = set(), []
     unexpected_fields = 0
     for condition in CLASSES:
@@ -295,10 +296,10 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
             for field, expected_type in (("Physical Examination", str), ("Laboratory Tests", dict), ("Radiology", list)):
                 value = record.get(field)
                 missing[field] += isinstance(value, expected_type) and not value
+            # A count, not the modality strings: the field is record text, never an audit key.
             if isinstance(record.get("Radiology"), list):
-                unconfigured.update(report["Modality"] for report in record["Radiology"]
-                                    if isinstance(report, dict) and isinstance(report.get("Modality"), str)
-                                    and report["Modality"] not in IMAGING_TESTS)
+                unconfigured += sum(isinstance(report, dict) and isinstance(report.get("Modality"), str)
+                                    and report["Modality"] not in IMAGING_TESTS for report in record["Radiology"])
     total = sum(counts.values())
     if fields["subject_id"] not in (0, total):
         errors["raw.inconsistent_subject_id_presence"] += 1
@@ -319,7 +320,7 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
         "source": source, "total": total, "class_counts": counts,
         "schema": {"valid": True, "field_counts": dict(fields), "empty_tests": dict(missing),
                    "extra_field_count": unexpected_fields,
-                   "unconfigured_modalities": dict(sorted(unconfigured.items()))},
+                   "unconfigured_modality_reports": unconfigured},
         "mapping": mapping_audit, "count_guard": count_guard,
         "subjects": {"status": "assessable" if subjects else "unassessable",
                      "unique": len(set(subjects)) if subjects else None,
