@@ -446,6 +446,11 @@ def _grouped_frames(frame: pd.DataFrame) -> tuple[dict[str, pd.DataFrame], dict]
                      "summary_reuse": "primary_by_admission"}
 
 
+def synthetic_summary(text: str, split: str) -> str:
+    """Invented-data stand-in for the GPU summarizer: the first sentence."""
+    return text.split(". ", 1)[0] + "."
+
+
 def prepare_splits(
     data_dir: Path, output_dir: Path, seed: int = 269, fake_summarizer: bool = True,
     summarizer: Callable[[str, str], str] | None = None, source: str = "synthetic",
@@ -458,7 +463,7 @@ def prepare_splits(
     if summarizer is None:
         if not fake_summarizer or source != "synthetic":
             raise ValueError("A real summarizer callable is required for this source")
-        summarizer = lambda text, split: text.split(". ", 1)[0] + "."
+        summarizer = synthetic_summary
         summary_kind = "synthetic_extract"
     else:
         summary_kind = "callable"

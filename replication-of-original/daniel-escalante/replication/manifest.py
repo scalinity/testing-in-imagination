@@ -123,13 +123,14 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
 
 
 @contextmanager
-def stage_lock(work_dir: Path, stage: str):
+def stage_lock(work_dir: Path, stage: str, wait: bool = False):
     path = work_dir / "locks" / f"{stage}.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # wait=True serializes brief shared-file updates instead of rejecting them.
+            fcntl.flock(fd, fcntl.LOCK_EX if wait else fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise RuntimeError(f"stage is already running; inspect the private lock: {path}") from None
         os.ftruncate(fd, 0)

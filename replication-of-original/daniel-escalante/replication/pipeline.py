@@ -1,6 +1,8 @@
 """Resumable S0–S6 stages. All patient-level artifacts stay in private work storage."""
 
 import argparse
+from collections import Counter
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -150,10 +152,74 @@ def s1(settings):
         _require_cuda()
         from .gpu import make_summarizer
         summarizer = make_summarizer(model=MODEL, revision=REVISION, seed=settings.seed)
+    shards = sorted((settings.work_dir / "summaries").glob("*-of-*.json"))
+    counts = Counter()
+    if shards:
+        summarizer = _cached_summarizer(settings, shards, summarizer, counts)
     split_audit = prepare_splits(settings.data_dir, prepared(settings), seed=settings.seed,
                                  fake_summarizer=settings.mock, summarizer=summarizer, source=settings.source)
-    out = private_write(settings.work_dir / "data-audit.json", {"schema": audit, "split": split_audit["audit"]}, settings.source)
-    return [out, *sorted(prepared(settings).rglob("*.csv")), *sorted(settings.data_dir.glob("*.pkl")), *sorted(settings.data_dir.glob("*.csv"))]
+    data_audit = {"schema": audit, "split": split_audit["audit"],
+                  "summary_cache": {"shards": len(shards), "cached": counts["cached"], "computed": counts["computed"]}}
+    out = private_write(settings.work_dir / "data-audit.json", data_audit, settings.source)
+    return [out, *shards, *sorted(prepared(settings).rglob("*.csv")), *sorted(settings.data_dir.glob("*.pkl")), *sorted(settings.data_dir.glob("*.csv"))]
+
+
+def _summary_key(split, text):
+    return f"{split}:{hashlib.sha256(text.encode()).hexdigest()}"
+
+
+def _summary_identity(settings):
+    return {"source": settings.source, "model": MODEL, "revision": REVISION, "seed": settings.seed,
+            "s0_receipt": _receipt(settings, "s0")["receipt_id"]}
+
+
+def _live_summarizer(settings):
+    if settings.mock:
+        from .data import synthetic_summary
+        return synthetic_summary
+    _require_cuda()
+    from .gpu import make_summarizer
+    return make_summarizer(model=MODEL, revision=REVISION, seed=settings.seed)
+
+
+def summarize_shard(settings, shard, shards):
+    """Summarize every shards-th history of the pinned split ahead of S1, on a GPU of its own.
+
+    Each summary keeps its (seed, split, text) RNG stream, so sharding does not change which
+    stream produces it; S1 then reads the cache and summarizes anything missing itself.
+    """
+    import pandas as pd
+    from .data import SPLITS, _upstream_module
+    if not 0 <= shard < shards:
+        raise ValueError("shard must satisfy 0 <= shard < shards")
+    _assert_runtime(settings)
+    identity = _summary_identity(settings)
+    scratch = settings.work_dir / "summaries" / f"split-{shard}-of-{shards}"
+    _upstream_module("scripts.split_dataset").split_dataset(settings.data_dir, scratch)
+    histories = [(split, text) for split in SPLITS
+                 for text in pd.read_csv(scratch / f"{split}.csv", keep_default_na=False)["Patient History"]]
+    shutil.rmtree(scratch)
+    summarize = _live_summarizer(settings)
+    summaries = {_summary_key(split, text): summarize(text, split) for split, text in histories[shard::shards]}
+    return private_write(settings.work_dir / "summaries" / f"{shard}-of-{shards}.json",
+                         {**identity, "summaries": summaries}, settings.source)
+
+
+def _cached_summarizer(settings, shards, live, counts=None):
+    identity, summaries = _summary_identity(settings), {}
+    for path in shards:
+        payload = private_read(path, settings.source)
+        if {key: payload.get(key) for key in identity} != identity:
+            raise RuntimeError("summary shard was produced for a different run; use a new work directory")
+        summaries.update(payload["summaries"])
+    fallback = live or _live_summarizer(settings)
+    counts = Counter() if counts is None else counts
+
+    def summarize(text, split):
+        cached = summaries.get(_summary_key(split, text))
+        counts["cached" if cached is not None else "computed"] += 1
+        return cached if cached is not None else fallback(text, split)
+    return summarize
 
 
 def s2(settings):
@@ -228,71 +294,109 @@ def s3(settings):
     return outputs
 
 
+def _ledger(settings, entry):
+    """Insert or update one training attempt; concurrent arm jobs share this file."""
+    path = settings.work_dir / "training-ledger.json"
+    with stage_lock(settings.work_dir, "training-ledger", wait=True):
+        ledger = read_json(path) if path.exists() else {"source": settings.source, "runs": []}
+        runs = ledger["runs"]
+        index = next((i for i, run in enumerate(runs) if run.get("attempt") == entry["attempt"]), None)
+        if index is None:
+            runs.append(dict(entry))
+        else:
+            runs[index] = dict(entry)
+        write_json(path, ledger)
+    return path
+
+
+def _train_arm(settings, protocol, seed, arm):
+    with stage_lock(settings.work_dir, f"train-{protocol}-{seed}-{arm}"):
+        directory = settings.work_dir / "models" / protocol / str(seed) / arm
+        selection = directory / "selection.json"
+        cfg = cfg_for(settings, arm, protocol, seed)
+        run_manifest = make_manifest(settings, f"training-{protocol}-{seed}-{arm}", cfg,
+                                     {"data_files": tree_fingerprint(prepared(settings, protocol)), "training_seed": seed})
+        if selection.exists():
+            saved = read_json(selection)
+            if saved.get("training_manifest_id") != run_manifest["manifest_id"]:
+                raise RuntimeError("training config or data changed after checkpoint selection")
+            for path, expected in saved["run_outputs"].items():
+                if not Path(path).is_file() or file_digest(Path(path)) != expected:
+                    raise RuntimeError("selected model or cached training artifact changed")
+            return [selection, *map(Path, saved["run_outputs"])]
+        started = eastern_now()
+        entry = {"attempt": f"{protocol}/{seed}/{arm}/{started}", "protocol": protocol, "seed": seed, "arm": arm,
+                 "status": "RUNNING", "started_at": started}
+        _ledger(settings, entry)
+        try:
+            manifest_path = directory / "manifest.json"
+            if manifest_path.exists() and read_json(manifest_path)["manifest_id"] != run_manifest["manifest_id"]:
+                raise RuntimeError("training inputs changed since the interrupted checkpoint")
+            arm_outputs = [write_json(manifest_path, run_manifest)]
+            if settings.mock:
+                train_rows = _evaluate(settings, arm, protocol, seed, "train")
+                val_rows = _evaluate(settings, arm, protocol, seed, "val")
+                arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "train"), train_rows, settings.source))
+                arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "val"), val_rows, settings.source))
+                info = {"adapter_dir": None, "execution": "mock", "learning": "NOT_RUN",
+                        "selection": "fixed mock policy; validation exercised; no test access",
+                        "wandb_run_ids": [], "training_patients": len(train_rows), "validation_patients": len(val_rows)}
+            else:
+                _require_cuda()
+                from .gpu import train
+                info = train(cfg, output_dir=directory, data_dir=prepared(settings, protocol), seed=seed)
+                adapter = Path(info["adapter_dir"])
+                selected = sorted(path for path in adapter.rglob("*") if path.is_file())
+                if not selected or not any(path.suffix in (".safetensors", ".bin") for path in selected):
+                    raise RuntimeError("selected adapter has no weight files")
+                arm_outputs.extend(selected)
+            run_manifest["wandb_run_ids"] = info.get("wandb_run_ids", [])
+            write_json(manifest_path, run_manifest)
+            info.update({"source": settings.source, "arm": arm, "seed": seed,
+                         "config_hash": digest(OmegaConf.to_container(cfg, resolve=True)), "selection_split": "val",
+                         "training_manifest_id": run_manifest["manifest_id"],
+                         "run_outputs": {str(path): file_digest(path) for path in arm_outputs}})
+            outputs = [write_json(selection, info), *arm_outputs]
+            entry["status"] = "PASS"
+            entry["selection"] = str(selection)
+        except BaseException as error:
+            entry["status"] = "FAILED"
+            entry["error_type"] = type(error).__name__
+            raise
+        finally:
+            entry["finished_at"] = eastern_now()
+            _ledger(settings, entry)
+        return outputs
+
+
 def s4(settings):
     outputs = []
-    ledger_path = settings.work_dir / "training-ledger.json"
-    ledger = read_json(ledger_path) if ledger_path.exists() else {"source": settings.source, "runs": []}
     for protocol in protocols(settings):
         for seed in settings.seeds:
             for arm in ARMS:
-                directory = settings.work_dir / "models" / protocol / str(seed) / arm
-                selection = directory / "selection.json"
-                cfg = cfg_for(settings, arm, protocol, seed)
-                run_manifest = make_manifest(settings, f"training-{protocol}-{seed}-{arm}", cfg,
-                                             {"data_files": tree_fingerprint(prepared(settings, protocol)), "training_seed": seed})
-                if selection.exists():
-                    saved = read_json(selection)
-                    if saved.get("training_manifest_id") != run_manifest["manifest_id"]:
-                        raise RuntimeError("training config or data changed after checkpoint selection")
-                    for path, expected in saved["run_outputs"].items():
-                        if not Path(path).is_file() or file_digest(Path(path)) != expected:
-                            raise RuntimeError("selected model or cached training artifact changed")
-                    outputs.extend([selection, *map(Path, saved["run_outputs"])])
-                    continue
-                entry = {"protocol": protocol, "seed": seed, "arm": arm, "status": "RUNNING", "started_at": eastern_now()}
-                ledger["runs"].append(entry)
-                write_json(ledger_path, ledger)
-                try:
-                    manifest_path = directory / "manifest.json"
-                    if manifest_path.exists() and read_json(manifest_path)["manifest_id"] != run_manifest["manifest_id"]:
-                        raise RuntimeError("training inputs changed since the interrupted checkpoint")
-                    arm_outputs = [write_json(manifest_path, run_manifest)]
-                    if settings.mock:
-                        train_rows = _evaluate(settings, arm, protocol, seed, "train")
-                        val_rows = _evaluate(settings, arm, protocol, seed, "val")
-                        arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "train"), train_rows, settings.source))
-                        arm_outputs.append(private_write(_rows_path(settings, protocol, seed, arm, "val"), val_rows, settings.source))
-                        info = {"adapter_dir": None, "execution": "mock", "learning": "NOT_RUN",
-                                "selection": "fixed mock policy; validation exercised; no test access",
-                                "wandb_run_ids": [], "training_patients": len(train_rows), "validation_patients": len(val_rows)}
-                    else:
-                        _require_cuda()
-                        from .gpu import train
-                        info = train(cfg, output_dir=directory, data_dir=prepared(settings, protocol), seed=seed)
-                        adapter = Path(info["adapter_dir"])
-                        selected = sorted(path for path in adapter.rglob("*") if path.is_file())
-                        if not selected or not any(path.suffix in (".safetensors", ".bin") for path in selected):
-                            raise RuntimeError("selected adapter has no weight files")
-                        arm_outputs.extend(selected)
-                    run_manifest["wandb_run_ids"] = info.get("wandb_run_ids", [])
-                    write_json(manifest_path, run_manifest)
-                    info.update({"source": settings.source, "arm": arm, "seed": seed,
-                                 "config_hash": digest(OmegaConf.to_container(cfg, resolve=True)), "selection_split": "val",
-                                 "training_manifest_id": run_manifest["manifest_id"],
-                                 "run_outputs": {str(path): file_digest(path) for path in arm_outputs}})
-                    outputs.append(write_json(selection, info))
-                    outputs.extend(arm_outputs)
-                    entry["status"] = "PASS"
-                    entry["selection"] = str(selection)
-                except BaseException as error:
-                    entry["status"] = "FAILED"
-                    entry["error_type"] = type(error).__name__
-                    raise
-                finally:
-                    entry["finished_at"] = eastern_now()
-                    write_json(ledger_path, ledger)
-    outputs.append(ledger_path)
+                outputs.extend(_train_arm(settings, protocol, seed, arm))
+    outputs.append(settings.work_dir / "training-ledger.json")
     return outputs
+
+
+def train_arm(settings, arm):
+    """Train one arm outside the S4 stage so arms run on separate GPUs; S4 then verifies them."""
+    if arm not in ARMS:
+        raise ValueError(f"unknown arm: {arm}")
+    _assert_runtime(settings)
+    _receipt(settings, "s2")
+    for protocol in protocols(settings):
+        for seed in settings.seeds:
+            _train_arm(settings, protocol, seed, arm)
+
+
+def _evaluate_arm(settings, protocol, seed, arm):
+    with stage_lock(settings.work_dir, f"evaluate-{protocol}-{seed}-{arm}"):
+        selection = read_json(settings.work_dir / "models" / protocol / str(seed) / arm / "selection.json")
+        for path, expected in selection["run_outputs"].items():
+            if not Path(path).is_file() or file_digest(Path(path)) != expected:
+                raise RuntimeError("selected model changed before test admission")
+        return _saved_evaluation(settings, arm, protocol, seed, adapter_dir=selection["adapter_dir"])
 
 
 def s5(settings):
@@ -300,12 +404,19 @@ def s5(settings):
     for protocol in protocols(settings):
         for seed in settings.seeds:
             for arm in ARMS:
-                selection = read_json(settings.work_dir / "models" / protocol / str(seed) / arm / "selection.json")
-                for path, expected in selection["run_outputs"].items():
-                    if not Path(path).is_file() or file_digest(Path(path)) != expected:
-                        raise RuntimeError("selected model changed before test admission")
-                outputs.extend(_saved_evaluation(settings, arm, protocol, seed, adapter_dir=selection["adapter_dir"]))
+                outputs.extend(_evaluate_arm(settings, protocol, seed, arm))
     return outputs
+
+
+def evaluate_arm(settings, arm):
+    """Evaluate one locked final model on test outside S5, once; S5 then verifies every arm."""
+    if arm not in ARMS:
+        raise ValueError(f"unknown arm: {arm}")
+    _assert_runtime(settings)
+    _receipt(settings, "s4")
+    for protocol in protocols(settings):
+        for seed in settings.seeds:
+            _evaluate_arm(settings, protocol, seed, arm)
 
 
 def s6(settings):
@@ -455,8 +566,12 @@ def export_aggregates(settings):
 
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("stage", choices=(*STAGES, "all", "validate", "export", "check-git", "python"))
+    parser.add_argument("stage", choices=(*STAGES, "all", "validate", "export", "check-git", "python",
+                                          "summarize-shard", "train-arm", "evaluate-arm"))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--shard", type=int)
+    parser.add_argument("--shards", type=int)
+    parser.add_argument("--arm", choices=ARMS)
     parser.add_argument("--fake-summarizer", action="store_true")
     parser.add_argument("--env-file", type=Path)
     args = parser.parse_args(argv)
@@ -477,6 +592,17 @@ def main(argv=None):
         print("tracked-file check: PASS")
     elif args.stage == "export":
         export_aggregates(settings)
+    elif args.stage == "summarize-shard":
+        if args.shard is None or args.shards is None:
+            parser.error("summarize-shard requires --shard and --shards")
+        os.environ["VLLM_USE_V1"] = "0"
+        print(f"summary shard written: {summarize_shard(settings, args.shard, args.shards).name}")
+    elif args.stage in ("train-arm", "evaluate-arm"):
+        if args.arm is None:
+            parser.error(f"{args.stage} requires --arm")
+        os.environ["VLLM_USE_V1"] = "0"
+        (train_arm if args.stage == "train-arm" else evaluate_arm)(settings, args.arm)
+        print(f"{args.stage} {args.arm}: PASS ({settings.source})")
     else:
         for stage in STAGES if args.stage == "all" else (args.stage,):
             run_stage(settings, stage, args.dry_run)

@@ -47,6 +47,47 @@ def test_report_packaging_note_follows_the_runtime(tmp_path):
     assert "CUDA 12.8" in note and "28 upstream pins" in note and "xgrammar source" not in note
 
 
+def test_summary_shards_cover_s1_and_must_match_the_run(tmp_path):
+    from replication import pipeline
+    from replication.data import generate_synthetic
+    settings = Settings("synthetic", tmp_path / "raw", tmp_path / "work", synthetic_n=120)
+    run_stage(settings, "s0")
+    generate_synthetic(settings.data_dir, seed=settings.seed, n=settings.synthetic_n)
+    (settings.data_dir / ".synthetic-generator.json").write_text(json.dumps({"source": "synthetic", "seed": 269, "n": 120}))
+    for shard in range(3):
+        pipeline.summarize_shard(settings, shard, 3)
+    run_stage(settings, "s1")
+    cache = json.loads((settings.work_dir / "data-audit.json").read_text())["payload"]["summary_cache"]
+    assert cache == {"shards": 3, "cached": 120, "computed": 0}
+    shard = settings.work_dir / "summaries" / "0-of-3.json"
+    payload = json.loads(shard.read_text())
+    payload["payload"]["seed"] = 270
+    shard.write_text(json.dumps(payload))
+    with pytest.raises(RuntimeError, match="different run"):
+        pipeline._cached_summarizer(settings, sorted(shard.parent.glob("*-of-*.json")), None)
+
+
+def test_arms_train_and_evaluate_as_separate_jobs_then_stages_verify_them(tmp_path):
+    from replication import pipeline
+    from replication.config import ARMS
+    settings = Settings("synthetic", tmp_path / "raw", tmp_path / "work", synthetic_n=120, bootstrap_resamples=20)
+    for stage in ("s0", "s1", "s2"):
+        run_stage(settings, stage)
+    with pytest.raises(RuntimeError, match="s4 must complete first"):
+        pipeline.evaluate_arm(settings, ARMS[0])
+    for arm in ARMS:
+        pipeline.train_arm(settings, arm)
+    run_stage(settings, "s3")
+    run_stage(settings, "s4")
+    ledger = json.loads((settings.work_dir / "training-ledger.json").read_text())
+    assert sorted(run["arm"] for run in ledger["runs"]) == sorted(ARMS * len(pipeline.protocols(settings)))
+    assert all(run["status"] == "PASS" for run in ledger["runs"])
+    for arm in ARMS:
+        pipeline.evaluate_arm(settings, arm)
+    run_stage(settings, "s5")
+    assert (settings.work_dir / "receipts" / "s5.json").exists()
+
+
 def test_fake_summarizer_cannot_enter_mimic_mode(tmp_path):
     env = dict(os.environ, CDM_DATA_SOURCE="mimic", CDM_DATA_DIR=str(tmp_path / "real"), CDM_WORK_DIR=str(tmp_path / "work"))
     result = subprocess.run([sys.executable, str(OWN / "scripts/run_stage.py"), "s1", "--fake-summarizer"], env=env, capture_output=True, text=True)
