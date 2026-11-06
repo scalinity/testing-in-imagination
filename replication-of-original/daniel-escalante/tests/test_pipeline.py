@@ -21,6 +21,32 @@ def test_every_stage_dry_runs_with_source_manifest(tmp_path):
     assert not settings.data_dir.exists()
 
 
+def test_later_stages_and_launcher_refuse_a_runtime_other_than_s0s(tmp_path, monkeypatch):
+    from replication import pipeline
+    work = tmp_path / "work"
+    run_stage(Settings("synthetic", tmp_path / "raw", work, runtime="blackwell"), "s0")
+    with pytest.raises(RuntimeError, match="built for the blackwell runtime"):
+        run_stage(Settings("synthetic", tmp_path / "raw", work), "s1")
+    for key in tuple(os.environ):
+        if key.startswith("CDM_"):
+            monkeypatch.delenv(key)
+    env = tmp_path / ".env"
+    env.write_text(f'CDM_WORK_DIR="{work}"\nCDM_RUNTIME=pinned\n')
+    with pytest.raises(RuntimeError, match="built for the blackwell runtime"):
+        pipeline.main(["python", "--env-file", str(env)])
+
+
+def test_report_packaging_note_follows_the_runtime(tmp_path):
+    from replication.pipeline import packaging_note, s0
+    assert "xgrammar source build" in packaging_note(Settings("synthetic", tmp_path / "raw", tmp_path / "pinned"))
+    blackwell = Settings("synthetic", tmp_path / "raw", tmp_path / "blackwell", runtime="blackwell")
+    blackwell.work_dir.mkdir()
+    os.environ["VLLM_USE_V1"] = "0"
+    s0(blackwell)
+    note = packaging_note(blackwell)
+    assert "CUDA 12.8" in note and "28 upstream pins" in note and "xgrammar source" not in note
+
+
 def test_fake_summarizer_cannot_enter_mimic_mode(tmp_path):
     env = dict(os.environ, CDM_DATA_SOURCE="mimic", CDM_DATA_DIR=str(tmp_path / "real"), CDM_WORK_DIR=str(tmp_path / "work"))
     result = subprocess.run([sys.executable, str(OWN / "scripts/run_stage.py"), "s1", "--fake-summarizer"], env=env, capture_output=True, text=True)

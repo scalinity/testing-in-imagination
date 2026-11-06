@@ -69,6 +69,22 @@ def _receipt(settings, stage):
     return receipt
 
 
+def _assert_runtime(settings):
+    """A work directory serves only the runtime its S0 environment was built for."""
+    path = settings.work_dir / "environment.json"
+    built = read_json(path).get("runtime_project", "pinned") if path.exists() else settings.runtime
+    if built != settings.runtime:
+        raise RuntimeError(f"work directory was built for the {built} runtime; use a new work directory for {settings.runtime}")
+
+
+def packaging_note(settings):
+    if settings.runtime == "pinned":
+        return "Packaging: no upstream lockfile; same-version xgrammar source build is pinned in the local lock."
+    changed = len(read_json(settings.work_dir / "environment.json")["dependency_substitutions"])
+    return (f"Packaging: no upstream lockfile; the CUDA 12.8 Blackwell runtime changes {changed} upstream pins "
+            "(torch 2.7.0+cu128, vLLM 0.9.2), listed in the S0 environment record.")
+
+
 def _require_cuda():
     import torch
     if not torch.cuda.is_available():
@@ -338,7 +354,7 @@ def s6(settings):
                 "leakage": {"admission_overlap": sum(current["leakage"]["admission_overlap"].values()),
                             "subject_overlap": current["leakage"]["subjects"]["any_overlap"],
                             "grouped_sensitivity": "full arm matrix reported separately below" if len(protocols(settings)) == 2 else "unassessable: subject IDs absent"},
-                "implementation": {"I1": "mock; no weights trained" if settings.mock else "pinned LoRA runtime completed",
+                "implementation": {"I1": "mock; no weights trained" if settings.mock else f"LoRA training completed on the {settings.runtime} runtime",
                                    "I2": "configured; learning NOT_RUN" if settings.mock else "100/100/100 optimizer-update phases",
                                    "I3": "configured; Adam NOT_RUN" if settings.mock else "Adam, lr 1e-5, batch 2, declared seed",
                                    "I4": "configured upstream USD schedule; provenance taken from paper ledger",
@@ -348,7 +364,7 @@ def s6(settings):
                         "git_sha": read_json(settings.work_dir / "manifests/s0.json")["git_sha"]},
                 "validation_dynamics": selection.get("validation_history", []),
                 "gaps": ["Local compatibility changes: " + text for text in COMPATIBILITY_DEVIATIONS] +
-                         ["Packaging: no upstream lockfile; same-version xgrammar source build is pinned in the local lock.",
+                         [packaging_note(settings),
                           "A paper delta treats the published value as fixed; its interval does not incorporate unknown paper-run uncertainty.",
                           "Physical-examination CSV missing-value literals become the existing unavailable sentinel, avoiding non-string NaN observations.",
                           "Primary parity admissions may share subjects with training; the grouped protocol tests sensitivity to that leakage."]}
@@ -381,6 +397,8 @@ def run_stage(settings, stage, dry_run=False):
     os.environ["VLLM_USE_V1"] = "0"
     settings.work_dir.mkdir(parents=True, exist_ok=True)
     index = STAGES.index(stage)
+    if index:
+        _assert_runtime(settings)
     inputs = {"settings": {"source": settings.source, "data_dir": str(settings.data_dir),
                            "work_dir": str(settings.work_dir), "seeds": list(settings.seeds),
                            "synthetic_n": settings.synthetic_n, "bootstrap_resamples": settings.bootstrap_resamples,
@@ -446,6 +464,7 @@ def main(argv=None):
     if args.fake_summarizer and not settings.mock:
         parser.error("--fake-summarizer is only permitted with synthetic input")
     if args.stage == "python":
+        _assert_runtime(settings)
         runtime = settings.work_dir / "runtime-env/bin/python"
         print(runtime if not settings.mock and runtime.exists() else sys.executable)
     elif args.stage == "validate":
