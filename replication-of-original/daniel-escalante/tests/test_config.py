@@ -25,6 +25,10 @@ def test_all_composed_backbones_and_rewards(arm):
     assert cfg.training.log_completions is False
     assert cfg.wandb.mode == "disabled"
     assert cfg.training.report_to == "none"
+    assert cfg.training.eval_strategy == "epoch"
+    # Singleton validation reports no eval_loss; a best-metric key would raise at the first scheduled pass.
+    assert cfg.training.metric_for_best_model is None and cfg.training.load_best_model_at_end is False
+    assert cfg.training.save_strategy == "steps" and cfg.training.save_steps == 100
     check_resolved_models(cfg)
 
 

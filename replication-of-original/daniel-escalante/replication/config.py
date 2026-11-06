@@ -149,6 +149,14 @@ def compose(arm="primary", data_dir=None, output_dir=None, seed=269):
         cfg.training.optimizer = "adam"
         cfg.training.temperature = 1.0
         cfg.evaluation.temperature = 0.0
+        # A validation pass replays every validation patient as a full episode (~80 min on
+        # 240 patients). The final fixed-budget checkpoint is selected regardless, so
+        # validating each epoch instead of every 100 steps saves ~50 h per arm.
+        cfg.training.eval_strategy = "epoch"
+        # The singleton validation override reports no eval_loss. With upstream's
+        # metric_for_best_model "loss", transformers raises KeyError after the first
+        # scheduled pass; the fixed-budget launcher never selects a best checkpoint.
+        cfg.training.metric_for_best_model = None
         for key in ("prompt_template_file", "hypothesis_prompt_template_file"):
             cfg.environment[key] = str(UPSTREAM / cfg.environment[key])
         if arm == "incorrect_minus1":

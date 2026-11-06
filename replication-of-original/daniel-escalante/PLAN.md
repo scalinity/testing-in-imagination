@@ -100,8 +100,13 @@ Inactive objectives skip unused forwards, changing dropout RNG consumption relat
 to upstream. Inference weight-transfer errors propagate. Physical-examination CSV
 missing-value literals become the existing unavailable sentinel. Checkpoints save
 the environment's independent confidence-pair RNG. Out-of-range generated confidence
-is retained for hypothesis accuracy and excluded from ECE as upstream specifies. F-1–F-4 remain
-unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
+is retained for hypothesis accuracy and excluded from ECE as upstream specifies. Validation
+runs at each epoch end rather than upstream's every 100 steps: one singleton pass over the
+240 real validation patients takes about 80 minutes, so 38 in-training passes would add
+about 50 hours per arm, and the final fixed-budget checkpoint is selected either way.
+Checkpoints stay every 100 steps for resume. Best-metric tracking is off because
+singleton validation reports no `eval_loss`; upstream's `metric_for_best_model: loss`
+would raise `KeyError` after the first scheduled validation. F-1–F-4 remain unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
 
 ## Implementation ownership
 

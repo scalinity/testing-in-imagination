@@ -24,6 +24,8 @@ COMPATIBILITY_DEVIATIONS = [
     "Inactive loss objectives skip unused forwards; dropout RNG consumption differs from the broken upstream minibatch path.",
     "Checkpoint sidecars preserve the environment's independent confidence-pair RNG; standard framework RNG files do not contain it.",
     "Training generation uses distinct deterministic request seeds by optimizer step, call and rollout; a single shared request seed would collapse identical GRPO prompts to identical draws.",
+    "Validation runs at each epoch end instead of every 100 steps (one singleton pass over 240 validation patients takes about 80 minutes); the final fixed-budget checkpoint is selected either way, so validation history has pre-training, per-epoch and final points.",
+    "Best-metric tracking is off (metric_for_best_model unset): singleton validation reports no eval_loss, so upstream's 'loss' setting raises KeyError at the first scheduled validation, and the final fixed-budget checkpoint is selected regardless.",
 ]
 
 
