@@ -219,6 +219,11 @@ Physical-examination strings recognized as missing by the pinned CSV parser
 sentinel, preventing a non-string NaN from being treated as test text. Finite
 out-of-range model confidences stay in hypothesis observations and are counted;
 upstream excludes them from ECE without dropping patients or clamping values.
+A trained adapter is evaluated as upstream's `evaluate.py` and training validation do:
+loaded with upstream's `load_model`, merged into the base weights and copied into a vLLM
+engine without LoRA support. A copy that leaves any engine parameter unloaded fails.
+vLLM's own LoRA kernels are not used; their Triton 3.3.0 build fails on RTX PRO 6000
+(`sm_120`) GPUs.
 These changes preserve F-1–F-4 and the shipped primary reward. CUDA numerical
 qualification of the repaired training path remains outstanding.
 

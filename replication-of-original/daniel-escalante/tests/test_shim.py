@@ -274,10 +274,22 @@ def test_gpu_evaluation_uses_actual_singleton_episodes_and_greedy_sampler(
 
     _, vllm, _, calls = fake_loaders
     vllm.SamplingParams = lambda **kwargs: SimpleNamespace(**kwargs)
-    request_module = ModuleType("vllm.lora.request")
-    request_module.LoRARequest = lambda *args: args
-    monkeypatch.setitem(sys.modules, "vllm.lora.request", request_module)
     monkeypatch.setattr(gpu, "_cuda_runtime", lambda: None)
+    monkeypatch.setattr(sys.modules["torch"].cuda, "empty_cache", lambda: None, raising=False)
+    loaded, loads, parameters = [], [], ["model.layer.weight"]
+
+    class Engine(vllm.LLM):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            weights = SimpleNamespace(load_weights=lambda items: loaded.extend(items) or {name for name, _ in loaded},
+                                      named_parameters=lambda: [(name, None) for name in parameters])
+            self.llm_engine = SimpleNamespace(model_executor=SimpleNamespace(
+                driver_worker=SimpleNamespace(model_runner=SimpleNamespace(model=weights))))
+    monkeypatch.setattr(vllm, "LLM", Engine)
+    merged = SimpleNamespace(state_dict=lambda: {"model.layer.weight": "merged"})
+    monkeypatch.setattr(upstream_setup, "load_model", lambda value, inference_mode=False: (
+        loads.append((inference_mode, value.evaluation.adapter_dir))
+        or SimpleNamespace(merge_and_unload=lambda: merged)))
     seen_splits = []
     def dataset(value, split):
         seen_splits.append(split)
@@ -297,8 +309,14 @@ def test_gpu_evaluation_uses_actual_singleton_episodes_and_greedy_sampler(
     generation_calls = [kwargs for kind, _, kwargs in calls if kind == "generate"]
     assert generation_calls
     assert all(kwargs["sampling_params"].temperature == 0 for kwargs in generation_calls)
-    assert all(kwargs["lora_request"][2] == str(adapter) for kwargs in generation_calls)
     assert all(len(prompts) <= 1 for kind, prompts, _ in calls if kind == "generate")
+    # As upstream evaluate.py: PEFT-load the adapter, merge it, copy weights into a base engine.
+    assert loads == [(True, str(adapter))] and loaded == [("model.layer.weight", "merged")]
+    assert all("lora_request" not in kwargs for kwargs in generation_calls)
+    assert not any(kwargs.get("enable_lora") for kind, _, kwargs in calls if kind == "llm")
+    parameters.append("model.unloaded.weight")
+    with pytest.raises(RuntimeError, match="1 inference parameters unloaded"):
+        gpu.evaluate(cfg, tmp_path, "test", 269, adapter_dir=adapter)
 
 
 def test_train_uses_adam_fixed_budget_train_val_only_and_resume(

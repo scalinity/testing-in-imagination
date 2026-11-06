@@ -402,27 +402,36 @@ def evaluate(cfg, data_dir, split, seed, adapter_dir=None):
         vllm = import_module("vllm")
         transformers.set_seed(cfg.training.seed)
         dataset = setup.prepare_dataset(cfg, split)
-        # vLLM LoRA uses the same pinned base without reloading a second HF model.
         engine = vllm.LLM(
-            model=cfg.model.model_name, enable_lora=adapter_dir is not None,
-            max_lora_rank=max(8, int(cfg.model.lora_r)),
+            model=cfg.model.model_name,
             gpu_memory_utilization=cfg.training.vllm_gpu_memory_utilization,
             max_model_len=cfg.environment.max_length + cfg.training.max_completion_length, seed=cfg.training.seed,
         )
         if adapter_dir is not None:
-            request = import_module("vllm.lora.request").LoRARequest("policy", 1, str(adapter_dir))
+            _load_merged_adapter(engine, cfg, adapter_dir, setup)
+        return _evaluate_with_model(cfg, dataset, engine, _sampling(vllm, cfg, False, cfg.training.seed))
 
-            class AdaptedPolicy:
-                def get_tokenizer(self):
-                    return engine.get_tokenizer()
 
-                def generate(self, *args, **kwargs):
-                    return engine.generate(*args, **kwargs, lora_request=request)
+def _load_merged_adapter(engine, cfg, adapter_dir, setup):
+    """Serve a trained adapter as upstream evaluate.py does: PEFT-load it, merge, copy into vLLM.
 
-            policy = AdaptedPolicy()
-        else:
-            policy = engine
-        return _evaluate_with_model(cfg, dataset, policy, _sampling(vllm, cfg, False, cfg.training.seed))
+    This is also how training validation reaches vLLM. vLLM's own LoRA kernels are not used;
+    their Triton 3.3.0 build fails to compile on sm_120 (RTX PRO 6000) GPUs.
+    """
+    from omegaconf import open_dict
+
+    adapter_cfg = deepcopy(cfg)
+    with open_dict(adapter_cfg):
+        adapter_cfg.evaluation.base_model = False
+        adapter_cfg.evaluation.adapter_dir = str(adapter_dir)
+    merged = setup.load_model(adapter_cfg, inference_mode=True).merge_and_unload()
+    target = engine.llm_engine.model_executor.driver_worker.model_runner.model
+    loaded = set(target.load_weights(merged.state_dict().items()) or ())
+    unloaded = {name for name, _ in target.named_parameters()} - loaded
+    if unloaded:
+        raise RuntimeError(f"Adapter merge left {len(unloaded)} inference parameters unloaded")
+    del merged
+    import_module("torch").cuda.empty_cache()
 
 
 @lru_cache(maxsize=1)
