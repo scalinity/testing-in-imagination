@@ -75,6 +75,14 @@ def _require_cuda():
         raise RuntimeError("real execution requires CUDA on HiPerGator")
 
 
+def dependency_substitutions(upstream, runtime):
+    """Return {name: [upstream, runtime]} for changed pins; the package set itself must match."""
+    before, after = (dict(dependency.split("==", 1) for dependency in group) for group in (upstream, runtime))
+    if set(before) != set(after):
+        raise RuntimeError("runtime package set differs from the upstream pin")
+    return {name: [before[name], after[name]] for name in sorted(before) if before[name] != after[name]}
+
+
 def s0(settings):
     if sys.version_info[:2] not in ((3, 11), (3, 12)):
         raise RuntimeError("Python 3.11–3.12 is required")
@@ -82,15 +90,17 @@ def s0(settings):
     audit = validate_raw(settings.data_dir, source="mimic") if not settings.mock else {"status": "synthetic generation occurs in S1"}
     if os.environ.get("VLLM_USE_V1") != "0":
         raise RuntimeError("VLLM_USE_V1 must be 0")
+    project = settings.runtime_dir
     upstream_dependencies = tomllib.loads((UPSTREAM / "pyproject.toml").read_text())["project"]["dependencies"]
-    runtime_dependencies = tomllib.loads((OWN / "runtime/pyproject.toml").read_text())["project"]["dependencies"]
-    if runtime_dependencies != upstream_dependencies:
+    runtime_dependencies = tomllib.loads((project / "pyproject.toml").read_text())["project"]["dependencies"]
+    substitutions = dependency_substitutions(upstream_dependencies, runtime_dependencies)
+    if settings.runtime == "pinned" and substitutions:
         raise RuntimeError("runtime dependencies have drifted from the upstream pin")
     if not settings.mock:
         if sys.platform != "linux":
             raise RuntimeError("full upstream environment requires Linux/CUDA; use HiPerGator")
         env = dict(os.environ, UV_PROJECT_ENVIRONMENT=str(settings.work_dir / "runtime-env"))
-        subprocess.run(["uv", "sync", "--frozen", "--project", str(OWN / "runtime"), "--python", sys.executable], env=env, check=True)
+        subprocess.run(["uv", "sync", "--frozen", "--project", str(project), "--python", sys.executable], env=env, check=True)
         request = urllib.request.Request(f"https://huggingface.co/api/models/{MODEL}/revision/{REVISION}")
         with urllib.request.urlopen(request, timeout=45) as response:
             metadata = json.load(response)
@@ -98,9 +108,10 @@ def s0(settings):
             raise RuntimeError("published model revision does not resolve to the pinned commit")
     result = {"source": settings.source, "data_validation": audit, "python": sys.version.split()[0],
               "model_revision": REVISION, "model_revision_verification": "immutable pin recorded; live lookup deferred" if settings.mock else "PASS",
-              "upstream_lockfile": "absent at pin; local lock preserves identical dependency declarations",
-              "runtime_lock_sha256": file_digest(OWN / "runtime/uv.lock"),
-              "dependency_source_overrides": {"xgrammar": {"version": "0.1.16", "commit": "989222175c2a30fb7987d8bcce35bec1bf6817f2", "reason": "release unavailable on package index; same-version publisher source"}},
+              "upstream_lockfile": "absent at pin; local lock preserves the upstream dependency declarations",
+              "runtime_project": settings.runtime, "runtime_lock_sha256": file_digest(project / "uv.lock"),
+              "dependency_substitutions": substitutions,
+              "dependency_source_overrides": {"xgrammar": {"version": "0.1.16", "commit": "989222175c2a30fb7987d8bcce35bec1bf6817f2", "reason": "release unavailable on package index; same-version publisher source"}} if settings.runtime == "pinned" else {},
               "cuda_stack_sync": "NOT_RUN (synthetic CPU)" if settings.mock else "PASS",
               "synthetic_n": settings.synthetic_n, "seeds": list(settings.seeds),
               "bootstrap_resamples": settings.bootstrap_resamples}
@@ -357,7 +368,7 @@ def s6(settings):
     launch = read_json(settings.work_dir / "manifests/s0.json")
     results["provenance"] = {"git_sha": launch["git_sha"], "source_fingerprint": launch["source_fingerprint"],
                              "stage_manifest_ids": {stage: read_json(settings.work_dir / "manifests" / f"{stage}.json")["manifest_id"] for stage in STAGES},
-                             "runtime_lock_sha256": file_digest(OWN / "runtime/uv.lock"),
+                             "runtime_lock_sha256": file_digest(settings.runtime_dir / "uv.lock"),
                              "wandb_run_ids": sorted({run_id for protocol in protocols(settings) for seed in settings.seeds for arm in ARMS
                                                       for run_id in read_json(settings.work_dir / "models" / protocol / str(seed) / arm / "selection.json").get("wandb_run_ids", [])})}
     private_write(private, results, settings.source)
@@ -372,7 +383,8 @@ def run_stage(settings, stage, dry_run=False):
     index = STAGES.index(stage)
     inputs = {"settings": {"source": settings.source, "data_dir": str(settings.data_dir),
                            "work_dir": str(settings.work_dir), "seeds": list(settings.seeds),
-                           "synthetic_n": settings.synthetic_n, "bootstrap_resamples": settings.bootstrap_resamples}}
+                           "synthetic_n": settings.synthetic_n, "bootstrap_resamples": settings.bootstrap_resamples,
+                           "runtime": settings.runtime}}
     if index and not dry_run:
         inputs["previous_stage"] = _receipt(settings, STAGES[index - 1])["receipt_id"]
     if stage == "s0" and settings.source == "mimic":

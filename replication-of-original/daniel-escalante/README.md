@@ -74,6 +74,15 @@ torch 2.6.0+cu124 build contains kernels up to `sm_90` only, so the pinned stack
 L4 but not on the Blackwell partitions. Partition and GRES are submission flags, which
 override the scripts' `#SBATCH` defaults.
 
+`CDM_RUNTIME=blackwell` selects `runtime-blackwell/`, which keeps every upstream package
+and changes 28 pins to the CUDA 12.8 set of the course's `lacdm-bw` environment: torch
+2.7.0+cu128, vLLM 0.9.2, xgrammar 0.1.19 and transformers 4.51.1, with TRL 0.15.2 and
+numpy unchanged. One 96 GB RTX PRO 6000 then holds the policy and vLLM engine at the
+upstream memory settings, as the authors' single 48 GB A40 did. S0 records every
+substituted version, and every manifest names the deviation. The default
+`CDM_RUNTIME=pinned` keeps the exact upstream pins. Changing it needs a new work
+directory.
+
 Only `CDM_DATA_SOURCE` changes execution mode. Both modes use the same stages,
 data contract, config composition and reporting. Set input and output locations
 once for the machine. Do not reuse a synthetic work directory for MIMIC.

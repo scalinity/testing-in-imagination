@@ -104,10 +104,16 @@ def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dic
              "config": OmegaConf.to_container(cfg, resolve=True),
              "overrides": overrides_against_defaults(cfg), "runtime": runtime_info(),
              "inputs": inputs, "dry_run": dry_run, "wandb_run_ids": [],
-             "bootstrap_resamples": settings.bootstrap_resamples}
+             "bootstrap_resamples": settings.bootstrap_resamples, "runtime_project": settings.runtime}
+    dependencies = (
+        "The absent xgrammar 0.1.16 package release is sourced from its publisher's immutable same-version commit."
+        if settings.runtime == "pinned" else
+        "CUDA 12.8 packages replace the upstream pins for Blackwell GPUs (torch 2.7.0+cu128, vLLM 0.9.2, "
+        "xgrammar 0.1.19, transformers 4.51.1; TRL 0.15.2 unchanged); S0 records every substituted version."
+    )
     value["local_compatibility_deviations"] = COMPATIBILITY_DEVIATIONS + [
         "Physical-examination CSV missing-value literals become the upstream not-available sentinel before parsing.",
-        "The absent xgrammar 0.1.16 package release is sourced from its publisher's immutable same-version commit.",
+        dependencies,
     ]
     # Observations document the launch, while immutable code/config/lock/input
     # identities determine resume. S0 deliberately transitions from bootstrap

@@ -62,10 +62,16 @@ class Settings:
     seeds: tuple[int, ...] = (269,)
     synthetic_n: int = 2400
     bootstrap_resamples: int = 10000
+    runtime: str = "pinned"
 
     @property
     def mock(self) -> bool:
         return self.source == "synthetic"
+
+    @property
+    def runtime_dir(self) -> Path:
+        # "blackwell" substitutes the CUDA 12.8 packages that B200/RTX PRO 6000 GPUs require.
+        return OWN / ("runtime" if self.runtime == "pinned" else "runtime-blackwell")
 
     @classmethod
     def load(cls, env_file: Path | None = None):
@@ -86,7 +92,10 @@ class Settings:
         n = int(values.get("CDM_SYNTHETIC_N", "2400"))
         if n < 120:
             raise ValueError("at least 120 synthetic admissions are needed for the full split and statistics pipeline")
-        return cls(source=source, data_dir=data, work_dir=work, seeds=seeds, synthetic_n=n)
+        runtime = values.get("CDM_RUNTIME", "pinned")
+        if runtime not in ("pinned", "blackwell"):
+            raise ValueError("CDM_RUNTIME must be pinned or blackwell")
+        return cls(source=source, data_dir=data, work_dir=work, seeds=seeds, synthetic_n=n, runtime=runtime)
 
 
 def assert_model(model: str) -> None:

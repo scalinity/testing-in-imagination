@@ -23,6 +23,23 @@ def test_manifest_records_identity_runtime_composed_config_overrides(tmp_path, m
     assert any(item["key"] == "model.model_name" for item in first["overrides"])
 
 
+def test_manifest_names_the_runtime_dependency_deviation(tmp_path):
+    pinned = make_manifest(Settings("synthetic", tmp_path / "raw", tmp_path / "work"), "s0", compose(), {})
+    blackwell = make_manifest(Settings("synthetic", tmp_path / "raw", tmp_path / "work", runtime="blackwell"),
+                              "s0", compose(), {})
+    pinned_text, blackwell_text = (" ".join(m["local_compatibility_deviations"]) for m in (pinned, blackwell))
+    assert "xgrammar 0.1.16" in pinned_text and "CUDA 12.8" not in pinned_text
+    assert "CUDA 12.8" in blackwell_text and "xgrammar 0.1.16" not in blackwell_text
+    assert pinned["manifest_id"] != blackwell["manifest_id"]
+
+
+def test_dependency_substitutions_are_recorded_and_new_packages_rejected():
+    from replication.pipeline import dependency_substitutions
+    assert dependency_substitutions(["a==1", "b==2"], ["a==1", "b==3"]) == {"b": ["2", "3"]}
+    with pytest.raises(RuntimeError, match="package set"):
+        dependency_substitutions(["a==1"], ["a==1", "c==1"])
+
+
 def test_metrics_reuse_shared_writer_without_mutating_it(tmp_path):
     from lacdm import metric_writer
     before = metric_writer.SOURCES

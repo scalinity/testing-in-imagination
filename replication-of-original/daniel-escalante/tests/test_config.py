@@ -59,6 +59,30 @@ def test_runtime_preserves_exact_dependency_requirements():
     assert (OWN / "runtime/uv.lock").exists()
 
 
+def test_blackwell_runtime_changes_only_versions_of_upstream_packages():
+    def pins(path):
+        return dict(dep.split("==") for dep in tomllib.loads(path.read_text())["project"]["dependencies"])
+    original, local = pins(UPSTREAM / "pyproject.toml"), pins(OWN / "runtime-blackwell/pyproject.toml")
+    assert set(local) == set(original)
+    assert (local["torch"], local["vllm"], local["trl"]) == ("2.7.0", "0.9.2", original["trl"])
+    assert (OWN / "runtime-blackwell/uv.lock").exists()
+
+
+def test_runtime_selection(tmp_path, monkeypatch):
+    for key in tuple(__import__("os").environ):
+        if key.startswith("CDM_"):
+            monkeypatch.delenv(key)
+    env = tmp_path / ".env"
+    base = f'CDM_WORK_DIR="{tmp_path / "work"}"\n'
+    env.write_text(base)
+    assert Settings.load(env).runtime_dir == OWN / "runtime"
+    env.write_text(base + "CDM_RUNTIME=blackwell\n")
+    assert Settings.load(env).runtime_dir == OWN / "runtime-blackwell"
+    env.write_text(base + "CDM_RUNTIME=cuda13\n")
+    with pytest.raises(ValueError, match="CDM_RUNTIME"):
+        Settings.load(env)
+
+
 def test_private_settings_and_literal_env(tmp_path, monkeypatch):
     for key in tuple(__import__("os").environ):
         if key.startswith("CDM_"):
