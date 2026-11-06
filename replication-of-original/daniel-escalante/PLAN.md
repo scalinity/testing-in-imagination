@@ -41,15 +41,19 @@ orchestration only, never learning. No model downloads or GPU rentals in CPU mod
 
 ## Data contract
 
-Four `<condition>_hadm_info_first_diag.pkl` dictionaries keyed by integer admission ID.
+Four `<condition>_hadm_info_first_diag.pkl` dictionaries keyed by integer admission ID,
+built from the PhysioNet v1.1 CSV release by `scripts/build_condition_pickles.py` with the
+field mapping of Hager et al.'s `ConvertPhysionet.py` at `4d33f98`.
 Consumed fields: `Patient History` (string), `Physical Examination` (string),
 `Laboratory Tests` (integer item ID → string), `Radiology` (list of dictionaries with
-`Modality` and `Report` strings). `Label` is assigned by the splitter, `Patient ID`
+`Modality` and `Report` strings). Reports in modalities outside the four imaging tests are
+counted and skipped by the parser, not rejected. `Label` is assigned by the splitter, `Patient ID`
 comes from the dictionary key, `Patient History Summary` is produced in S1.
 Optional `subject_id` supports admission-overlap audits and grouped splitting;
 absence must be reported as unassessable, never zero overlap.
 `lab_test_mapping.csv` or `.pkl` must resolve `itemid`, `label`, `corresponding_ids`
-through the upstream parser. The configured 7 lab panels, 4 imaging modalities and
+through the upstream parser; panels and other test groups are rows with a blank `itemid`,
+found by label. The configured 7 lab panels, 4 imaging modalities and
 physical exam are the only action vocabulary; normalized costs sum to 1 including
 physical exam. Validate roughly 2,400 admissions and the expected 957/648/257/538
 class mix before mimic execution. Synthetic records are invented independently,

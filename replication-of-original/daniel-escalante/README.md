@@ -40,8 +40,23 @@ mode. No full-stack installation, model download or GPU is needed for CPU checks
 ## Day one: credentialed MIMIC data on HiPerGator
 
 Use an approved HiPerGator checkout with the submodule already present. Put the
-credentialed files in private storage, never in this repository. Keep all actual
-paths and site settings in the ignored `.env`:
+credentialed files in private storage, never in this repository.
+
+The PhysioNet v1.1 release ships CSVs, while the pinned splitter reads four condition
+pickles. Upstream defers that step to Hager et al.'s `ConvertPhysionet.py`
+(`paulhager/MIMIC-Clinical-Decision-Making-Dataset@4d33f98`, MIT); this script builds the
+same dictionaries without its unused spaCy import and never writes to the raw directory:
+
+```sh
+.venv/bin/python -I scripts/build_condition_pickles.py \
+  --raw-dir "<private v1.1 download>" --out-dir "<new private directory>"
+```
+
+It checks every digest in `SHA256SUMS.txt` itself: PhysioNet separates digest and name
+with one space, which `shasum -c` rejects while still exiting 0. The output's
+`.conversion.json` records the checksum-manifest digest and every output digest, so a
+second machine can confirm it built identical pickles. Point `CDM_DATA_DIR` at the
+output directory. Keep all actual paths and site settings in the ignored `.env`:
 
 ```dotenv
 CDM_DATA_SOURCE=mimic
@@ -140,6 +155,15 @@ there is no canonical seed; the executable pin contradicts it. Subject overlap i
 reported for the parity split. If subject IDs exist, a separate grouped split runs
 the full arm matrix as a sensitivity analysis. Without subject IDs, subject leakage
 is unassessable and the report says so. Admission overlap always fails on load.
+The v1.1 release has no `subject_id`, so on real data the grouped split does not run
+and subject leakage of the parity split is unassessable.
+
+Two properties of the real release differ from the synthetic population. Its lab mapping
+lists the seven panels and 111 other test groups as rows with a blank `itemid`; validation
+resolves them by label, as the upstream parser does. Of its 5,960 radiology reports, 373
+use modalities outside the four configured imaging tests (MRCP, ERCP, CTU and others).
+The upstream parser skips those reports, so validation counts them in the private audit
+rather than rejecting the release.
 
 ## Interpretation and open checks
 

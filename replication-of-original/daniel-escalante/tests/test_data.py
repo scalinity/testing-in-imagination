@@ -115,7 +115,7 @@ def test_generation_and_all_split_bytes_are_deterministic(tmp_path):
     (lambda record: record.update({"Laboratory Tests": {50001: 1.0}}), "invalid_lab_result"),
     (lambda record: record.update({"Radiology": {"CT": "text"}}), "invalid_radiology"),
     (lambda record: record.update({"Radiology": ["text"]}), "invalid_radiology_record"),
-    (lambda record: record.update({"Radiology": [{"Modality": "PET", "Report": "text"}]}), "unexpected_modality"),
+    (lambda record: record.update({"Radiology": [{"Modality": None, "Report": "text"}]}), "invalid_modality"),
     (lambda record: record.update({"Radiology": [{"Modality": "CT", "Findings": "text"}]}), "invalid_radiology_report"),
     (lambda record: record.update({"Radiology": [{"Modality": "CT", "Report": None}]}), "invalid_radiology_report"),
     (lambda record: record.update({"subject_id": "unknown"}), "invalid_subject_id"),
@@ -209,6 +209,38 @@ def test_pickle_mapping_conversion_and_parser(raw, tmp_path, cfg):
     output = tmp_path / "prepared"
     prepare_splits(raw, output)
     assert load_dataset(output, "test", cfg)[0]["patient_history"]
+
+
+def test_release_mapping_lists_panels_as_rows_with_blank_itemid(raw, tmp_path, cfg):
+    # PhysioNet v1.1 gives panels and other test groups a label and members but no itemid.
+    path = raw / "lab_test_mapping.csv"
+    frame = pd.read_csv(path)
+    frame["itemid"] = frame["itemid"].astype("Int64")
+    frame.loc[frame["label"].isin(LAB_TESTS), "itemid"] = pd.NA
+    group = pd.DataFrame({"itemid": pd.array([pd.NA], dtype="Int64"), "label": ["Lipid Profile"],
+                          "corresponding_ids": ["[50001]"]})
+    pd.concat([frame, group], ignore_index=True).to_csv(path, index=False)
+    audit = validate_raw(raw)["mapping"]
+    assert (audit["rows"], audit["group_rows"]) == (2 * len(LAB_TESTS) + 1, len(LAB_TESTS) + 1)
+    output = tmp_path / "prepared"
+    prepare_splits(raw, output)
+    assert pd.read_csv(output / "lab_test_mapping.csv")["itemid"].isna().sum() == len(LAB_TESTS) + 1
+    dataset = load_dataset(output, "test", cfg)
+    assert any(dataset[i]["test_results"][LAB_TESTS[0]] != "not available.\n" for i in range(len(dataset)))
+
+
+def test_unconfigured_imaging_modalities_are_counted_and_ignored_like_upstream(raw, tmp_path, cfg):
+    # PhysioNet v1.1 also holds MRCP, ERCP and other reports that are not configured actions.
+    for condition in CLASSES:
+        path, records = _raw_records(raw, condition)
+        for record in records.values():
+            record["Radiology"] = [{"Modality": "MRCP", "Report": "FINDINGS:\nInvented finding.\nIMPRESSION:\nObserve."}]
+        _rewrite(path, records)
+    assert validate_raw(raw)["schema"]["unconfigured_modalities"] == {"MRCP": 240}
+    output = tmp_path / "prepared"
+    prepare_splits(raw, output)
+    dataset = load_dataset(output, "test", cfg)
+    assert all(dataset[i]["test_results"]["MRI"] == "not available.\n" for i in range(len(dataset)))
 
 
 def test_parser_follows_canonical_lab_references_and_multiple_reports(raw, tmp_path, cfg):

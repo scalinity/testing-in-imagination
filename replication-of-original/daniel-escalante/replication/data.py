@@ -88,17 +88,24 @@ def _mapping(data_dir: Path) -> tuple[pd.DataFrame, set[int], dict]:
         raise ValueError("Lab mapping requires itemid, label, corresponding_ids")
 
     errors = Counter()
-    rows = {}
+    rows, groups = {}, []
     labels = Counter()
     normalized = []
     for row in frame.to_dict("records"):
         itemid, label, refs = row["itemid"], row["label"], row["corresponding_ids"]
-        if not _integer(itemid):
+        # The PhysioNet release lists panels and other test groups with a blank itemid, so the
+        # CSV column is read as text; upstream looks groups up by label and items by itemid.
+        if isinstance(itemid, str):
+            itemid = itemid.strip()
+            itemid = int(itemid) if itemid.isascii() and itemid.isdigit() else itemid
+        group = itemid == "" or (isinstance(itemid, float) and math.isnan(itemid))
+        if not group and not _integer(itemid):
             errors["mapping.invalid_itemid"] += 1
             continue
-        itemid = int(itemid)
-        if itemid in rows:
-            errors["mapping.duplicate_itemid"] += 1
+        if not group:
+            itemid = int(itemid)
+            if itemid in rows:
+                errors["mapping.duplicate_itemid"] += 1
         if not isinstance(label, str) or not label.strip():
             errors["mapping.invalid_label"] += 1
             continue
@@ -115,23 +122,26 @@ def _mapping(data_dir: Path) -> tuple[pd.DataFrame, set[int], dict]:
         refs = [int(x) for x in refs]
         if len(refs) != len(set(refs)):
             errors["mapping.duplicate_corresponding_ids"] += 1
-        rows[itemid] = (label, refs)
-        normalized.append({"itemid": itemid, "label": label, "corresponding_ids": repr(refs)})
+        if group:
+            groups.append((label, refs))
+        else:
+            rows[itemid] = (label, refs)
+        normalized.append({"itemid": "" if group else itemid, "label": label, "corresponding_ids": repr(refs)})
     for panel in LAB_TESTS:
         if labels[panel] != 1:
             errors["mapping.panel_label_not_unique"] += 1
-    for _, refs in rows.values():
+    for _, refs in (*rows.values(), *groups):
         for itemid in refs:
             if itemid not in rows:
                 errors["mapping.unresolved_corresponding_id"] += 1
     _raise_errors(errors, "Invalid lab mapping")
 
     panel_ids = set()
-    for label, refs in rows.values():
+    for label, refs in (*rows.values(), *groups):
         if label in LAB_TESTS:
             panel_ids.update(refs)
     return pd.DataFrame(normalized), set(rows), {
-        "format": mapping_format, "rows": len(rows), "panels": len(LAB_TESTS),
+        "format": mapping_format, "rows": len(normalized), "group_rows": len(groups), "panels": len(LAB_TESTS),
         "resolved_itemids": len(panel_ids), "all_references_resolved": True,
     }
 
@@ -168,9 +178,10 @@ def _record_errors(record, panel_ids: set[int]) -> Counter:
             if not isinstance(report, dict):
                 errors["raw.invalid_radiology_record"] += 1
                 continue
+            # Unconfigured modalities (MRCP, ERCP, ...) are valid; the upstream parser skips them.
             modality = report.get("Modality")
-            if not isinstance(modality, str) or modality not in IMAGING_TESTS:
-                errors["raw.unexpected_modality"] += 1
+            if not isinstance(modality, str) or not modality.strip():
+                errors["raw.invalid_modality"] += 1
             text = report.get("Report")
             if not isinstance(text, str) or not text.strip():
                 errors["raw.invalid_radiology_report"] += 1
@@ -250,7 +261,7 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
     if source not in ("synthetic", "mimic"):
         raise ValueError("source must be synthetic or mimic")
     _, panel_ids, mapping_audit = _mapping(data_dir)
-    errors, counts, missing, fields = Counter(), {}, Counter(), Counter()
+    errors, counts, missing, fields, unconfigured = Counter(), {}, Counter(), Counter(), Counter()
     admissions, subjects = set(), []
     unexpected_fields = 0
     for condition in CLASSES:
@@ -284,6 +295,10 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
             for field, expected_type in (("Physical Examination", str), ("Laboratory Tests", dict), ("Radiology", list)):
                 value = record.get(field)
                 missing[field] += isinstance(value, expected_type) and not value
+            if isinstance(record.get("Radiology"), list):
+                unconfigured.update(report["Modality"] for report in record["Radiology"]
+                                    if isinstance(report, dict) and isinstance(report.get("Modality"), str)
+                                    and report["Modality"] not in IMAGING_TESTS)
     total = sum(counts.values())
     if fields["subject_id"] not in (0, total):
         errors["raw.inconsistent_subject_id_presence"] += 1
@@ -303,7 +318,8 @@ def validate_raw(data_dir: Path, source: str = "synthetic") -> dict:
     return {
         "source": source, "total": total, "class_counts": counts,
         "schema": {"valid": True, "field_counts": dict(fields), "empty_tests": dict(missing),
-                   "extra_field_count": unexpected_fields},
+                   "extra_field_count": unexpected_fields,
+                   "unconfigured_modalities": dict(sorted(unconfigured.items()))},
         "mapping": mapping_audit, "count_guard": count_guard,
         "subjects": {"status": "assessable" if subjects else "unassessable",
                      "unique": len(set(subjects)) if subjects else None,
