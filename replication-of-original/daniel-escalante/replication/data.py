@@ -98,6 +98,9 @@ def _mapping(data_dir: Path) -> tuple[pd.DataFrame, set[int], dict]:
         if isinstance(itemid, str):
             itemid = itemid.strip()
             itemid = int(itemid) if itemid.isascii() and itemid.isdigit() else itemid
+        elif isinstance(itemid, float) and itemid.is_integer():
+            # A pickled pd.read_csv mapping stores item IDs as floats beside its NaN group IDs.
+            itemid = int(itemid)
         group = itemid == "" or (isinstance(itemid, float) and math.isnan(itemid))
         if not group and not _integer(itemid):
             errors["mapping.invalid_itemid"] += 1

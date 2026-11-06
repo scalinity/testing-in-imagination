@@ -243,6 +243,25 @@ def test_unconfigured_imaging_modalities_are_counted_and_ignored_like_upstream(r
     assert all(dataset[i]["test_results"]["MRI"] == "not available.\n" for i in range(len(dataset)))
 
 
+def test_release_shaped_pickle_mapping_holds_float_itemids(raw, tmp_path, cfg):
+    # Hager's converter pickles pd.read_csv output: NaN group IDs turn every item ID into a float.
+    csv_path = raw / "lab_test_mapping.csv"
+    frame = pd.read_csv(csv_path)
+    frame["itemid"] = frame["itemid"].astype(float)
+    frame.loc[frame["label"].isin(LAB_TESTS), "itemid"] = float("nan")
+    frame["corresponding_ids"] = frame["corresponding_ids"].map(ast.literal_eval)
+    _rewrite(raw / "lab_test_mapping.pkl", frame)
+    csv_path.unlink()
+    assert validate_raw(raw)["mapping"]["group_rows"] == len(LAB_TESTS)
+    output = tmp_path / "prepared"
+    prepare_splits(raw, output)
+    assert load_dataset(output, "test", cfg)[0]["patient_history"]
+    frame.loc[~frame["label"].isin(LAB_TESTS), "itemid"] += 0.5
+    _rewrite(raw / "lab_test_mapping.pkl", frame)
+    with pytest.raises(ValueError, match="invalid_itemid"):
+        validate_raw(raw)
+
+
 def test_parser_follows_canonical_lab_references_and_multiple_reports(raw, tmp_path, cfg):
     mapping_path = raw / "lab_test_mapping.csv"
     mapping = pd.read_csv(mapping_path)
