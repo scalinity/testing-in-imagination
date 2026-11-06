@@ -12,7 +12,7 @@
 |-------|-------|
 | Date | 2026-11-05 (America/New_York) |
 | Operator | Daniel Escalante |
-| Machine / GPU | UF HiPerGator. S0 on login node `login7`; run graph at `b7190c5` (summary shard 49874606 on `c0800a-s5`), NVIDIA RTX PRO 6000 Blackwell Server Edition (compute capability 12.0, 97,887 MiB). Pinned-stack probe: job 49867089 on an L4 (`c0603a-s14`) |
+| Machine / GPU | UF HiPerGator. S0 on login node `login7`; run graph at `4d22c70` (first run at `b7190c5`: summary shard 49874606 on `c0800a-s5`), NVIDIA RTX PRO 6000 Blackwell Server Edition (compute capability 12.0, 97,887 MiB). Pinned-stack probe: job 49867089 on an L4 (`c0603a-s14`) |
 | CUDA / driver | Driver 580.178.04. `CDM_RUNTIME=blackwell`: torch 2.7.0+cu128, vLLM 0.9.2, TRL 0.15.2; arch list through `sm_120`. The pinned torch 2.6.0+cu124 stack stops at `sm_90` |
 | Python | 3.12.14 (uv-managed) |
 | Install | `uv sync --frozen` (CPU checks); S0 `uv sync --frozen --project runtime-blackwell` (lock sha256 `f12ce556…`, 28 substituted pins recorded in S0) |
