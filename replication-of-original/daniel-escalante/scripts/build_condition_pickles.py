@@ -34,6 +34,10 @@ def sha256(path: Path) -> str:
 def rows(name: str, *columns: str):
     # Series iteration yields Python scalars, matching DataFrame.iterrows on these mixed-type CSVs.
     frame = pd.read_csv(raw / name)
+    # Fail with a count, never a KeyError naming the admission.
+    unknown = int((~frame["hadm_id"].isin(set(hadm))).sum())
+    if unknown:
+        sys.exit(f"{name}: {unknown} rows reference admissions absent from history_of_present_illness.csv")
     return zip(*(frame[column] for column in columns))
 
 
@@ -92,6 +96,9 @@ for hadm_id, code, version, title in rows("icd_procedures.csv", "hadm_id", "icd_
     record[f"Procedures {system} Title"].append(title)
 
 pathology = json.loads((raw / "pathology_ids.json").read_text())
+unknown = sum(hadm_id not in hadm for condition in CONDITIONS for hadm_id in pathology[condition])
+if unknown:
+    sys.exit(f"pathology_ids.json: {unknown} admissions absent from history_of_present_illness.csv")
 out.mkdir(mode=0o700, parents=True, exist_ok=True)
 for condition in CONDITIONS:
     with (out / f"{condition}_hadm_info_first_diag.pkl").open("xb") as handle:
