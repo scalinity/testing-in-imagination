@@ -25,6 +25,7 @@ COMPATIBILITY_DEVIATIONS = [
     "Checkpoint sidecars preserve the environment's independent confidence-pair RNG; standard framework RNG files do not contain it.",
     "Training generation uses distinct deterministic request seeds by optimizer step, call and rollout; a single shared request seed would collapse identical GRPO prompts to identical draws.",
     "Validation runs at each epoch end instead of every 100 steps (one singleton pass over 240 validation patients takes about 80 minutes); the final fixed-budget checkpoint is selected either way, so validation history has pre-training, per-epoch and final points.",
+    "The first-hypothesis placeholder is filled as a literal substitution: upstream applies str.format to the whole episode text, so any other brace field in a record or sampled completion raised KeyError during training.",
     "Best-metric tracking is off (metric_for_best_model unset): singleton validation reports no eval_loss, so upstream's 'loss' setting raises KeyError at the first scheduled validation, and the final fixed-budget checkpoint is selected regardless.",
 ]
 

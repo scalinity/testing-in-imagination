@@ -152,6 +152,20 @@ def test_reward_arms_use_actual_upstream_functions(cfg):
     assert free["reward"] == pytest.approx(0)
 
 
+def test_first_hypothesis_injection_keeps_other_braces_literal(cfg):
+    # Upstream injects the first hypothesis with str.format on the whole episode text, so any
+    # other "{name}" from a record, observation or sampled completion raised KeyError mid-training.
+    env = shim.prepare_environment(cfg)
+    module = import_module("src.environment.environment")
+    text = "Record {curly} and {0} then {first_hypothesis}Thought: next {}"
+    trajectory = module.Trajectory(text, patient(cfg)["test_results"], "Right lower quadrant pain")
+    policy = shim.MockPolicy()
+    prompts = env._generate_hypothesis([trajectory], policy, None, policy.tokenizer)
+    assert prompts[0].startswith("Record {curly} and {0} then \n\nThe current hypothesis is: ")
+    assert prompts[0].endswith("Thought: next {}")
+    assert "{first_hypothesis}" not in prompts[0]
+
+
 def test_f1_f3_f4_and_fourteen_action_budget_preserved(cfg):
     env = shim.prepare_environment(cfg)
     module = import_module("src.environment.environment")

@@ -2,6 +2,9 @@
 set -euo pipefail
 own="$(cd "$(dirname "$0")/.." && pwd)"
 export VLLM_USE_V1=0
+# Long eight-rollout log-prob passes need one ~12 GiB block; without expandable segments,
+# fragmentation left 4.7 GiB unusable and a real-data training step ran out of memory.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 bootstrap="${CDM_PYTHON:-$own/.venv/bin/python}"
 if [[ ! -x "$bootstrap" ]]; then
   echo "Create the CPU check environment first: uv sync --frozen --project \"$own\" --python 3.12" >&2

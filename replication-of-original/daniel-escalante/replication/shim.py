@@ -160,6 +160,13 @@ def prepare_environment(cfg):
             return result
 
         def _generate_hypothesis(self, trajectories, model, sampling_params, processing_class):
+            # Upstream injects the first hypothesis with str.format over the whole episode text;
+            # escape every other brace so records and sampled completions stay literal.
+            for trajectory in trajectories:
+                if "{first_hypothesis}" in trajectory.text:
+                    trajectory.text = (trajectory.text.replace("{", "{{").replace("}", "}}")
+                                       .replace("{{first_hypothesis}}", "{first_hypothesis}"))
+
             def chat(example, tokenizer):
                 return {**example, "prompt": tokenizer.apply_chat_template(example["prompt"], tokenize=False, add_generation_prompt=True)}
             with patch.object(_environment_module(), "maybe_apply_chat_template", chat):

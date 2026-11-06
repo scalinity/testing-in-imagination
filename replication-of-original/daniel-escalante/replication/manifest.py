@@ -84,7 +84,8 @@ def runtime_info() -> dict:
         cuda = "NOT_AVAILABLE"
     return {"python": platform.python_version(), "platform": platform.platform(),
             "packages": versions, "gpu_driver": gpu, "cuda_driver_report": cuda,
-            "VLLM_USE_V1": os.environ.get("VLLM_USE_V1", "UNSET")}
+            "VLLM_USE_V1": os.environ.get("VLLM_USE_V1", "UNSET"),
+            "PYTORCH_CUDA_ALLOC_CONF": os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "UNSET")}
 
 
 def make_manifest(settings, stage: str, cfg, inputs: dict, dry_run=False) -> dict:

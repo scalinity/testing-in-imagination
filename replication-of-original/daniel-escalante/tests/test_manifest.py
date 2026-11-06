@@ -11,6 +11,7 @@ from replication.manifest import (assert_aggregate, digest, make_manifest, stamp
 
 def test_manifest_records_identity_runtime_composed_config_overrides(tmp_path, monkeypatch):
     monkeypatch.setenv("VLLM_USE_V1", "0")
+    monkeypatch.setenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     settings = Settings("synthetic", tmp_path / "raw", tmp_path / "work")
     first = make_manifest(settings, "s2", compose(), {"example": "input"})
     second = make_manifest(settings, "s2", compose(), {"example": "input"})
@@ -18,6 +19,7 @@ def test_manifest_records_identity_runtime_composed_config_overrides(tmp_path, m
     required = {"git_sha", "upstream_sha", "model_revision", "source", "config", "overrides", "runtime", "training_seeds", "split_seed", "wandb_run_ids", "manifest_id", "source_fingerprint", "bootstrap_resamples"}
     assert required <= first.keys()
     assert first["runtime"]["VLLM_USE_V1"] == "0"
+    assert first["runtime"]["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"
     assert first["runtime"]["python"].startswith(("3.11", "3.12"))
     assert "packages" in first["runtime"] and "gpu_driver" in first["runtime"]
     assert any(item["key"] == "model.model_name" for item in first["overrides"])

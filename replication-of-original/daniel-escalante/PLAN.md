@@ -106,7 +106,12 @@ runs at each epoch end rather than upstream's every 100 steps: one singleton pas
 about 50 hours per arm, and the final fixed-budget checkpoint is selected either way.
 Checkpoints stay every 100 steps for resume. Best-metric tracking is off because
 singleton validation reports no `eval_loss`; upstream's `metric_for_best_model: loss`
-would raise `KeyError` after the first scheduled validation. F-1–F-4 remain unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
+would raise `KeyError` after the first scheduled validation. The first-hypothesis
+placeholder is filled as a literal substitution: upstream applies `str.format` to the
+whole episode text, so any other brace field in a record or sampled completion raised
+`KeyError` mid-training. Stages run with PyTorch expandable allocator segments, because
+fragmentation left 4.7 GiB unusable when a long eight-rollout log-probability pass needed
+one 12 GiB block. F-1–F-4 remain unchanged. These repairs have CPU tests; CUDA numerical behavior remains unverified.
 
 ## Implementation ownership
 
