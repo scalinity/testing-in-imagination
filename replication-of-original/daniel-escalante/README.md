@@ -64,9 +64,15 @@ CDM_DATA_DIR="<private directory containing the four condition pickle files>"
 CDM_WORK_DIR="<new private durable working directory outside the repository>"
 CDM_TRAINING_SEEDS=269
 SLURM_ACCOUNT="<HiPerGator account>"
-SLURM_PARTITION=gpu
-SLURM_GRES=gpu:a100:2
+SLURM_PARTITION=hpg-turin
+SLURM_GRES=gpu:l4:2
 ```
+
+HiPerGator's GPU partitions are `hpg-turin` (L4, 24 GB), `hpg-rtx6000` (RTX PRO 6000,
+96 GB) and `hpg-b200` (B200); none has A100s, and no burst QOS exists for GPUs. The pinned
+torch 2.6.0+cu124 build contains kernels up to `sm_90` only, so the pinned stack runs on
+L4 but not on the Blackwell partitions. Partition and GRES are submission flags, which
+override the scripts' `#SBATCH` defaults.
 
 Only `CDM_DATA_SOURCE` changes execution mode. Both modes use the same stages,
 data contract, config composition and reporting. Set input and output locations
@@ -213,7 +219,8 @@ not vendor its source. The backbone has its own NVIDIA and Llama license terms.
 ## Run log
 
 Only completed aggregate runs belong here. A synthetic row records an execution
-check, never a clinical or paper-matching result.
+check, never a clinical or paper-matching result. A real-data row without a metric
+records how far the credentialed run has progressed.
 
 | Date | Person | Upstream commit | Model | Config | Seed | Dataset version | Metric | Value | Paper value | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -228,6 +235,10 @@ check, never a clinical or paper-matching result.
 | 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T7: Macro F1 | 14.285714 | 81.3 | SYNTHETIC mock; 95% CI [14.159292, 14.371257]; no weight updates |
 | 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity | 269 | synthetic (2,400 raw) | T8: Average provided-test cost | 1037.866667 | 1295.61 | SYNTHETIC mock; 95% CI [954.023237, 1117.478992]; no weight updates |
 | 2026-10-30 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | zero_shot, parity | 269 | synthetic (2,400 raw) | B1: mean class recall | 25.0 | 64.5 | SYNTHETIC mock; no trained baseline or learning claim |
+| 2026-11-05 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | all arms, parity | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | Raw schema and cohort | 957/648/257/538 | 957/648/257/538 | REAL DATA; validation PASS on macOS and HiPerGator; 373 reports in unconfigured modalities; subject_id absent |
+| 2026-11-05 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | all arms, parity | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | S0 environment | PASS | — | REAL DATA; HiPerGator `login7`, commit `8f4e3c2`, receipt `92a05616`; no metric |
+| 2026-11-05 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | split preflight, parity | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | Train/val/test admissions | 1,920/240/240 | — | REAL DATA CPU preflight outside stage receipts; zero admission overlap; upstream parser read all 2,400 |
+| 2026-11-05 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | S1–S6, parity | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | — | BLOCKED | — | GPU stack decision pending: pinned CUDA 12.4 stack runs only on L4 (24 GB); no metric yet |
 
 Verification: **242 tests passed**, including all 83 existing tests in `lacdm/tests`.
 The default-population synthetic run completed S0–S6 on committed code
@@ -239,3 +250,6 @@ No learning, CUDA execution or clinical result is established by this run.
 
 Aggregate artifacts: [report](results/synthetic/REPORT.md) and
 [full-precision metrics](results/synthetic/metrics.json).
+
+At `8f4e3c2`, 247 tests pass on macOS and on HiPerGator. The real-data rows above come
+from `stage.sh validate`, the S0 receipt and a CPU split preflight; no GPU stage has run.

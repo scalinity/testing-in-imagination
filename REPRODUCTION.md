@@ -10,18 +10,18 @@
 
 | Field | Value |
 |-------|-------|
-| Date | |
-| Operator | |
-| Machine / GPU | |
-| CUDA / driver | |
-| Python | 3.11–3.12 (required) |
-| Install | `uv sync` |
+| Date | 2026-11-05 (America/New_York) |
+| Operator | Daniel Escalante |
+| Machine / GPU | UF HiPerGator. S0 on login node `login7`; GPU probe SLURM job 49867089 on `c0603a-s14`, NVIDIA L4 (compute capability 8.9, 23,034 MiB) |
+| CUDA / driver | Driver 580.178.04. Pinned runtime: torch 2.6.0+cu124, CUDA 12.4, vLLM 0.8.1; compiled arch list `sm_50`–`sm_90`, so no Blackwell (B200, RTX PRO 6000) kernels |
+| Python | 3.12.14 (uv-managed) |
+| Install | `uv sync --frozen` (CPU checks); S0 `uv sync --frozen --project runtime` (runtime lock sha256 `2e7d2e86…`, `xgrammar==0.1.16` built from source) |
 | Upstream SHA | `3f435a10f569c3255172c1ef8fe7880c6edb7fee` (lacdm/upstream) |
 | `VLLM_USE_V1` | `0` |
-| Data source | PhysioNet MIMIC-IV-Ext-CDM path |
-| Split seed | (none canonical — see D-4) |
-| Hydra overrides | |
-| W&B run ids | |
+| Data source | PhysioNet MIMIC-IV-Ext-CDM v1.1: 12/12 SHA256 digests verified; condition pickles from `scripts/build_condition_pickles.py`, byte-identical on macOS and HiPerGator |
+| Split seed | 269 (pinned splitter `RANDOM_STATE`; see D-4) |
+| Hydra overrides | Composed by `replication-of-original/daniel-escalante/replication/config.py` and recorded in every stage manifest |
+| W&B run ids | None: `wandb.mode=disabled` in every arm |
 
 ## Archaeology findings (preserve — do not redo from zero)
 
