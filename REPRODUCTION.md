@@ -4,7 +4,7 @@
 
 **Upstream:** https://github.com/dharouni/LA-CDM · commit pin: `3f435a10f569c3255172c1ef8fe7880c6edb7fee` · paper: arXiv:2506.13474 · OpenReview: https://openreview.net/forum?id=7vHUQCMAzG
 
-**Milestone:** M0 (onboarding + ledger opened). Phase A archaeology extended below; no training run yet.
+**Milestone:** credentialed parity run complete (run graph `7fcd9e5`, seed 269, all S0–S6 receipts PASS on 2026-11-08); observed values are filled in below and logged in the replication README.
 
 ## Environment log (fill as you go)
 
@@ -65,10 +65,10 @@
 
 | ID | Claim | Status | Evidence / gap |
 |----|-------|--------|----------------|
-| S1 | Repo installs with `uv sync` on Python 3.11–3.12 | ☐ not started | |
-| S2 | `prepare_data.py` produces `train/val/test.csv` + `lab_test_mapping.csv` | ☐ | Needs PhysioNet + GPU for summaries |
-| S3 | Zero-shot eval runs: `src.evaluate evaluation.base_model=true` | ☐ | Needs CUDA + data |
-| S4 | Full train launches: `accelerate ... -m src.train` | ☐ | A40-class GPU |
+| S1 | Repo installs with `uv sync` on Python 3.11–3.12 | ☑ | Python 3.12.14; `uv sync --frozen` and the Blackwell runtime lock (S0 receipts) |
+| S2 | `prepare_data.py` produces `train/val/test.csv` + `lab_test_mapping.csv` | ☑ | Run graph `7fcd9e5`: 2,400 summaries (shards 50010230–50010237), split 1,920/240/240 (S1 50010238, S2 50010239) |
+| S3 | Zero-shot eval runs: `src.evaluate evaluation.base_model=true` | ☑ | S3 50010240 on an RTX PRO 6000, receipt `f323a460` |
+| S4 | Full train launches: `accelerate ... -m src.train` | ☑ | Four arms × 3,840 steps, jobs 50010241–50010244, all COMPLETED 0:0; S4 receipt `05601581` |
 
 ## Table 1 / main result claims (test set)
 
@@ -76,40 +76,42 @@ Primary row — **LA-CDM** (fill Ours only from logged runs):
 
 | ID | Metric | Paper | Ours | Match? | Log path |
 |----|--------|-------|------|--------|----------|
-| T1 | Appendicitis Acc | 93.1 | | ☐ | |
-| T2 | Cholecystitis Acc | 83.6 | | ☐ | |
-| T3 | Diverticulitis Acc | 75.0 | | ☐ | |
-| T4 | Pancreatitis Acc | 73.5 | | ☐ | |
-| T5 | Mean Acc | 81.3 | | ☐ | |
-| T6 | Micro F1 | 84.1 | | ☐ | |
-| T7 | Macro F1 | 81.3 | | ☐ | |
-| T8 | Avg Test Cost (USD) | 1295.61 | | ☐ | |
+| T1 | Appendicitis Acc | 93.1 | 90.62 [84.38, 95.83] | not judged | README run log, 2026-11-08 |
+| T2 | Cholecystitis Acc | 83.6 | 72.31 [61.54, 83.08] | not judged | README run log, 2026-11-08 |
+| T3 | Diverticulitis Acc | 75.0 | 72.00 [56.00, 88.00] | not judged | README run log, 2026-11-08 |
+| T4 | Pancreatitis Acc | 73.5 | 57.41 [44.44, 70.37] | not judged | README run log, 2026-11-08 |
+| T5 | Mean Acc | 81.3 | 73.09 [66.65, 79.19] | not judged | README run log, 2026-11-08 |
+| T6 | Micro F1 | 84.1 | 81.15 [76.47, 85.53] | not judged | README run log, 2026-11-08 |
+| T7 | Macro F1 | 81.3 | 78.20 [72.32, 83.44] | not judged | README run log, 2026-11-08 |
+| T8 | Avg Test Cost (USD) | 1295.61 | 1439.58 [1341.50, 1537.65] | not judged | README run log, 2026-11-08 |
+
+Ours: run graph `7fcd9e5`, parity split, seed 269, 240 test admissions, a different backbone and summarizer (D-3, D-5); 95% class-stratified bootstrap intervals. Match? stays unjudged because no tolerance was agreed. The aggregate export (`results/mimic/metrics.json`, `REPORT.md`) stays private: `**/mimic*/` is git-ignored.
 
 Trainless sanity targets:
 
 | ID | Method | Mean Acc (paper) | Ours | Match? |
 |----|--------|------------------|------|--------|
-| B1 | LA-CDM (ZS) | 64.5 | | ☐ |
-| B2 | ReAct | 74.9 | | ☐ |
+| B1 | LA-CDM (ZS) | 64.5 | 12.71 [8.04, 17.86] | not judged |
+| B2 | ReAct | 74.9 | gap: no ReAct at the upstream pin | gap |
 
 ## Training-dynamics claims (paper §6)
 
 | ID | Claim | Paper | Ours | Match? |
 |----|-------|-------|------|--------|
-| C1 | Hypothesis Acc improves with training | 75.7 → 81.9 | | ☐ |
-| C2 | ECE improves | 0.069 → 0.037 | | ☐ |
-| C3 | Cost reward lowers avg cost at similar Acc | $1427.85 → $1295.61; Acc 82.3 → 81.3 | | ☐ |
-| C4 | Hypothesis agent helps vs DA-only | Table 3 | | ☐ |
+| C1 | Hypothesis Acc improves with training | 75.7 → 81.9 | 29.59 → 81.67 (zero-shot → primary, held-out endpoints) | not judged |
+| C2 | ECE improves | 0.069 → 0.037 | 0.3022 → 0.1281 | not judged |
+| C3 | Cost reward lowers avg cost at similar Acc | $1427.85 → $1295.61; Acc 82.3 → 81.3 | $1321.33 → $1439.58; recall 70.81 → 73.09 (cost went up; McNemar Holm p 0.551) | not judged |
+| C4 | Hypothesis agent helps vs DA-only | Table 3 | mean recall 57.49 → 73.09 (McNemar Holm p 0.00056) | paper values absent |
 
 ## Implementation-detail claims (Appendix C)
 
 | ID | Claim | Status |
 |----|-------|--------|
-| I1 | Upstream: Qwen-2.5-7B-Instruct + LoRA. **Ours:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` + LoRA (D-5) | ☐ |
-| I2 | Cyclic 100 steps: action GRPO → hyp SFT → conf GRPO | ☐ |
-| I3 | Adam lr 1e-5, batch 2, seed **269** (code) | ☐ |
-| I4 | Costs from BIDMC CMS table (Appendix Table 4) | ☐ (see D-2) |
-| I5 | Cost normalized so “all tests” ≈ zero total reward vs correct dx | ☐ |
+| I1 | Upstream: Qwen-2.5-7B-Instruct + LoRA. **Ours:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` + LoRA (D-5) | ☑ LoRA training completed on the Blackwell runtime (run graph `7fcd9e5`) |
+| I2 | Cyclic 100 steps: action GRPO → hyp SFT → conf GRPO | ☑ 100/100/100 optimizer-update phases |
+| I3 | Adam lr 1e-5, batch 2, seed **269** (code) | ☑ Adam, lr 1e-5, batch 2, seed 269 |
+| I4 | Costs from BIDMC CMS table (Appendix Table 4) | ☑ configured upstream USD schedule (see D-2) |
+| I5 | Cost normalized so “all tests” ≈ zero total reward vs correct dx | ☑ twelve normalized costs sum to one (tested) |
 
 ## Honest gaps (expected)
 
