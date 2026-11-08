@@ -8,6 +8,7 @@ the check measures how much of each gap the decoding choice explains. Nothing
 here selects or tunes a model, and only counts and metrics leave the work directory.
 """
 
+import json
 from pathlib import Path
 
 from .config import ARMS, OWN, stream_seed
@@ -24,13 +25,29 @@ def sampled_path(settings, protocol, seed, arm):
     return settings.work_dir / "sensitivity" / "decoding-t1" / protocol / str(seed) / f"{arm}-test.json"
 
 
+def _admission(path):
+    return Path(path).with_name(Path(path).stem + ".admission.json")
+
+
 def admit(path):
-    if Path(path).exists():
-        raise RuntimeError("the decoding check already evaluated this arm on test; it runs once")
+    """Reserve one test evaluation before any generation; a reservation is never released."""
+    path, admission = Path(path), _admission(path)
+    if path.exists() or admission.exists():
+        raise RuntimeError("the decoding check already admitted this arm on test; it runs once")
+    admission.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with admission.open("x") as handle:  # exclusive create: concurrent jobs cannot both pass
+            json.dump({"admitted_at": eastern_now()}, handle)
+    except FileExistsError:
+        raise RuntimeError("the decoding check already admitted this arm on test; it runs once") from None
 
 
 def evaluate_arm(settings, arm):
-    """GPU: evaluate one locked model (or the untrained policy) once on test at upstream's temperature."""
+    """GPU: evaluate one locked model (or the untrained policy) once on test at upstream's temperature.
+
+    Completed protocol/seed units are skipped; an admitted unit without results was
+    interrupted after test admission and is refused rather than evaluated again.
+    """
     from . import pipeline
     if arm not in ALL_ARMS:
         raise ValueError(f"unknown arm: {arm}")
@@ -39,6 +56,8 @@ def evaluate_arm(settings, arm):
     for protocol in pipeline.protocols(settings):
         for seed in settings.seeds:
             path = sampled_path(settings, protocol, seed, arm)
+            if path.exists():
+                continue
             admit(path)
             adapter_dir = None
             if arm != "zero_shot":
@@ -62,9 +81,17 @@ def _counts(rows):
             "repeated_requests": sum(len(r["requested_tests"]) - len(set(r["requested_tests"])) for r in rows)}
 
 
-def build(greedy, cfg, seed, n_resamples, sampled=None):
-    """Aggregate-only supplement; ``sampled`` holds whichever arms finished the decoding check."""
+FAMILY = ("primary_vs_decision_only", "primary_vs_no_cost", "primary_vs_incorrect_minus1", "primary_vs_zero_shot")
+
+
+def build(greedy, cfg, seed, n_resamples, sampled=None, cluster_ids=None):
+    """Aggregate-only supplement; ``sampled`` holds whichever arms finished the decoding check.
+
+    ``cluster_ids`` are the subject identifiers S6 uses, aligned to patient order (None when absent).
+    The Holm family is always the four planned comparisons; unfinished ones count as unrun tests.
+    """
     bootstrap_seed = stream_seed(seed, "test", "bootstrap")
+    options = {"seed": bootstrap_seed, "n_resamples": n_resamples, "cluster_ids": cluster_ids}
     result = {"greedy": {arm: {"confusion": confusion(rows), **_counts(rows)} for arm, rows in greedy.items()}}
     if sampled:
         result["upstream_decoding"] = {}
@@ -73,17 +100,18 @@ def build(greedy, cfg, seed, n_resamples, sampled=None):
             result["upstream_decoding"][arm] = {
                 "temperature": TEMPERATURE, "claims": point["claims"], "pooled_accuracy": point["pooled_accuracy"],
                 "hypothesis_accuracy": point["hypothesis"]["accuracy"], "confusion": confusion(rows), **_counts(rows),
-                "intervals": single_arm_intervals(rows, cfg, seed=bootstrap_seed, n_resamples=n_resamples)["metrics"],
-                "minus_greedy": paired_bootstrap(rows, greedy[arm], cfg, seed=bootstrap_seed, n_resamples=n_resamples)["metrics"],
+                "intervals": single_arm_intervals(rows, cfg, **options)["metrics"],
+                "minus_greedy": paired_bootstrap(rows, greedy[arm], cfg, **options)["metrics"],
             }
         if "primary" in sampled:
-            comparisons = {f"primary_vs_{arm}": paired_bootstrap(sampled["primary"], sampled[arm], cfg, seed=bootstrap_seed,
-                                                                 n_resamples=n_resamples)
-                           for arm in ALL_ARMS if arm != "primary" and arm in sampled}
-            holm = holm_adjust({name: value["mcnemar"]["p_value"] for name, value in comparisons.items()})
+            comparisons = {name: paired_bootstrap(sampled["primary"], sampled[name.removeprefix("primary_vs_")], cfg, **options)
+                           for name in FAMILY if name.removeprefix("primary_vs_") in sampled}
+            holm = holm_adjust({name: comparisons[name]["mcnemar"]["p_value"] if name in comparisons else None
+                                for name in FAMILY})
             for name, value in comparisons.items():
                 value["holm"] = holm[name]
             result["upstream_decoding_comparisons"] = comparisons
+            result["upstream_decoding_planned_family"] = list(FAMILY)
     assert_aggregate(result)
     return result
 
@@ -96,8 +124,9 @@ def _interval(metric):
     return "unassessable" if metric.get("ci95") is None else f"[{_number(metric['ci95'][0])}, {_number(metric['ci95'][1])}]"
 
 
-def render(result):
+def render(result, protocol="parity", seed=269):
     lines = [MARKER, "", "## Supplementary aggregates (added after S6)", "",
+             f"Protocol: {protocol}; training seed: {seed}.", "",
              "Counts and metrics computed from the saved test episodes after S6; no patient row leaves the work directory. "
              "Rows are true diagnoses; columns are the episode's final diagnosis, or *undiagnosed* when the episode "
              "ended without a valid diagnosis (malformed action, step budget or trajectory length).", ""]
@@ -131,9 +160,13 @@ def render(result):
                              f"{_interval(values['intervals'][metric])} | {_number(delta['estimate'])} | {_interval(delta)} |")
         lines.append("")
         if "upstream_decoding_comparisons" in result:
-            lines += ["| Comparison at temperature 1.0 | T5 difference | 95% paired interval | Exact McNemar p | Holm p |",
+            lines += ["| Comparison at temperature 1.0 | T5 difference | 95% paired interval | Exact McNemar p | Holm p (family = 4) |",
                       "| --- | --- | --- | --- | --- |"]
-            for name, value in result["upstream_decoding_comparisons"].items():
+            for name in result["upstream_decoding_planned_family"]:
+                value = result["upstream_decoding_comparisons"].get(name)
+                if value is None:
+                    lines.append(f"| {name} | not run | not run | not run | not run |")
+                    continue
                 lines.append(f"| {name} | {_number(value['metrics']['T5']['estimate'])} | {_interval(value['metrics']['T5'])} | "
                              f"{_number(value['mcnemar']['p_value'], 6)} | {_number(value['holm']['holm_p_value'], 6)} |")
             lines.append("")
@@ -142,19 +175,24 @@ def render(result):
 
 def report(settings):
     """CPU: build the supplement from saved episodes and add it to the exported results."""
+    import pandas as pd
     from . import pipeline
     pipeline._receipt(settings, "s6")
     supplements, texts = {}, []
     for protocol in pipeline.protocols(settings):
+        # The same subject clusters S6 uses; v1.1 ships no subject_id, so this is usually None.
+        frame = pd.read_csv(pipeline.prepared(settings, protocol) / "test.csv")
+        subjects = dict(zip(frame["Patient ID"].map(str), frame["subject_id"])) if "subject_id" in frame else None
         for seed in settings.seeds:
             greedy = {arm: pipeline.private_read(pipeline._rows_path(settings, protocol, seed, arm), settings.source)
                       for arm in ALL_ARMS}
             sampled = {arm: pipeline.private_read(sampled_path(settings, protocol, seed, arm), settings.source)
                        for arm in ALL_ARMS if sampled_path(settings, protocol, seed, arm).exists()}
+            clusters = [int(subjects[str(r["patient_id"])]) for r in greedy["primary"]] if subjects else None
             value = build(greedy, pipeline.cfg_for(settings, protocol=protocol, seed=seed), seed,
-                          settings.bootstrap_resamples, sampled or None)
+                          settings.bootstrap_resamples, sampled or None, cluster_ids=clusters)
             supplements[f"{protocol}/{seed}"] = value
-            texts.append(render(value))
+            texts.append(render(value, protocol, seed))
     payload = {"source": settings.source, "label": "re-implementation on a different backbone",
                "written_at": eastern_now(), "supplements": supplements}
     assert_aggregate(payload)

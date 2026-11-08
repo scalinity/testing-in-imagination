@@ -55,9 +55,39 @@ def test_decoding_check_reports_intervals_and_paired_differences(rows, cfg):
     assert "temperature 1.0" in render(result)
 
 
-def test_decoding_check_admits_each_arm_once(tmp_path):
+def test_decoding_check_admits_each_arm_once_even_after_an_interruption(tmp_path):
     path = tmp_path / "zero_shot-test.json"
     admit(path)
-    path.write_text("{}")
+    # Admission is recorded before generation: an interrupted run cannot be retried on test.
     with pytest.raises(RuntimeError, match="runs once"):
         admit(path)
+    other = tmp_path / "primary-test.json"
+    other.write_text("{}")
+    with pytest.raises(RuntimeError, match="runs once"):
+        admit(other)
+
+
+def test_partial_decoding_check_keeps_the_planned_holm_family(rows, cfg):
+    greedy = {arm: copy.deepcopy(rows) for arm in ALL_ARMS}
+    sampled = {"primary": copy.deepcopy(rows), "zero_shot": copy.deepcopy(rows)}
+    for row in sampled["zero_shot"]:
+        row["prediction"] = row["label"]
+    result = build(greedy, cfg, seed=269, n_resamples=50, sampled=sampled)
+    comparison = result["upstream_decoding_comparisons"]["primary_vs_zero_shot"]
+    assert comparison["holm"]["holm_p_value"] == pytest.approx(min(1, 4 * comparison["mcnemar"]["p_value"]))
+    assert result["upstream_decoding_planned_family"] == ["primary_vs_decision_only", "primary_vs_no_cost",
+                                                         "primary_vs_incorrect_minus1", "primary_vs_zero_shot"]
+
+
+def test_repeated_subjects_make_the_admission_level_mcnemar_unassessable(rows, cfg):
+    greedy = {arm: copy.deepcopy(rows) for arm in ALL_ARMS}
+    sampled = copy.deepcopy(greedy)
+    clusters = [1, 1, 2, 3, 4]
+    result = build(greedy, cfg, seed=269, n_resamples=50, sampled=sampled, cluster_ids=clusters)
+    assert result["upstream_decoding_comparisons"]["primary_vs_zero_shot"]["mcnemar"]["p_value"] is None
+    assert result["upstream_decoding"]["primary"]["intervals"]["T5"]["status"] in ("assessed", "unassessable")
+
+
+def test_rendered_blocks_name_their_protocol_and_seed(rows, cfg):
+    result = build({arm: copy.deepcopy(rows) for arm in ALL_ARMS}, cfg, seed=269, n_resamples=50)
+    assert "Protocol: grouped; training seed: 7" in render(result, "grouped", 7)
