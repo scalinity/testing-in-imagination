@@ -130,6 +130,14 @@ def summary(rows, cfg):
     return _calculate(rows, costs)
 
 
+def confusion(rows):
+    """Counts of predicted diagnosis per true label; an episode without a valid diagnosis is 'undiagnosed'."""
+    table = {label: {**{p: 0 for p in CLASSES}, "undiagnosed": 0} for label in CLASSES}
+    for row in rows:
+        table[row["label"]]["undiagnosed" if row["prediction"] is None else row["prediction"]] += 1
+    return table
+
+
 def _estimates(result):
     return {**result["claims"], "pooled_accuracy": result["pooled_accuracy"],
             "hypothesis_accuracy": result["hypothesis"]["accuracy"], "ece": result["hypothesis"]["ece"],

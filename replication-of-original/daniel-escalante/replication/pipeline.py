@@ -567,11 +567,11 @@ def export_aggregates(settings):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("stage", choices=(*STAGES, "all", "validate", "export", "check-git", "python",
-                                          "summarize-shard", "train-arm", "evaluate-arm"))
+                                          "summarize-shard", "train-arm", "evaluate-arm", "decode-arm", "decode-report"))
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--shard", type=int)
     parser.add_argument("--shards", type=int)
-    parser.add_argument("--arm", choices=ARMS)
+    parser.add_argument("--arm", choices=(*ARMS, "zero_shot"))
     parser.add_argument("--fake-summarizer", action="store_true")
     parser.add_argument("--env-file", type=Path)
     args = parser.parse_args(argv)
@@ -597,9 +597,19 @@ def main(argv=None):
             parser.error("summarize-shard requires --shard and --shards")
         os.environ["VLLM_USE_V1"] = "0"
         print(f"summary shard written: {summarize_shard(settings, args.shard, args.shards).name}")
-    elif args.stage in ("train-arm", "evaluate-arm"):
+    elif args.stage == "decode-arm":
+        from .sensitivity import evaluate_arm as decode_arm
         if args.arm is None:
-            parser.error(f"{args.stage} requires --arm")
+            parser.error("decode-arm requires --arm")
+        os.environ["VLLM_USE_V1"] = "0"
+        decode_arm(settings, args.arm)
+        print(f"decode-arm {args.arm}: PASS ({settings.source})")
+    elif args.stage == "decode-report":
+        from .sensitivity import report
+        report(settings)
+    elif args.stage in ("train-arm", "evaluate-arm"):
+        if args.arm is None or args.arm not in ARMS:
+            parser.error(f"{args.stage} requires --arm with a trained arm")
         os.environ["VLLM_USE_V1"] = "0"
         (train_arm if args.stage == "train-arm" else evaluate_arm)(settings, args.arm)
         print(f"{args.stage} {args.arm}: PASS ({settings.source})")

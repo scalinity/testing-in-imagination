@@ -397,6 +397,28 @@ def test_train_uses_adam_fixed_budget_train_val_only_and_resume(
     assert events["finish"] == {"exit_code": 0}
 
 
+def test_gpu_evaluation_can_sample_at_upstream_temperature_with_distinct_request_seeds(
+        cfg, upstream_setup, fake_loaders, monkeypatch, tmp_path):
+    from zlib import crc32
+
+    _, vllm, _, calls = fake_loaders
+    vllm.SamplingParams = lambda **kwargs: SimpleNamespace(**kwargs)
+    monkeypatch.setattr(gpu, "_cuda_runtime", lambda: None)
+    monkeypatch.setattr(sys.modules["replication.config"], "stream_seed",
+                        lambda seed, split, stage: crc32(f"{seed}:{split}:{stage}".encode()))
+    monkeypatch.setattr(upstream_setup, "prepare_dataset", lambda value, split: [patient(cfg)])
+    fake_loaders[0].set_seed = lambda seed: None
+    rows = gpu.evaluate(cfg, tmp_path, "test", 269, temperature=1.0)
+    assert [row["prediction"] for row in rows] == ["appendicitis"]
+    requests = [params for kind, _, kwargs in calls if kind == "generate" for params in kwargs["sampling_params"]]
+    assert len(requests) > 1
+    # Upstream evaluates with its training temperature and no per-request seed reuse.
+    assert all(params.temperature == 1.0 and params.top_p == 1.0 for params in requests)
+    assert all(params.stop == ["Observation:"] and params.max_tokens == cfg.training.max_completion_length
+               for params in requests)
+    assert len({params.seed for params in requests}) == len(requests)
+
+
 def test_every_loader_path_is_pinned_and_padding_is_set(fake_loaders):
     transformers, vllm, trainer, calls = fake_loaders
     model = shim.APPROVED_MODEL

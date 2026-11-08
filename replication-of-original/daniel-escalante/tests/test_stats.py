@@ -60,6 +60,17 @@ def test_known_confusion_counts_and_none_behavior(rows, cfg):
     json.dumps(result, allow_nan=False)
 
 
+def test_confusion_counts_rows_by_label_with_undiagnosed_column(rows):
+    from replication.stats import confusion
+    empty = {"appendicitis": 0, "cholecystitis": 0, "diverticulitis": 0, "pancreatitis": 0, "undiagnosed": 0}
+    assert confusion(rows) == {
+        "appendicitis": {**empty, "appendicitis": 1},
+        "cholecystitis": {**empty, "appendicitis": 1},
+        "diverticulitis": {**empty, "diverticulitis": 1},
+        "pancreatitis": {**empty, "pancreatitis": 1, "undiagnosed": 1},
+    }
+
+
 def test_missing_observations_are_unassessable(rows, cfg):
     for row in rows:
         row["ece_triplets"] = []

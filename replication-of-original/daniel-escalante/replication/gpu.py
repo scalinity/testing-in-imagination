@@ -27,6 +27,7 @@ COMPATIBILITY_DEVIATIONS = [
     "Validation runs at each epoch end instead of every 100 steps (one singleton pass over 240 validation patients takes about 80 minutes); the final fixed-budget checkpoint is selected either way, so validation history has pre-training, per-epoch and final points.",
     "The first-hypothesis placeholder is filled as a literal substitution: upstream applies str.format to the whole episode text, so any other brace field in a record or sampled completion raised KeyError during training.",
     "Best-metric tracking is off (metric_for_best_model unset): singleton validation reports no eval_loss, so upstream's 'loss' setting raises KeyError at the first scheduled validation, and the final fixed-budget checkpoint is selected regardless.",
+    "Validation and test generation are greedy (temperature 0, pre-specified); upstream evaluates with its training temperature 1.0 (configure_grpo eval_only). The decode-arm check re-evaluates locked models at 1.0 after S6.",
 ]
 
 
@@ -385,8 +386,13 @@ def train(cfg, output_dir, data_dir, seed):
             wandb.finish(exit_code=0 if success else 1)
 
 
-def evaluate(cfg, data_dir, split, seed, adapter_dir=None):
-    """One greedy singleton episode per patient using the locked final policy."""
+def evaluate(cfg, data_dir, split, seed, adapter_dir=None, temperature=None):
+    """One singleton episode per patient using the locked final policy.
+
+    Greedy by default. ``temperature`` reproduces upstream's sampled evaluation
+    (configure_grpo(eval_only=True) keeps the training temperature, 1.0); each
+    request then draws from its own reconstructable seed stream.
+    """
     if split not in ("train", "val", "test"):
         raise ValueError(f"Unknown split: {split}")
     _cuda_runtime()
@@ -412,7 +418,12 @@ def evaluate(cfg, data_dir, split, seed, adapter_dir=None):
         )
         if adapter_dir is not None:
             _load_merged_adapter(engine, cfg, adapter_dir, setup)
-        return _evaluate_with_model(cfg, dataset, engine, _sampling(vllm, cfg, False, cfg.training.seed))
+        sampling = _sampling(vllm, cfg, False, cfg.training.seed)
+        policy = engine
+        if temperature is not None:
+            sampling.temperature = temperature
+            policy = _SeededTrainingPolicy(engine, cfg.training.seed, f"evaluation-t{temperature}")
+        return _evaluate_with_model(cfg, dataset, policy, sampling)
 
 
 def _load_merged_adapter(engine, cfg, adapter_dir, setup):
