@@ -63,16 +63,25 @@ CDM_DATA_SOURCE=mimic
 CDM_DATA_DIR="<private directory containing the four condition pickle files>"
 CDM_WORK_DIR="<new private durable working directory outside the repository>"
 CDM_TRAINING_SEEDS=269
+CDM_RUNTIME=blackwell
 SLURM_ACCOUNT="<HiPerGator account>"
-SLURM_PARTITION=hpg-turin
-SLURM_GRES=gpu:l4:2
+SLURM_QOS="<HiPerGator account>"
+SLURM_PARTITION=hpg-rtx6000
+SLURM_GRES=gpu:rtx_pro_6000:1
 ```
 
-HiPerGator's GPU partitions are `hpg-turin` (L4, 24 GB), `hpg-rtx6000` (RTX PRO 6000,
-96 GB) and `hpg-b200` (B200); none has A100s, and no burst QOS exists for GPUs. The pinned
-torch 2.6.0+cu124 build contains kernels up to `sm_90` only, so the pinned stack runs on
-L4 but not on the Blackwell partitions. Partition and GRES are submission flags, which
-override the scripts' `#SBATCH` defaults.
+This is the configuration of the completed credentialed run. HiPerGator's GPU
+partitions are `hpg-turin` (L4, 24 GB), `hpg-rtx6000` (RTX PRO 6000, 96 GB) and
+`hpg-b200` (B200); none has A100s. The pinned torch 2.6.0+cu124 build contains kernels up
+to `sm_90` only, so the pinned stack runs on L4 but not on the Blackwell partitions, and
+an L4 cannot hold the 16 GB model at upstream's vLLM memory setting. Partition and GRES
+are submission flags, which override the scripts' `#SBATCH` defaults.
+
+A class QOS caps the whole class at 8 GPUs, 32 CPUs and 250 GB of memory. Its burst
+QOS (`<account>-b`) adds 2,250 GB and 288 CPUs but no GPUs, so the CPU-only stages S4,
+S5 and S6 can run there (`scontrol update JobId=<id> QOS=<account>-b` on a queued job)
+when other class jobs fill the memory cap. Host memory peaked at 6.8 GB per GPU job, so
+16 GB requests suffice.
 
 `CDM_RUNTIME=blackwell` selects `runtime-blackwell/`, which keeps every upstream package
 and changes 28 pins to the CUDA 12.8 set of the course's `lacdm-bw` environment: torch
@@ -182,27 +191,100 @@ rather than rejecting the release.
 
 ## Interpretation and open checks
 
-T1–T4 use per-class recall; T5 is their unweighted mean. Pooled accuracy is also
-reported. T6/T7 use the upstream micro/macro-F1 implementation, including its handling
-of abstentions. T8 charges **provided tests only**. Requested-test cost and unavailable
-request counts are separate. The normalized twelve-test cost sum includes physical
-exam. F-1–F-4 are retained and characterized by tests, including the stale confidence
-scale and the 14-action budget.
+Results come from one credentialed run (graph `7fcd9e5`, parity split, training seed 269,
+240 test admissions) on a different 8B backbone and summarizer, the CUDA 12.8 Blackwell
+runtime, and greedy evaluation decoding. They are a replication attempt, not a
+reproduction of the paper's numbers: no tolerance was agreed and every deviation below
+changes what the model sees or how it decodes. `REPRODUCTION.md` gives each claim's
+status against our 95% interval with its reason.
 
-All comparisons pair identical patients. Patient uncertainty uses 10,000 paired
-resamples and 95% intervals; accuracy discordance uses an exact binomial test.
-Between-seed uncertainty is distinct. Optional extra training seeds must be declared
-before running, for example `CDM_TRAINING_SEEDS=269,270,271`; every attempted seed stays
-in the ledger, including failures. A single seed cannot establish training stability.
+Metric definitions. T1–T4 are per-class recall; T5 is their unweighted mean. Pooled
+accuracy is also reported. T6/T7 use the upstream micro/macro-F1 implementation, in which
+an episode without a valid diagnosis counts as wrong. T8 charges **provided tests only**;
+requested-test cost and unavailable requests are reported separately. All comparisons
+pair identical patients: 10,000 class-stratified paired resamples give 95% intervals, and
+an exact McNemar test with Holm adjustment (family of four) covers pooled accuracy.
 
-The pinned upstream has no ReAct implementation, so B2 remains an explicit gap.
-There is no substitute straw-man baseline or claimed oracle bound. C1/C2 require
-real training and validation dynamics; mock behavior cannot establish improvement.
-Clinical validity, actual v1.1 counts and schema variation, CUDA memory/driver
-compatibility, numerical learning behavior and final real-data outcomes remain
-unverified until the corresponding runs finish.
+What the counts show (`results/mimic/REPORT.md`, supplementary section):
 
-Several local compatibility repairs are explicit in every manifest and report.
+- **Undiagnosed episodes drive most errors.** An episode that ends with a malformed
+  action, the 14-action budget or the 4,096-token trajectory limit has no diagnosis.
+  Greedy zero-shot left 194 of 240 test episodes undiagnosed (613 repeated test
+  requests); the trained primary arm left 29 (121 repeated requests).
+- **Cholecystitis and pancreatitis.** Primary called 10 of 65 cholecystitis patients
+  pancreatitis and left 6 undiagnosed; it left 14 of 54 pancreatitis patients
+  undiagnosed and called 7 cholecystitis.
+- **Cost reward (C3).** `TestCostReward` is part of the primary training reward on all
+  3,840 steps (the logged total equals the sum of its components), but it is small: its
+  mean was −0.09 to −0.11 per rollout against 0.17–0.53 for the diagnosis reward and
+  0.26–0.69 for the format reward, and it acts only in the decision-agent phase (100 of
+  every 300 updates). Unavailable requests cost nothing (F-2). The no-cost arm was not
+  cheaper in our run.
+- **Decoding (D-6).** Upstream evaluates at its training temperature, 1.0; this run
+  pre-specified greedy decoding. A post-hoc check re-evaluated every locked model once on
+  the same test set at 1.0 (greedy stays primary). Every arm scored lower: zero-shot
+  mean recall 12.71 → 9.19 (paired −3.52 [−9.38, 2.37]) and primary 73.09 → 59.30
+  (−13.79 [−21.70, −6.24]). Sampling removed most repeated requests (zero-shot 613 → 44)
+  but left as many or more episodes undiagnosed (zero-shot 194 → 202, primary 29 → 55),
+  with far fewer valid test requests (zero-shot 1,521 → 406). Decoding therefore does not
+  explain the B1 gap. The code audit found no bug, so the backbone and summarizer (D-5,
+  D-3) remain the untested candidates. C4 holds under both decodings (primary −
+  decision_only T5 +18.66 [9.94, 27.21], Holm p 0.000049); the D-1 ablation difference
+  does not (+3.55 [−5.68, 12.76], Holm p 0.474).
+
+Open checks and honest gaps:
+
+- **One training seed.** Between-seed uncertainty is unassessable; every interval covers
+  test-patient sampling only.
+- **No `subject_id` in v1.1.** Subject leakage of the parity split and the
+  subject-grouped sensitivity split are unassessable, never reported as zero.
+- **B2 ReAct** has no implementation at the upstream pin; no substitute is labelled ReAct.
+- **Radiology count.** v1.1 has 5,960 radiology reports where upstream states 5,959; the
+  one-report difference is unexplained.
+- **Deviations named in every report.** D-1 keeps the shipped incorrect reward 0 as
+  primary (−1 is the `incorrect_minus1` ablation). D-3 and D-5 replace the summarizer and
+  the policy with `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` at `54641c16`. The Blackwell
+  runtime changes 28 upstream pins (torch 2.7.0+cu128, vLLM 0.9.2). D-6 evaluates greedily
+  where upstream samples at temperature 1.0. The local compatibility repairs are listed
+  below and in every manifest.
+
+### Running an independent second replication
+
+A teammate (for example Hugo or Edwin) can repeat the run only from their own
+credentialed access; no data, private directory, model output or work directory may be
+shared, and nothing patient-level may be sent to a model service.
+
+1. Complete PhysioNet credentialing, CITI training and the MIMIC-IV-Ext-CDM v1.1 data
+   use agreement, then download the release with their own account and keep it
+   owner-only outside every repository.
+2. Clone this repository with its submodule (`lacdm/upstream` at `3f435a10`) at the commit
+   named in the run log, and build the condition pickles with
+   `scripts/build_condition_pickles.py` (all 12 digests must match).
+3. Write their own untracked `.env` as in *Day one*, with a fresh `CDM_WORK_DIR`. Keep
+   seed 269 to compare like with like, or declare a new training seed to measure
+   between-seed variation.
+4. Run `bash scripts/stage.sh validate`, then `scripts/submit_slurm.py --parallel` after
+   the course staff approve the GPU budget below.
+5. After S6, run `stage.sh export` and `check-git`, then compare their aggregate
+   `results/mimic/metrics.json` with this run's committed one.
+
+GPU budget from the logged durations of this run (RTX PRO 6000):
+
+| Work | GPU-hours | Wall time |
+|---|---|---|
+| HPI summaries, 8 shards (once per summarizer) | 3.3 | 25 min on 8 GPUs |
+| Zero-shot baseline (once per backbone) | 1.5 | 1 h 33 min |
+| Training, four arms × 3,840 steps (per training seed) | 103.6 | 28 h on 4 GPUs (arms 24 h 53 min – 27 h 58 min) |
+| Test evaluation, four arms (per training seed) | 1.8 | 24–33 min each |
+
+One more training seed therefore costs about 105 GPU-hours (about 29 h on four GPUs).
+Two more seeds, the minimum for a between-seed interval with three seeds, cost about 211.
+A different backbone (for example the D-5 fallback `meta-llama/Llama-3.1-8B-Instruct`)
+also regenerates the summaries and the zero-shot baseline: about 110 GPU-hours. Class
+jobs share 8 GPUs and 250 GB, so queue time adds to every estimate; multi-GPU or
+over-24-hour jobs need the course staff's approval first.
+
+Local compatibility repairs, explicit in every manifest and report:
 Singleton validation/evaluation prevents upstream's first-patient label from being
 reused across a batch. Hypothesis SFT examples are batched independently of the
 eight decision rollouts, so deduplication cannot discard them; each batch-two
@@ -214,7 +296,9 @@ requested 100/100/100 updates; upstream changes phase on the last microbatch of 
 boundary update. The phase derives from saved optimizer-step count on resume.
 Inactive objectives do not run extra forwards, which changes dropout RNG use from
 the broken upstream batching path. Weight-transfer failures propagate explicitly.
-Physical-examination strings recognized as missing by the pinned CSV parser
+Validation runs once per epoch with best-metric tracking off, and the first-hypothesis
+placeholder is filled as a literal substitution (both found on real data; see the run
+log). Physical-examination strings recognized as missing by the pinned CSV parser
 (including empty strings, `N/A` and `NULL`) become the existing unavailable-test
 sentinel, preventing a non-string NaN from being treated as test text. Finite
 out-of-range model confidences stay in hypothesis observations and are counted;
@@ -223,9 +307,7 @@ A trained adapter is evaluated as upstream's `evaluate.py` and training validati
 loaded with upstream's `load_model`, merged into the base weights and copied into a vLLM
 engine without LoRA support. A copy that leaves any engine parameter unloaded fails.
 vLLM's own LoRA kernels are not used; their Triton 3.3.0 build fails on RTX PRO 6000
-(`sm_120`) GPUs.
-These changes preserve F-1–F-4 and the shipped primary reward. CUDA numerical
-qualification of the repaired training path remains outstanding.
+(`sm_120`) GPUs. These changes preserve F-1–F-4 and the shipped primary reward.
 
 No upstream license is listed. This folder imports the pinned submodule and does
 not vendor its source. The backbone has its own NVIDIA and Llama license terms.
@@ -271,8 +353,21 @@ records how far the credentialed run has progressed.
 | 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | no_cost → primary, parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | C3: cost USD; mean recall | $1321.33 → $1439.58; 70.81 → 73.09 | $1427.85 → $1295.61; 82.3 → 81.3 | REAL DATA; paired T8 difference 118.25 [−0.25, 239.86]; McNemar Holm p 0.551; train 50010243/50010241, evaluate 50010248/50010246 |
 | 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | decision_only → primary, parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | C4: mean class recall | 57.49 → 73.09 | — | REAL DATA; paper Table 3 values absent from REPRODUCTION.md; paired T5 difference 15.59 [6.34, 24.60]; McNemar Holm p 0.00056; train 50010242/50010241, evaluate 50010247/50010246 |
 | 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | incorrect_minus1 (D-1 ablation), parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | T5: Mean of four class recalls | 59.38 | — | REAL DATA; T8 $1619.27; primary − ablation T5 13.71 [5.32, 21.93]; McNemar Holm p 0.0031; train 50010244, evaluate 50010249 |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | zero_shot, parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | B1 gap: code audit against upstream | no code bug; one decoding difference (D-6) | 64.5 | REAL DATA, counts only; prompt, chat template, parser, action names, stop string and 256-token budget match `3f435a10`; system message differs as D-5 requires; upstream evaluates at its training temperature 1.0, this run greedily. Greedy zero-shot: 194/240 undiagnosed (by valid requests before the episode ended: 0: 23, 1–3: 27, 4–7: 66, 8–13: 56, 14+: 22), 613 repeated test requests, 27 of 46 given diagnoses correct, 904 of 1,095 hypotheses cholecystitis |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | C3: cost reward wired into training | yes | — | REAL DATA; composed configs: primary and decision_only include `TestCostReward`, no_cost omits it; logged total reward equals the sum of its components on every logged step (max residual 0.0). Primary per 960-step block: cost −0.087, −0.099, −0.104, −0.106; diagnosis 0.166, 0.296, 0.453, 0.535; format 0.259, 0.416, 0.594, 0.692 |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | all arms (greedy), parity, blackwell runtime | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | 4×4 confusion counts with an undiagnosed column | added to `REPORT.md` | — | REAL DATA, counts only, from the saved S5 test episodes after S6 (no model run); primary undiagnosed 29, zero_shot 194; code `4b79683`; CPU report job 50282958 (burst QOS, 1:28 PM EST) |
+| 2026-11-08 | Daniel Escalante | — | — | HiPerGator work directories | — | — | Superseded work directories deleted | 4 | — | `-4d22c70` (5.3 GB unique), `-b7190c5` (187 MB), `-e65cb03` (158 MB), `-d434552` (80 KB) removed 1:30 PM EST after zero references or symlinks from `-7fcd9e5` were confirmed; about 5.6 GB freed (hard-linked runtime files are shared with the kept 15 GB directory); `-7fcd9e5` untouched |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | zero_shot, parity, blackwell runtime, temperature 1.0 (D-6 check) | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | B1: mean class recall | 9.19 | 64.5 | REAL DATA, post-hoc decoding check, greedy stays primary; 95% CI [5.55, 13.44]; minus greedy −3.52 [−9.38, 2.37]; 202/240 undiagnosed, 44 repeated requests; job 50282940 (code `4b79683`, 1:29–2:11 PM EST); decoding does not explain the B1 gap |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary, parity, blackwell runtime, temperature 1.0 (D-6 check) | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | T5: Mean of four class recalls | 59.30 | 81.3 | REAL DATA, post-hoc; 95% CI [52.23, 66.19]; minus greedy −13.79 [−21.70, −6.24]; T1–T4 65.62/66.15/48.00/57.41, T6 70.12, T7 66.91, T8 $961.71; 55/240 undiagnosed; hypothesis accuracy 75.41%; job 50282941 (code `d3ef9de`, 16 min) |
+| 2026-11-08 | Daniel Escalante | `3f435a10` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | primary vs ablations, parity, blackwell runtime, temperature 1.0 (D-6 check) | 269 | MIMIC-IV-Ext-CDM v1.1 (2,400 raw) | Paired comparisons (Holm, family of four) | C4 holds; C3 and D-1 not observed | — | REAL DATA, post-hoc; primary − decision_only T5 +18.66 [9.94, 27.21], Holm p 0.000049; primary − no_cost cost +$82.94 [−30.33, 195.84], Holm p 0.538; primary − incorrect_minus1 T5 +3.55 [−5.68, 12.76], Holm p 0.474; T5 at 1.0: decision_only 40.64, no_cost 61.46, incorrect_minus1 55.75; jobs 50282942–50282944 (16–21 min), report 50282959 (burst QOS, 2:46–2:58 PM EST) |
 
-Verification: **242 tests passed**, including all 83 existing tests in `lacdm/tests`.
+Verification: **264 tests passed** at `d3ef9de` (181 here and all 83 in `lacdm/tests`).
+
+Credentialed aggregates (run `7fcd9e5`; no patient rows or identifiers):
+[report](results/mimic/REPORT.md), [full-precision metrics](results/mimic/metrics.json) and
+[supplementary counts and decoding check](results/mimic/supplementary.json). A narrow
+`.gitignore` exception tracks exactly these three files; `check-git` scans them.
+
 The default-population synthetic run completed S0–S6 on committed code
 `e56e0de83444b0c5925dc3f1ed436323d2540024`. Both protocols ran all five arms with
 10,000 paired resamples. The parity test set has 240 admissions; the grouped test
@@ -280,8 +375,5 @@ set has 237. The parity audit found 175 subjects shared across at least two spli
 (80 shared between train and test); the grouped audit found zero subject overlap.
 No learning, CUDA execution or clinical result is established by this run.
 
-Aggregate artifacts: [report](results/synthetic/REPORT.md) and
+Synthetic aggregate artifacts: [report](results/synthetic/REPORT.md) and
 [full-precision metrics](results/synthetic/metrics.json).
-
-At `8f4e3c2`, 247 tests pass on macOS and on HiPerGator. The real-data rows above come
-from `stage.sh validate`, the S0 receipt and a CPU split preflight; no GPU stage has run.

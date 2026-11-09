@@ -37,6 +37,7 @@
 | **F-4** | Stale-turn confidence scale mismatch: fresh turns show raw 0–10 integer; on error turns `environment.py:376` reuses `trajectory.confidence[-1]` already ÷10, so the same belief appears as `(confidence: 0.7)` against a 0–10 prompt. Confirmed by `lacdm/tests/test_unavailable_tests.py`. | Confirmed (executed unit) |
 | **B-1** | Full stack needs CUDA (vLLM). Local Mac (Apple Silicon) cannot produce Table 1. Local OK for Phase E + synthetic. Prefer HiPerGator; cloud A40 ~$0.49/hr ≈ ~$35 paper-length — **ask before renting**. | Confirmed |
 | **D-5** | **Backbone swap (HiPerGator CoC):** upstream LA-CDM defaults to `Qwen/Qwen2.5-7B-Instruct` (PRC-origin → **not permitted** on HiPerGator). **Our default:** `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` (Meta Llama 3.1 8B Instruct **US base** + NVIDIA post-train for reasoning / tool-calling). UFIT RC confirmed NVIDIA models OK when the base is US. This is a documented reproduction deviation — do **not** claim Table 1 bit-for-bit weight match. Stock `meta-llama/Llama-3.1-8B-Instruct` remains the fallback ablation (same family, no Nemotron post-train). | Confirmed (Canvas CoC + RC; 2026-09-28) |
+| **D-6** | **Evaluation decoding.** Upstream evaluates with its training temperature: `configure_grpo(eval_only=True)` passes `temperature=getattr(cfg.training, "temperature", 1.0)` and `CDMGRPOTrainer` samples with it in `_run_environment` for evaluation as well as training. This replication pre-specified greedy validation and test decoding (PLAN S2), so its primary results use temperature 0. A post-hoc check (`decode-arm`, `decode-report`) re-evaluates every locked model once at temperature 1.0; greedy stays the primary analysis. | Confirmed (code read, 2026-11-08). Measured 2026-11-08 (jobs 50282940–50282944, report 50282959): temperature 1.0 lowers every arm and does not explain B1 |
 
 **Thesis implication:** baseline env makes unavailability cheap and uninformative; a world model changes the economics so every planned action yields an observation. F-1–F-4 executed at unit level against upstream `3f435a10` via `lacdm/tests` (2026-10-06); still confirm on a smoke episode (rung F2) before write-up.
 
@@ -74,34 +75,51 @@
 
 Primary row — **LA-CDM** (fill Ours only from logged runs):
 
-| ID | Metric | Paper | Ours | Match? | Log path |
-|----|--------|-------|------|--------|----------|
-| T1 | Appendicitis Acc | 93.1 | 90.62 [84.38, 95.83] | not judged | README run log, 2026-11-08 |
-| T2 | Cholecystitis Acc | 83.6 | 72.31 [61.54, 83.08] | not judged | README run log, 2026-11-08 |
-| T3 | Diverticulitis Acc | 75.0 | 72.00 [56.00, 88.00] | not judged | README run log, 2026-11-08 |
-| T4 | Pancreatitis Acc | 73.5 | 57.41 [44.44, 70.37] | not judged | README run log, 2026-11-08 |
-| T5 | Mean Acc | 81.3 | 73.09 [66.65, 79.19] | not judged | README run log, 2026-11-08 |
-| T6 | Micro F1 | 84.1 | 81.15 [76.47, 85.53] | not judged | README run log, 2026-11-08 |
-| T7 | Macro F1 | 81.3 | 78.20 [72.32, 83.44] | not judged | README run log, 2026-11-08 |
-| T8 | Avg Test Cost (USD) | 1295.61 | 1439.58 [1341.50, 1537.65] | not judged | README run log, 2026-11-08 |
+**Status** compares the paper's published value with our 95% interval. It is not a reproduction verdict: no tolerance was agreed, the backbone and summarizer differ (D-3, D-5), the runtime differs (28 pins), decoding differs (D-6) and there is one training seed.
+*Within CI*: the paper value lies inside our interval. *Below CI* / *Above CI*: our whole interval lies below or above the paper value.
 
-Ours: run graph `7fcd9e5`, parity split, seed 269, 240 test admissions, a different backbone and summarizer (D-3, D-5); 95% class-stratified bootstrap intervals. Match? stays unjudged because no tolerance was agreed. The aggregate export (`results/mimic/metrics.json`, `REPORT.md`) stays private: `**/mimic*/` is git-ignored.
+| ID | Metric | Paper | Ours (greedy, primary analysis) | Status | Reason |
+|----|--------|-------|------|--------|----------|
+| T1 | Appendicitis recall | 93.1 | 90.62 [84.38, 95.83] | within CI | 87/96 test patients correct |
+| T2 | Cholecystitis recall | 83.6 | 72.31 [61.54, 83.08] | below CI | 10/65 called pancreatitis, 6/65 undiagnosed |
+| T3 | Diverticulitis recall | 75.0 | 72.00 [56.00, 88.00] | within CI | only 25 test patients; wide interval |
+| T4 | Pancreatitis recall | 73.5 | 57.41 [44.44, 70.37] | below CI | 14/54 undiagnosed, 7/54 called cholecystitis |
+| T5 | Mean class recall | 81.3 | 73.09 [66.65, 79.19] | below CI | driven by T2 and T4 |
+| T6 | Micro F1 | 84.1 | 81.15 [76.47, 85.53] | within CI | |
+| T7 | Macro F1 | 81.3 | 78.20 [72.32, 83.44] | within CI | |
+| T8 | Avg provided-test cost (USD) | 1295.61 | 1439.58 [1341.50, 1537.65] | above CI (costlier) | the cost reward did not lower cost here (C3) |
+
+Ours: run graph `7fcd9e5`, parity split, seed 269, 240 test admissions; 95% class-stratified patient bootstrap (10,000 resamples). Counts in *Reason* come from the confusion matrices in `results/mimic/REPORT.md` (supplementary section). The aggregate export (`results/mimic/metrics.json`, `REPORT.md`, `supplementary.json`) is tracked through a narrow `.gitignore` exception; all other `mimic*` paths stay ignored.
 
 Trainless sanity targets:
 
-| ID | Method | Mean Acc (paper) | Ours | Match? |
-|----|--------|------------------|------|--------|
-| B1 | LA-CDM (ZS) | 64.5 | 12.71 [8.04, 17.86] | not judged |
-| B2 | ReAct | 74.9 | gap: no ReAct at the upstream pin | gap |
+| ID | Method | Mean recall (paper) | Ours | Status | Reason |
+|----|--------|------------------|------|--------|--------|
+| B1 | LA-CDM (ZS) | 64.5 | 12.71 [8.04, 17.86] | below CI | 194/240 greedy zero-shot episodes ended without a valid diagnosis (613 repeated test requests); 27 of the 46 diagnoses it did give were correct. No code bug against `3f435a10`; upstream's temperature-1.0 decoding scores lower still (9.19 [5.55, 13.44]), so decoding does not explain the gap. The backbone and summarizer (D-5, D-3) remain the untested candidates |
+| B2 | ReAct | 74.9 | — | gap | no ReAct implementation at the upstream pin |
+
+### Decoding check (D-6, post-hoc)
+
+Every locked model ran once more on the same 240 test patients at upstream's evaluation temperature, 1.0, each request with its own seed. Greedy stays the primary analysis; this table measures how much the decoding choice moves each result. Source: `results/mimic/REPORT.md` and `supplementary.json` (supplementary section).
+
+| Arm | T5 greedy | T5 at 1.0 [95% CI] | Paired difference [95% CI] | Undiagnosed, greedy → 1.0 |
+|-----|-----------|--------------------|----------------------------|---------------------------|
+| zero_shot | 12.71 | 9.19 [5.55, 13.44] | −3.52 [−9.38, 2.37] | 194 → 202 |
+| primary | 73.09 | 59.30 [52.23, 66.19] | −13.79 [−21.70, −6.24] | 29 → 55 |
+| decision_only | 57.49 | 40.64 [33.86, 47.27] | −16.85 [−25.05, −8.68] | 19 → 50 |
+| no_cost | 70.81 | 61.46 [54.52, 68.28] | −9.35 [−17.60, −1.02] | 31 → 50 |
+| incorrect_minus1 | 59.38 | 55.75 [48.63, 62.62] | −3.63 [−12.94, 5.66] | 65 → 78 |
+
+At 1.0 the primary arm's whole interval lies below the paper on each of T1–T7, and its provided-test cost falls to $961.71 [875.56, 1,046.85] with fewer valid test requests (661 → 400). Hypothesis accuracy is 28.49% → 75.41% (zero-shot → primary; greedy 29.59% → 81.67%). Comparisons at 1.0 (Holm family of four): C4 primary − decision_only T5 +18.66 [9.94, 27.21], Holm p 0.000049, holds; C3 primary − no_cost cost +$82.94 [−30.33, 195.84], Holm p 0.538, still not observed; primary − incorrect_minus1 T5 +3.55 [−5.68, 12.76], Holm p 0.474, so the D-1 ablation difference seen under greedy decoding does not hold under sampling.
 
 ## Training-dynamics claims (paper §6)
 
-| ID | Claim | Paper | Ours | Match? |
-|----|-------|-------|------|--------|
-| C1 | Hypothesis Acc improves with training | 75.7 → 81.9 | 29.59 → 81.67 (zero-shot → primary, held-out endpoints) | not judged |
-| C2 | ECE improves | 0.069 → 0.037 | 0.3022 → 0.1281 | not judged |
-| C3 | Cost reward lowers avg cost at similar Acc | $1427.85 → $1295.61; Acc 82.3 → 81.3 | $1321.33 → $1439.58; recall 70.81 → 73.09 (cost went up; McNemar Holm p 0.551) | not judged |
-| C4 | Hypothesis agent helps vs DA-only | Table 3 | mean recall 57.49 → 73.09 (McNemar Holm p 0.00056) | paper values absent |
+| ID | Claim | Paper | Ours | Status | Reason |
+|----|-------|-------|------|--------|--------|
+| C1 | Hypothesis accuracy improves with training | 75.7 → 81.9 | 29.59 → 81.67 [77.24, 85.89] (zero-shot → primary, held-out endpoints) | endpoint within CI; start below | improvement +52.08 points [46.40, 57.73]; our zero-shot start is far lower |
+| C2 | ECE improves | 0.069 → 0.037 | 0.3022 → 0.1281 [0.0861, 0.1749] | improves; endpoint above paper (worse calibration) | difference −0.174 [−0.232, −0.114] |
+| C3 | Cost reward lowers avg cost at similar accuracy | $1427.85 → $1295.61; recall 82.3 → 81.3 | no_cost → primary: $1321.33 → $1439.58; recall 70.81 → 73.09 | not observed | paired cost difference +118.25 [−0.25, 239.86]; McNemar Holm p 0.551. The cost reward is in the primary training reward (logged on all 3,840 steps) but small: −0.09 to −0.11 per rollout against 0.17–0.53 for the diagnosis reward |
+| C4 | Hypothesis agent helps vs decision-agent only | Table 3 | decision_only → primary mean recall 57.49 → 73.09 | direction observed; paper value unassessable | paired +15.59 [6.34, 24.60], McNemar Holm p 0.00056; exact Table 3 values absent from this ledger |
 
 ## Implementation-detail claims (Appendix C)
 
@@ -118,6 +136,11 @@ Trainless sanity targets:
 - Full Table 1 may be blocked by MIMIC access, GPU budget, or unpinned seeds — document rather than invent.
 - OASST row is not directly comparable (paper footnote).
 - SFT-all is an information upper bound, not an interactive baseline.
+- **B1 gap unexplained.** No code bug against `3f435a10` and decoding ruled out (D-6 check); the backbone and summarizer (D-5, D-3) are untested because a new backbone run was out of scope.
+- **One training seed (269).** Between-seed uncertainty is unassessable; every interval covers test-patient sampling only.
+- **No `subject_id` in v1.1.** Subject leakage and the subject-grouped split are unassessable, never reported as zero.
+- **Radiology count** 5,960 in v1.1 vs 5,959 stated upstream; unexplained.
+- **C4 paper value** (Table 3) is not in this ledger, so only the direction is assessed.
 
 ## Definition of done (pick one)
 
@@ -125,4 +148,4 @@ Trainless sanity targets:
 - **B (partial):** S1–S3 + ZS metrics logged; full train deferred; gaps written.
 - **C (synthetic-first):** Formal env + toy tuples complete; MIMIC reproduction deferred with written rationale.
 
-**Current recommendation:** Phase E unit tests now; synthetic-first (C) in parallel with whatever of B PhysioNet/CUDA allows.
+**Status (2026-11-08):** B is met and exceeded: S1–S4 ran on credentialed v1.1 and T1–T8, B1 and C1–C4 are logged from one full training run (graph `7fcd9e5`). A is unassessable: no tolerance was agreed, and T2, T4 and T5 sit below and T8 above our intervals. The results are a replication attempt on a different backbone, summarizer and runtime, not a reproduction.
