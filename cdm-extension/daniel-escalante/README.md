@@ -59,3 +59,7 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | smoke (re-run, amendment A1) | GPU job 50449871 (V3, cai5724) | `results/credentialed/smoke/` | pass: 2 val patients in 183 s on the split-local data path |
 | 2026-11-09 | bench-a | GPU job 50451223 (V0-shadow, cai5724) | `results/credentialed/bench-a/` | 24 patients in 462 s: setup 177 s, 11.8 s per patient; fast vs reference max abs difference 0.3625 (tolerance 0.001: exceeded); next-token agreement 1.00 over 96 turns |
 | 2026-11-09 | bench-a | GPU job 50451224 (V3, cai5724) | `results/credentialed/bench-a/` | 24 patients in 286 s: setup 179 s, 4.5 s per patient |
+| 2026-11-09 | val-a | GPU job 50465776 (V0) | `results/credentialed/val-a/` | pass: 240 val patients in 23 min |
+| 2026-11-09 | val-a | GPU job 50465777 (V0-shadow) | `results/credentialed/val-a/` | pass: 240 val patients in 47 min |
+| 2026-11-09 | val-a | GPU job 50465778 (V2) | `results/credentialed/val-a/` | pass: 240 val patients in 24 min |
+| 2026-11-09 | val-a | GPU job 50465779 (V3) | `results/credentialed/val-a/` | pass: 240 val patients in 22 min |
