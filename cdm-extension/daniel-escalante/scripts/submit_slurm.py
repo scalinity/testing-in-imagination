@@ -22,6 +22,14 @@ from tim.runner import CONFIG  # noqa: E402
 from tim.settings import Settings  # noqa: E402
 
 
+def least_busy_first(accounts):
+    """Order course accounts by how many jobs their whole class has queued or running now."""
+    def load(account):
+        out = subprocess.run(["squeue", "-h", "-A", account, "-o", "%i"], capture_output=True, text=True).stdout
+        return len(out.split())
+    return sorted(accounts, key=load)
+
+
 def wall(hours: float) -> str:
     minutes = int(max(60, 2 * hours * 60 + 30))
     return f"{minutes // 60:02d}:{minutes % 60:02d}:00"
@@ -49,7 +57,7 @@ def main():
         approvals.check(settings, args.stage)
         approved = OWN / "approvals" / f"{args.stage}.json"
         hours = json.loads(approved.read_text())["gpu_hours"] if approved.exists() else {}
-        accounts = [a for a in site["SLURM_ACCOUNTS"].split(",") if a]
+        accounts = least_busy_first([a for a in site["SLURM_ACCOUNTS"].split(",") if a])
         for i, job in enumerate(CONFIG["stages"][args.stage]["jobs"]):
             account = accounts[i % len(accounts)]
             budget = hours.get(job, approvals.PROVISIONAL[args.stage])
