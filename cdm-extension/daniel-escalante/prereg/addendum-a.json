@@ -1,0 +1,80 @@
+{
+  "addendum": "A",
+  "bench": {
+    "V0-shadow": {
+      "decision_turns": 98,
+      "fast_within_tolerance": false,
+      "max_abs_fast_minus_reference": 0.36254215240478516,
+      "next_token_agreement": 1.0,
+      "next_token_checks": 96,
+      "patients": 24,
+      "scoring_calls": 96,
+      "seconds": 461.69209781847894,
+      "setup_seconds": 177.44135114829987,
+      "variant": "V0-shadow"
+    },
+    "V3": {
+      "decision_turns": 83,
+      "fast_within_tolerance": null,
+      "max_abs_fast_minus_reference": null,
+      "next_token_agreement": null,
+      "next_token_checks": 0,
+      "patients": 24,
+      "scoring_calls": 0,
+      "seconds": 286.0116542679025,
+      "setup_seconds": 178.62883960094769,
+      "variant": "V3"
+    }
+  },
+  "go": true,
+  "premise": {
+    "minimum": 10,
+    "passed": true,
+    "v0_nonanswers": 24
+  },
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "sensitivity": {
+    "V1-V0": {
+      "discordance": {
+        "appendicitis": 0.05263157894736842,
+        "cholecystitis": 0.09230769230769231,
+        "diverticulitis": 0.038461538461538464,
+        "pancreatitis": 0.037037037037037035
+      },
+      "mde_80": 4.153727675721212,
+      "power_at_val_effect": 0.9962,
+      "val_effect": 5.510946168840905
+    },
+    "V3-V0": {
+      "discordance": {
+        "appendicitis": 0.05263157894736842,
+        "cholecystitis": 0.1076923076923077,
+        "diverticulitis": 0.11538461538461539,
+        "pancreatitis": 0.037037037037037035
+      },
+      "mde_80": 5.543292513635852,
+      "power_at_val_effect": 0.9993,
+      "val_effect": 7.818638476533213
+    }
+  },
+  "shadow_control": {
+    "amendment": null,
+    "identical": 240,
+    "passed": true,
+    "scorer_errors": 0,
+    "total": 240
+  },
+  "sources": {
+    "results/credentialed/analyze-val-a/validation.json": "cdb8abe430ceba895dea56dbed2352bf5bd21cef98eb7feac6606e6436a26f92",
+    "results/credentialed/bench-a/bench.V0-shadow.json": "c011e48d38b9b1674a9681409e225d0ac9a3487ffc902c7ba537130c095a8fea",
+    "results/credentialed/bench-a/bench.V3.json": "b1146f7e6b50040cc5c1bc5cf5f51973f666e748c7967f42f3fb35eb41509b37"
+  },
+  "test_a_budget": {
+    "gpu_hours": {
+      "V0-rerun": 0.348,
+      "V2": 0.348,
+      "V3": 0.348
+    },
+    "gpu_hours_total": 1.044
+  }
+}
