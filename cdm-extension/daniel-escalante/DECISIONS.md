@@ -46,3 +46,10 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 
 - `scripts/tim.sh all` uses 200 bootstrap resamples and 300 sensitivity simulations at fixture scale (24 patients per split) so the CPU run finishes in seconds. Credentialed stages use the protocol's 10,000 each.
 - Wall-clock fields are 0 in synthetic mode, so two runs are byte-identical.
+
+## Review fixes (amendment A1)
+
+- **Split-local loading.** `open_split` reads only the authorized split and gives each stage a private data directory (`$TIM_WORK_DIR/private/prepared/<stage>/`) holding that split and the lab mapping; GPU jobs pass it to `replication.gpu.evaluate` as its data directory. The replication's `load_dataset` is no longer called, because its disjointness audit reads every split.
+- **Locks.** A run's writer holds an exclusive `flock` in `$TIM_ADMISSION_DIR/locks/` from admission or resume until it finishes, the same mechanism the replication's `stage_lock` uses on this file system.
+- **Generation digest.** Only hypothesis and decision generations enter the digest the shadow control compares.
+- **Repeated requests.** `requests.repeated` counts, per patient, requests beyond the first for the same test; `requests.unavailable` counts every request for an unavailable test, so the two can overlap.

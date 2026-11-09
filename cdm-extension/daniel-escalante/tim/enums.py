@@ -21,7 +21,8 @@ ACTION_KINDS = ("test", "diagnosis", "malformed", "unknown_action", "unknown_tes
 PREDICTION_SOURCES = ("diagnosis", "hypothesis_fallback", "none")
 ERROR_CODES = ("internal", "interrupted", "out_of_memory", "access_denied", "admission_refused",
                "approval_missing", "approval_mismatch", "schema_violation", "canary_found",
-               "baseline_mismatch", "runtime_mismatch", "budget_exceeded", "resume_mismatch")
+               "baseline_mismatch", "runtime_mismatch", "budget_exceeded", "resume_mismatch",
+               "validation_stop")
 EXCEPTION_CLASSES = ("ValueError", "RuntimeError", "KeyError", "TypeError", "IndexError", "AttributeError",
                      "AssertionError", "FileNotFoundError", "FileExistsError", "PermissionError", "OSError",
                      "ImportError", "ModuleNotFoundError", "ZeroDivisionError", "NotImplementedError",

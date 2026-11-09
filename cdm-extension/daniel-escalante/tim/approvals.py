@@ -42,12 +42,12 @@ def jobs(stage) -> list[dict]:
 
 
 def binding(settings, stage, root=ROOT) -> dict:
-    addendum = ADDENDA.get(stage)
+    addendum, folder = ADDENDA.get(stage), root / FOLDER
     return {
         "stage": stage,
-        "protocol_sha256": _sha(OWN / "prereg" / "protocol.json"),
-        "addendum_sha256": _sha(OWN / "prereg" / addendum) if addendum else None,
-        "config_sha256": _sha(OWN / "configs" / "variants.yaml"),
+        "protocol_sha256": _sha(folder / "prereg" / "protocol.json"),
+        "addendum_sha256": _sha(folder / "prereg" / addendum) if addendum else None,
+        "config_sha256": _sha(folder / "configs" / "variants.yaml"),
         "code_commit": _git(root, "rev-parse", "HEAD").stdout.strip(),
         "jobs": jobs(stage),
     }
@@ -89,18 +89,51 @@ def settings_accounts() -> list[str]:
     return os.environ.get("SLURM_ACCOUNTS", "").split(",")
 
 
-def check(settings, stage, root=ROOT, code_paths=CODE_PATHS) -> None:
+def _sacct_seconds(job):
+    """Scheduler-reported elapsed seconds of a job, or None when unavailable."""
+    out = subprocess.run(["sacct", "-n", "-X", "-P", "-j", str(job), "--format=ElapsedRaw"],
+                         capture_output=True, text=True) if str(job).isdecimal() else None
+    try:
+        return float(out.stdout.split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None
+
+
+def smoke_used_seconds(settings, sacct=_sacct_seconds) -> float:
+    """Smoke GPU time so far. An attempt that never recorded its time (killed, timed out) is
+    charged its scheduler-reported elapsed time, or the whole cap when that is unavailable."""
     from tim.access import Ledger
-    if stage == "smoke":
-        used = sum(e["seconds"] for e in Ledger(settings.admission_dir).entries() if e["event"] == "smoke_seconds")
-        if used < SMOKE_CAP_SECONDS:
-            return
+    entries = Ledger(settings.admission_dir).entries()
+    recorded = [e for e in entries if e["event"] == "smoke_seconds"]
+    started = {e["job"] for e in entries if e["event"] == "smoke_started"}
+    used = sum(e["seconds"] for e in recorded)
+    for job in started - {e.get("job") for e in recorded}:
+        elapsed = sacct(job)
+        used += SMOKE_CAP_SECONDS if elapsed is None else elapsed
+    return used
+
+
+def _validation_stop(root) -> None:
+    """SPEC §5.3 and §5.5: no test access unless the premise held and the shadow control passed
+    (or a committed amendment explains its mismatch)."""
+    addendum = json.loads((root / FOLDER / "prereg" / "addendum-a.json").read_text())
+    shadow, amendment = addendum["shadow_control"], addendum["shadow_control"].get("amendment")
+    explained = amendment and (root / FOLDER / "prereg" / "amendments" / amendment).is_file()
+    if not addendum["premise"]["passed"] or not (shadow["passed"] or explained):
+        raise TimError("validation_stop", "addendum A blocks test access")
+
+
+def check(settings, stage, root=ROOT, code_paths=CODE_PATHS) -> None:
+    if stage == "smoke" and smoke_used_seconds(settings) < SMOKE_CAP_SECONDS:
+        return
     path = root / FOLDER / "approvals" / f"{stage}.json"
     relative = str(path.relative_to(root))
     tracked = _git(root, "ls-files", "--error-unmatch", relative).returncode == 0
     if not path.exists() or not tracked or _git(root, "diff", "--quiet", "HEAD", "--", relative).returncode:
         raise TimError("approval_missing", f"commit approvals/{stage}.json before running {stage}")
     approval, expected = json.loads(path.read_text()), binding(settings, stage, root)
+    if stage in ADDENDA and expected["addendum_sha256"] is None:
+        raise TimError("approval_missing", f"commit prereg/{ADDENDA[stage]} before {stage}")
     for key in ("stage", "protocol_sha256", "addendum_sha256", "config_sha256", "jobs"):
         if approval.get(key) != expected[key]:
             raise TimError("approval_mismatch", f"approval field {key} does not match")
@@ -111,3 +144,5 @@ def check(settings, stage, root=ROOT, code_paths=CODE_PATHS) -> None:
             or _git(root, "diff", "--quiet", commit, "HEAD", "--", *code_paths).returncode
             or _git(root, "diff", "--quiet", "HEAD", "--", *code_paths).returncode):
         raise TimError("approval_mismatch", "code changed since the approved commit")
+    if stage in ("test-a", "test-a2"):
+        _validation_stop(root)

@@ -57,13 +57,18 @@ def main():
         approvals.check(settings, args.stage)
         approved = OWN / "approvals" / f"{args.stage}.json"
         hours = json.loads(approved.read_text())["gpu_hours"] if approved.exists() else {}
+        smoke_left = None
+        if args.stage == "smoke" and not approved.exists():
+            # Unapproved smoke may not outlast what remains of its 0.5 GPU-hour allowance.
+            smoke_left = int(approvals.SMOKE_CAP_SECONDS - approvals.smoke_used_seconds(settings)) // 60
         accounts = least_busy_first([a for a in site["SLURM_ACCOUNTS"].split(",") if a])
         for i, job in enumerate(CONFIG["stages"][args.stage]["jobs"]):
             account = accounts[i % len(accounts)]
             budget = hours.get(job, approvals.PROVISIONAL[args.stage])
             submissions.append((job, account, common + [
                 f"--account={account}", f"--qos={account}", f"--partition={site['SLURM_PARTITION']}",
-                f"--gres={site['SLURM_GRES']}", "--cpus-per-task=4", "--mem=16G", f"--time={wall(budget)}",
+                f"--gres={site['SLURM_GRES']}", "--cpus-per-task=4", "--mem=16G",
+                f"--time={wall(budget) if smoke_left is None else f'00:{max(smoke_left, 1):02d}:00'}",
                 f"--job-name=tim-{args.stage}-{job}", str(OWN / "scripts" / "gpu.slurm"), args.stage, "--job", job]))
     else:
         account = site["SLURM_CPU_ACCOUNT"]

@@ -168,6 +168,7 @@ def summarize(rows, cfg) -> dict:
     from tim.enums import GUARD_EVENTS, PREDICTION_SOURCES, TERMINATIONS
     result = summary(rows, cfg)
     unavailable = sum(len(r.get("unavailable_requests", ())) for r in rows)
+    repeated = sum(len(r["requested_tests"]) - len(set(r["requested_tests"])) for r in rows)
     requested, provided = result["cost"]["requested_count"], result["cost"]["provided_count"]
     block = {
         "n": result["n"],
@@ -175,7 +176,7 @@ def summarize(rows, cfg) -> dict:
         "nonanswers": sum(r["prediction"] is None for r in rows),
         "nonanswers_by_class": _counts([r["label"] for r in rows if r["prediction"] is None], DISEASES),
         "requests": {"requested": requested, "provided": provided, "unavailable": unavailable,
-                     "repeated": requested - provided - unavailable},
+                     "repeated": repeated},
         "confusion": confusion(rows),
     }
     if all("termination" in r for r in rows):

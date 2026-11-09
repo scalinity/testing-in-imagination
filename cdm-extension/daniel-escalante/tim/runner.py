@@ -6,6 +6,7 @@ to make_evaluator(...): engine creation, adapter merge and sampling stay the bas
 from dataclasses import dataclass, field
 import hashlib
 import json
+import os
 import re
 import traceback
 
@@ -121,7 +122,11 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits()):
 
 
 class Recorder:
-    """Passes generation through and keeps a digest of every generated token sequence."""
+    """Passes generation through and keeps a digest of each hypothesis and decision generation.
+
+    Confidence-calibration generations (prompts ending in "Confidence: ") are left out: upstream
+    discards them and picks their prompts with an RNG that a resumed run restarts (SPEC §5.5).
+    """
 
     def __init__(self, model):
         self.model, self.digests = model, []
@@ -131,7 +136,9 @@ class Recorder:
 
     def generate(self, prompts, *args, **kwargs):
         outputs = self.model.generate(prompts, *args, **kwargs)
-        for output in outputs:
+        for prompt, output in zip(prompts, outputs):
+            if prompt.endswith("Confidence: "):
+                continue
             ids = ",".join(str(i) for i in output.outputs[0].token_ids)
             self.digests.append(hashlib.sha256(ids.encode()).hexdigest())
         return outputs
@@ -215,7 +222,7 @@ class Progress:
         self.bundle.emit("progress", completed=self.count, total=self.total)
 
 
-def _gpu_rows(settings, split, evaluator_for):
+def _gpu_rows(settings, split, data_dir, evaluator_for):
     """Run the baseline's own GPU evaluator with tim's evaluator patched in (SPEC 3.6)."""
     from unittest.mock import patch
     from replication import gpu, pipeline
@@ -229,7 +236,7 @@ def _gpu_rows(settings, split, evaluator_for):
         if file_digest(path) != expected:
             raise TimError("baseline_mismatch", "the selected primary model changed")
     with patch.object(gpu, "_evaluate_with_model", evaluator_for(selection["adapter_dir"])):
-        return gpu.evaluate(pipeline.cfg_for(baseline, "primary"), pipeline.prepared(baseline), split=split,
+        return gpu.evaluate(pipeline.cfg_for(baseline, "primary"), data_dir, split=split,
                             seed=stream_seed(269, split, "policy"), adapter_dir=selection["adapter_dir"])
 
 
@@ -254,19 +261,27 @@ def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock)
         return bench[-1]
 
     start = clock()
-    if settings.synthetic:
-        from replication.shim import generation_settings
-        from tim.fixture import MockScorer, ScriptedPolicy
-        evaluator = make_evaluator(variant, dataset, lambda cfg, tok: wrap(MockScorer(tok)), log, limits)
-        rows = evaluator(split_cfg(settings, split), None, ScriptedPolicy(), generation_settings(False))
-    else:
-        from tim.scoring import load_scorer
-        rows = _gpu_rows(settings, split, lambda adapter: make_evaluator(
-            variant, dataset, lambda cfg, tok: wrap(load_scorer(cfg, adapter, tok)), log, limits))
-    episodes.finish()
-    rows, seconds = done + rows, clock() - start
     if stage == "smoke" and not settings.synthetic:
-        episodes.ledger.record("smoke_seconds", key=episodes.key, seconds=seconds)
+        episodes.ledger.record("smoke_started", key=episodes.key, job=os.environ.get("SLURM_JOB_ID", "local"))
+    try:
+        if episodes.complete:
+            rows = []  # every patient is logged; only the finish record was missing
+        elif settings.synthetic:
+            from replication.shim import generation_settings
+            from tim.fixture import MockScorer, ScriptedPolicy
+            evaluator = make_evaluator(variant, dataset, lambda cfg, tok: wrap(MockScorer(tok)), log, limits)
+            rows = evaluator(split_cfg(settings, split), None, ScriptedPolicy(), generation_settings(False))
+        else:
+            from tim.scoring import load_scorer
+            rows = _gpu_rows(settings, split, dataset.data_dir, lambda adapter: make_evaluator(
+                variant, dataset, lambda cfg, tok: wrap(load_scorer(cfg, adapter, tok)), log, limits))
+        episodes.finish()
+    finally:
+        episodes.close()
+        if stage == "smoke" and not settings.synthetic:
+            episodes.ledger.record("smoke_seconds", key=episodes.key, job=os.environ.get("SLURM_JOB_ID", "local"),
+                                   seconds=clock() - start)
+    rows, seconds = done + rows, clock() - start
     if stage.startswith("bench"):
         measured = bench[0].measurements() if bench else {
             "scoring_calls": 0, "max_abs_fast_minus_reference": None, "fast_within_tolerance": None,

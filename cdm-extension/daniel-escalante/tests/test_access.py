@@ -56,6 +56,7 @@ def test_admission_then_resume_without_reevaluation(settings):
     first = episodes(settings)
     assert first.open() == []
     first.append(90002001, {"x": 1})
+    first.close()
     resumed = episodes(settings)
     assert resumed.open() == [{"x": 1}]
     resumed.append(90002002, {"x": 2})
@@ -69,7 +70,9 @@ def test_admission_then_resume_without_reevaluation(settings):
 
 
 def test_admission_survives_a_new_work_directory(settings, tmp_path):
-    episodes(settings).open()
+    first = episodes(settings)
+    first.open()
+    first.close()
     moved = Settings(source=settings.source, data_dir=settings.data_dir, baseline_dir=settings.baseline_dir,
                      work_dir=tmp_path / "elsewhere", admission_dir=settings.admission_dir)
     with pytest.raises(TimError) as caught:
@@ -81,6 +84,7 @@ def test_a_tampered_episode_log_is_refused(settings):
     run = episodes(settings)
     run.open()
     run.append(90002001, {"x": 1})
+    run.close()
     line = json.loads(run.log.read_text())
     line["row"] = {"x": 9}
     run.log.write_text(json.dumps(line) + "\n")
@@ -101,3 +105,72 @@ def test_credentialed_runs_require_the_protocols_admission_path(settings, tmp_pa
     with pytest.raises(TimError) as caught:
         access.check_admission_path(mimic, {"admission_dir": str(tmp_path / "other")})
     assert caught.value.code == "admission_refused"
+
+
+def test_loading_a_split_never_opens_another_split(settings, tmp_path):
+    import shutil
+    prepared = tmp_path / "split-only"
+    shutil.copytree(settings.baseline_dir, prepared)
+    for other in ("train.csv", "test.csv"):
+        (prepared / "prepared" / other).chmod(0)
+    local = Settings(source=settings.source, data_dir=settings.data_dir, baseline_dir=prepared,
+                     work_dir=settings.work_dir, admission_dir=settings.admission_dir)
+    try:
+        assert len(access.open_split(local, "val-a", "val")) == fixture.SIZES["val"]
+        assert len(access.open_split(local, "smoke", "val")) == 2
+    finally:
+        for other in ("train.csv", "test.csv"):
+            (prepared / "prepared" / other).chmod(0o644)
+
+
+def test_listed_stages_get_a_private_data_dir_with_only_their_patients(settings):
+    import pandas as pd
+    bench = access.open_split(settings, "bench-a", "val")
+    files = sorted(p.name for p in bench.data_dir.iterdir())
+    assert files == ["lab_test_mapping.csv", "val.csv"]
+    assert len(pd.read_csv(bench.data_dir / "val.csv")) == 24
+
+
+def test_a_running_admission_cannot_be_resumed_by_a_second_job(settings):
+    first = episodes(settings)
+    first.open()
+    with pytest.raises(TimError) as caught:
+        episodes(settings).open()
+    assert caught.value.code == "admission_refused"
+    first.close()
+    assert episodes(settings).open() == []
+
+
+def test_a_row_written_before_its_ledger_entry_is_recovered(settings):
+    run = episodes(settings)
+    run.open()
+    run.append(90002001, {"x": 1})
+    with run.log.open("a") as handle:  # crash after the row, before the ledger record
+        line = {"patient_id": 90002002, "row": {"x": 2}, "sha256": access.digest({"x": 2})}
+        handle.write(json.dumps(line, sort_keys=True) + "\n")
+    run.close()
+    assert episodes(settings).open() == [{"x": 1}, {"x": 2}]
+
+
+def test_a_truncated_final_line_is_dropped_and_its_patient_rerun(settings):
+    run = episodes(settings)
+    run.open()
+    run.append(90002001, {"x": 1})
+    with run.log.open("a") as handle:
+        handle.write('{"patient_id": 90002002, "row": {"x"')
+    run.close()
+    resumed = episodes(settings)
+    assert resumed.open() == [{"x": 1}]
+    assert resumed.done == {90002001}
+
+
+def test_a_run_with_every_row_but_no_finish_completes_without_evaluation(settings):
+    run = episodes(settings)
+    run.open()
+    for i in range(3):
+        run.append(90002001 + i, {"x": i})
+    run.close()
+    resumed = episodes(settings)
+    assert len(resumed.open()) == 3 and resumed.done == {90002001, 90002002, 90002003}
+    resumed.finish()
+    assert access.Ledger(settings.admission_dir).entries()[-1]["event"] == "completed"

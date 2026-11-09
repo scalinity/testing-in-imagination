@@ -118,3 +118,11 @@ def test_significance_wording(p, ci, significant):
     text = analysis.significance(p, ci)
     assert (text == "statistically significant") is significant
     assert significant or text == "not statistically significant"
+
+
+def test_repeated_requests_include_repeats_of_unavailable_tests():
+    from tim.access import baseline_cfg
+    rows = [{"patient_id": i, "label": d, "prediction": d, "provided_tests": [], "requested_tests": ["ct", "ct"],
+             "unavailable_requests": ["ct", "ct"], "ece_triplets": []} for i, d in enumerate(DISEASES)]
+    requests = analysis.summarize(rows, _cfg())["requests"]
+    assert requests == {"requested": 8, "provided": 0, "unavailable": 8, "repeated": 4}

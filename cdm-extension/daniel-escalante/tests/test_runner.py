@@ -126,6 +126,7 @@ def test_resume_continues_at_the_first_incomplete_patient(settings):
     log.open()
     with pytest.raises(KeyboardInterrupt):
         evaluate(settings, "V3", log=log, policy=Interrupting(stop_at=6))
+    log.close()
     log = episodes()
     done = log.open()
     assert len(done) == 5
@@ -133,3 +134,20 @@ def test_resume_continues_at_the_first_incomplete_patient(settings):
     rest = evaluate(settings, "V3", log=log, policy=policy)
     assert policy.patients == fixture.SIZES["val"] - 5
     assert done + rest == evaluate(settings, "V3")
+
+
+class CalibrationSensitive(fixture.ScriptedPolicy):
+    """Confidence-calibration answers depend on the prompt, as a real model's would."""
+
+    def generate(self, prompts, sampling_params=None, use_tqdm=False):
+        outputs = super().generate(prompts, sampling_params, use_tqdm)
+        for prompt, output in zip(prompts, outputs):
+            if prompt.endswith("Confidence: "):
+                output.outputs[0].token_ids = [len(prompt) % 97]
+        return outputs
+
+
+def test_generation_digest_covers_only_hypothesis_and_decision_generations(settings):
+    plain = evaluate(settings, "V0")
+    sensitive = evaluate(settings, "V0", policy=CalibrationSensitive())
+    assert [r["generation_digest"] for r in plain] == [r["generation_digest"] for r in sensitive]
