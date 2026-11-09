@@ -90,3 +90,11 @@ def test_requests_carry_the_job_list_and_budget(repo, settings):
     assert all(job["split"] == "val" and job["patients"] == 240 for job in request["jobs"])
     assert request["gpu_hours_total"] == pytest.approx(sum(request["gpu_hours"].values()))
     assert request["code_commit"] == git(repo, "rev-parse", "HEAD").strip()
+
+
+def test_bench_estimates_scale_the_smoke_measurement(repo, settings):
+    events = repo / FOLDER / "results" / "credentialed" / "smoke" / "events"
+    events.mkdir(parents=True)
+    (events / "V3.jsonl").write_text(json.dumps({"type": "job_end", "status": "pass", "patients": 2, "seconds": 180.0}) + "\n")
+    request = json.loads(approvals.request(settings, "bench-a", root=repo, code_paths=["tim"]).read_text())
+    assert request["gpu_hours"] == {"V0-shadow": 0.6, "V3": 0.6}

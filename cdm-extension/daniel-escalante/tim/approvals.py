@@ -55,7 +55,13 @@ def binding(settings, stage, root=ROOT) -> dict:
 
 def estimate_hours(stage, job, root=ROOT) -> float:
     """Setup plus per-patient time measured by bench-a; the SPEC's provisional figure before it."""
-    bench = root / FOLDER / "results" / "credentialed" / "bench-a" / f"bench.{BENCH_PROXY.get(job['variant'], 'V3')}.json"
+    results = root / FOLDER / "results" / "credentialed"
+    bench = results / "bench-a" / f"bench.{BENCH_PROXY.get(job['variant'], 'V3')}.json"
+    smoke = results / "smoke" / "events" / "V3.jsonl"
+    if stage == "bench-a" and smoke.exists():
+        # Upper bound: smoke's seconds per patient include model loading, scaled to the bench patients.
+        end = [json.loads(line) for line in smoke.read_text().splitlines()][-1]
+        return end["seconds"] / end["patients"] * job["patients"] / 3600
     if stage.endswith("-a") and stage != "bench-a" and bench.exists():
         m = json.loads(bench.read_text())
         per_patient = (m["seconds"] - m["setup_seconds"]) / max(m["patients"], 1)
