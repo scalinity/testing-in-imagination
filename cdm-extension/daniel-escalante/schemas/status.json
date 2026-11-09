@@ -1,9 +1,0 @@
-{
-  "type": "object", "additionalProperties": false,
-  "required": ["stage", "status"],
-  "properties": {
-    "stage": {"type": "string", "enum": "stage"},
-    "status": {"type": "string", "enum": "status"},
-    "code": {"type": "string", "enum": "error_code"}
-  }
-}
