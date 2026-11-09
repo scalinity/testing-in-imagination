@@ -54,3 +54,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | Date (ET) | Stage | Jobs | Bundle | Outcome |
 |---|---|---|---|---|
 | 2026-11-09 | validate | CPU job 50442531 | `results/credentialed/validate/` | T5 recomputed 73.08502492877493 from the official rows; matches the reference: yes; 29 nonanswers |
+| 2026-11-09 | smoke | GPU job 50442537 (V3, cai5724) | `results/credentialed/smoke/` | pass: 2 val patients in 186 s including model loading (0.052 of the 0.5 GPU-hour smoke cap) |
