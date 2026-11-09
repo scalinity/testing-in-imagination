@@ -8,6 +8,12 @@ credentials*
 # PhysioNet / MIMIC / PHI — never commit
 data/
 **/mimic*/
+# Exception: the checked aggregate-only export of the credentialed run (no rows, no IDs).
+!replication-of-original/daniel-escalante/results/mimic/
+replication-of-original/daniel-escalante/results/mimic/*
+!replication-of-original/daniel-escalante/results/mimic/metrics.json
+!replication-of-original/daniel-escalante/results/mimic/REPORT.md
+!replication-of-original/daniel-escalante/results/mimic/supplementary.json
 **/*physionet*
 **/*.csv
 !**/lab_test_mapping.example.csv

@@ -1,0 +1,1908 @@
+{
+  "label": "re-implementation on a different backbone",
+  "metrics": {
+    "baseline_gaps": {
+      "B2": "ReAct not shipped upstream"
+    },
+    "between_seed_uncertainty": {
+      "status": "not estimable from one training seed"
+    },
+    "bootstrap_resamples": 10000,
+    "data_audit": {
+      "class_counts": {
+        "appendicitis": 957,
+        "cholecystitis": 648,
+        "diverticulitis": 257,
+        "pancreatitis": 538
+      },
+      "mapping_rows": 1209,
+      "raw_admissions": 2400,
+      "schema_valid": true,
+      "source": "mimic",
+      "subject_audit": {
+        "repeated_admissions": null,
+        "status": "unassessable",
+        "unique": null
+      }
+    },
+    "execution": "cuda",
+    "label": "re-implementation on a different backbone",
+    "model_revision": "54641c1611fcff44fa4865626462445e0a153fc7",
+    "protocols": {
+      "parity": {
+        "leakage": {
+          "admission_overlap": {
+            "train_test": 0,
+            "train_val": 0,
+            "val_test": 0
+          },
+          "splits": {
+            "test": {
+              "class_counts": {
+                "appendicitis": 96,
+                "cholecystitis": 65,
+                "diverticulitis": 25,
+                "pancreatitis": 54
+              },
+              "count": 240
+            },
+            "train": {
+              "class_counts": {
+                "appendicitis": 766,
+                "cholecystitis": 518,
+                "diverticulitis": 206,
+                "pancreatitis": 430
+              },
+              "count": 1920
+            },
+            "val": {
+              "class_counts": {
+                "appendicitis": 95,
+                "cholecystitis": 65,
+                "diverticulitis": 26,
+                "pancreatitis": 54
+              },
+              "count": 240
+            }
+          },
+          "status": "valid",
+          "subjects": {
+            "any_overlap": null,
+            "overlap": null,
+            "repeated_admissions": null,
+            "status": "unassessable",
+            "unique": null
+          },
+          "total": 2400
+        },
+        "seed_differences": {
+          "primary_vs_decision_only/T5": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 15.592414529914535,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_decision_only/T6": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 16.944750398006846,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_decision_only/T7": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 20.981429197021967,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_decision_only/T8": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": -153.64166666666665,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_decision_only/pooled_accuracy": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 14.583333333333329,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_incorrect_minus1/T5": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 13.705840455840459,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_incorrect_minus1/T6": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 5.490342745705661,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_incorrect_minus1/T7": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 8.333846232545781,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_incorrect_minus1/T8": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": -179.6875,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_incorrect_minus1/pooled_accuracy": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 10.833333333333329,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_no_cost/T5": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 2.2767094017093967,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_no_cost/T6": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 1.8656882256208718,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_no_cost/T7": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 1.9838587217103765,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_no_cost/T8": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 118.2541666666666,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_no_cost/pooled_accuracy": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 2.0833333333333286,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_zero_shot/T5": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 60.374287749287745,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_zero_shot/T6": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 62.27187446699642,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_zero_shot/T7": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 58.52220614715458,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_zero_shot/T8": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": -300.9916666666668,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          },
+          "primary_vs_zero_shot/pooled_accuracy": {
+            "ci95": null,
+            "declared_n": 1,
+            "estimate": 65.0,
+            "method": "paired training-seed Student t",
+            "n": 1,
+            "status": "unassessable"
+          }
+        },
+        "seeds": {
+          "269": {
+            "arms": {
+              "decision_only": {
+                "intervals": {
+                  "direction": "single_arm",
+                  "method": "class-stratified patient percentile bootstrap",
+                  "metrics": {
+                    "T1": {
+                      "ci95": [
+                        77.08333333333334,
+                        91.66666666666666
+                      ],
+                      "estimate": 84.375,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T2": {
+                      "ci95": [
+                        50.76923076923077,
+                        73.84615384615385
+                      ],
+                      "estimate": 63.07692307692307,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T3": {
+                      "ci95": [
+                        44.0,
+                        84.0
+                      ],
+                      "estimate": 64.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T4": {
+                      "ci95": [
+                        9.25925925925926,
+                        29.629629629629626
+                      ],
+                      "estimate": 18.51851851851852,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T5": {
+                      "ci95": [
+                        51.07900863603989,
+                        63.90836894586894
+                      ],
+                      "estimate": 57.49261039886039,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T6": {
+                      "ci95": [
+                        58.84890681936491,
+                        69.41431670281996
+                      ],
+                      "estimate": 64.20824295010846,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T7": {
+                      "ci95": [
+                        50.53927916661195,
+                        63.70807389971956
+                      ],
+                      "estimate": 57.21878412813979,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T8": {
+                      "ci95": [
+                        1508.2283333333332,
+                        1678.5740624999999
+                      ],
+                      "estimate": 1593.225,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "ece": {
+                      "ci95": null,
+                      "estimate": null,
+                      "status": "unassessable",
+                      "valid_resamples": 0
+                    },
+                    "hypothesis_accuracy": {
+                      "ci95": null,
+                      "estimate": null,
+                      "status": "unassessable",
+                      "valid_resamples": 0
+                    },
+                    "missing_count_mean": {
+                      "ci95": [
+                        1.0458333333333334,
+                        1.4541666666666666
+                      ],
+                      "estimate": 1.2375,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "pooled_accuracy": {
+                      "ci95": [
+                        56.25,
+                        67.08333333333333
+                      ],
+                      "estimate": 61.66666666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "requested_cost_usd": {
+                      "ci95": [
+                        3807.184166666667,
+                        4669.061041666667
+                      ],
+                      "estimate": 4217.15,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    }
+                  },
+                  "n": 240,
+                  "n_resamples": 10000,
+                  "seed": 971965967,
+                  "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+                },
+                "summary": {
+                  "claims": {
+                    "T1": 84.375,
+                    "T2": 63.07692307692307,
+                    "T3": 64.0,
+                    "T4": 18.51851851851852,
+                    "T5": 57.49261039886039,
+                    "T6": 64.20824295010846,
+                    "T7": 57.21878412813979,
+                    "T8": 1593.225
+                  },
+                  "cost": {
+                    "missing_count": 297,
+                    "missing_mean": 1.2375,
+                    "provided_count": 408,
+                    "provided_mean_usd": 1593.225,
+                    "provided_total_usd": 382374.0,
+                    "repeated_available_request_mean_usd": 186.27083333333334,
+                    "requested_count": 747,
+                    "requested_mean_usd": 4217.15,
+                    "requested_total_usd": 1012116.0,
+                    "unavailable_requested_mean_usd": 2437.6541666666667
+                  },
+                  "hypothesis": {
+                    "accuracy": null,
+                    "ece": null,
+                    "ece_triplet_count": 0,
+                    "invalid_confidence_count": 0,
+                    "triplet_count": 0,
+                    "unknown_fraction": null
+                  },
+                  "n": 240,
+                  "pooled_accuracy": 61.66666666666667,
+                  "upstream": {
+                    "all/accuracy": 0.6166666666666667,
+                    "all/f1_appendicitis": 0.7902439024390244,
+                    "all/f1_cholecystitis": 0.6074074074074074,
+                    "all/f1_diverticulitis": 0.5925925925925926,
+                    "all/f1_pancreatitis": 0.29850746268656714,
+                    "all/macro_f1": 0.5721878412813979,
+                    "all/macro_precision": 0.6624471147327838,
+                    "all/macro_recall": 0.574926103988604,
+                    "all/micro_f1": 0.6420824295010846,
+                    "all/micro_precision": 0.669683257918552,
+                    "all/micro_recall": 0.6166666666666667,
+                    "all/precision_appendicitis": 0.7431192660550459,
+                    "all/precision_cholecystitis": 0.5857142857142857,
+                    "all/precision_diverticulitis": 0.5517241379310345,
+                    "all/precision_pancreatitis": 0.7692307692307693,
+                    "all/recall_appendicitis": 0.84375,
+                    "all/recall_cholecystitis": 0.6307692307692307,
+                    "all/recall_diverticulitis": 0.64,
+                    "all/recall_pancreatitis": 0.18518518518518517,
+                    "all/support_appendicitis": 96,
+                    "all/support_cholecystitis": 65,
+                    "all/support_diverticulitis": 25,
+                    "all/support_pancreatitis": 54,
+                    "ece": 0.0,
+                    "hypothesis_accuracy": 0.0,
+                    "ignore/accuracy": 0.669683257918552,
+                    "ignore/f1_appendicitis": 0.801980198019802,
+                    "ignore/f1_cholecystitis": 0.6307692307692307,
+                    "ignore/f1_diverticulitis": 0.6153846153846154,
+                    "ignore/f1_pancreatitis": 0.3448275862068966,
+                    "ignore/macro_f1": 0.5982404075951362,
+                    "ignore/macro_precision": 0.6624471147327838,
+                    "ignore/macro_recall": 0.6180438678510207,
+                    "ignore/micro_f1": 0.669683257918552,
+                    "ignore/micro_precision": 0.669683257918552,
+                    "ignore/micro_recall": 0.669683257918552,
+                    "ignore/precision_appendicitis": 0.7431192660550459,
+                    "ignore/precision_cholecystitis": 0.5857142857142857,
+                    "ignore/precision_diverticulitis": 0.5517241379310345,
+                    "ignore/precision_pancreatitis": 0.7692307692307693,
+                    "ignore/recall_appendicitis": 0.8709677419354839,
+                    "ignore/recall_cholecystitis": 0.6833333333333333,
+                    "ignore/recall_diverticulitis": 0.6956521739130435,
+                    "ignore/recall_pancreatitis": 0.2222222222222222,
+                    "ignore/support_appendicitis": 93,
+                    "ignore/support_cholecystitis": 60,
+                    "ignore/support_diverticulitis": 23,
+                    "ignore/support_pancreatitis": 45,
+                    "none_fraction": 0.07916666666666666,
+                    "unknown_hypothesis_fraction": 0.0
+                  }
+                }
+              },
+              "incorrect_minus1": {
+                "intervals": {
+                  "direction": "single_arm",
+                  "method": "class-stratified patient percentile bootstrap",
+                  "metrics": {
+                    "T1": {
+                      "ci95": [
+                        73.95833333333334,
+                        89.58333333333334
+                      ],
+                      "estimate": 82.29166666666666,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T2": {
+                      "ci95": [
+                        50.76923076923077,
+                        73.88461538461483
+                      ],
+                      "estimate": 63.07692307692307,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T3": {
+                      "ci95": [
+                        24.0,
+                        64.0
+                      ],
+                      "estimate": 44.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T4": {
+                      "ci95": [
+                        35.18518518518518,
+                        61.111111111111114
+                      ],
+                      "estimate": 48.148148148148145,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T5": {
+                      "ci95": [
+                        52.372050836894594,
+                        66.24595575142449
+                      ],
+                      "estimate": 59.37918447293447,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T6": {
+                      "ci95": [
+                        70.53140096618358,
+                        80.28169014084507
+                      ],
+                      "estimate": 75.66265060240964,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T7": {
+                      "ci95": [
+                        62.60497258976428,
+                        75.96157753169527
+                      ],
+                      "estimate": 69.86636709261597,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T8": {
+                      "ci95": [
+                        1517.5726041666667,
+                        1720.4836458333334
+                      ],
+                      "estimate": 1619.2708333333333,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "ece": {
+                      "ci95": [
+                        0.02424576140902318,
+                        0.09651617845269145
+                      ],
+                      "estimate": 0.053693931398417084,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "hypothesis_accuracy": {
+                      "ci95": [
+                        0.8060065753834084,
+                        0.8799435959930236
+                      ],
+                      "estimate": 0.8443271767810027,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "missing_count_mean": {
+                      "ci95": [
+                        1.3625,
+                        2.0584374999999984
+                      ],
+                      "estimate": 1.6916666666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "pooled_accuracy": {
+                      "ci95": [
+                        59.583333333333336,
+                        71.25
+                      ],
+                      "estimate": 65.41666666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "requested_cost_usd": {
+                      "ci95": [
+                        4442.392916666667,
+                        5559.826145833333
+                      ],
+                      "estimate": 4976.466666666666,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    }
+                  },
+                  "n": 240,
+                  "n_resamples": 10000,
+                  "seed": 971965967,
+                  "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+                },
+                "summary": {
+                  "claims": {
+                    "T1": 82.29166666666666,
+                    "T2": 63.07692307692307,
+                    "T3": 44.0,
+                    "T4": 48.148148148148145,
+                    "T5": 59.37918447293447,
+                    "T6": 75.66265060240964,
+                    "T7": 69.86636709261597,
+                    "T8": 1619.2708333333333
+                  },
+                  "cost": {
+                    "missing_count": 406,
+                    "missing_mean": 1.6916666666666667,
+                    "provided_count": 425,
+                    "provided_mean_usd": 1619.2708333333333,
+                    "provided_total_usd": 388625.0,
+                    "repeated_available_request_mean_usd": 432.7416666666667,
+                    "requested_count": 937,
+                    "requested_mean_usd": 4976.466666666666,
+                    "requested_total_usd": 1194352.0,
+                    "unavailable_requested_mean_usd": 2924.454166666667
+                  },
+                  "hypothesis": {
+                    "accuracy": 0.8443271767810027,
+                    "ece": 0.053693931398417084,
+                    "ece_triplet_count": 758,
+                    "invalid_confidence_count": 0,
+                    "triplet_count": 758,
+                    "unknown_fraction": 0.0
+                  },
+                  "n": 240,
+                  "pooled_accuracy": 65.41666666666667,
+                  "upstream": {
+                    "all/accuracy": 0.6541666666666667,
+                    "all/f1_appendicitis": 0.8926553672316384,
+                    "all/f1_cholecystitis": 0.7321428571428571,
+                    "all/f1_diverticulitis": 0.5789473684210527,
+                    "all/f1_pancreatitis": 0.5909090909090909,
+                    "all/macro_f1": 0.6986636709261598,
+                    "all/macro_precision": 0.8646271990035027,
+                    "all/macro_recall": 0.5937918447293447,
+                    "all/micro_f1": 0.7566265060240964,
+                    "all/micro_precision": 0.8971428571428571,
+                    "all/micro_recall": 0.6541666666666667,
+                    "all/precision_appendicitis": 0.9753086419753086,
+                    "all/precision_cholecystitis": 0.8723404255319149,
+                    "all/precision_diverticulitis": 0.8461538461538461,
+                    "all/precision_pancreatitis": 0.7647058823529411,
+                    "all/recall_appendicitis": 0.8229166666666666,
+                    "all/recall_cholecystitis": 0.6307692307692307,
+                    "all/recall_diverticulitis": 0.44,
+                    "all/recall_pancreatitis": 0.48148148148148145,
+                    "all/support_appendicitis": 96,
+                    "all/support_cholecystitis": 65,
+                    "all/support_diverticulitis": 25,
+                    "all/support_pancreatitis": 54,
+                    "ece": 0.053693931398417084,
+                    "hypothesis_accuracy": 0.8443271767810027,
+                    "ignore/accuracy": 0.8971428571428571,
+                    "ignore/f1_appendicitis": 0.9753086419753086,
+                    "ignore/f1_cholecystitis": 0.8723404255319149,
+                    "ignore/f1_diverticulitis": 0.8148148148148148,
+                    "ignore/f1_pancreatitis": 0.7761194029850746,
+                    "ignore/macro_f1": 0.8596458213267782,
+                    "ignore/macro_precision": 0.8646271990035027,
+                    "ignore/macro_recall": 0.8553105352750743,
+                    "ignore/micro_f1": 0.8971428571428571,
+                    "ignore/micro_precision": 0.8971428571428571,
+                    "ignore/micro_recall": 0.8971428571428571,
+                    "ignore/precision_appendicitis": 0.9753086419753086,
+                    "ignore/precision_cholecystitis": 0.8723404255319149,
+                    "ignore/precision_diverticulitis": 0.8461538461538461,
+                    "ignore/precision_pancreatitis": 0.7647058823529411,
+                    "ignore/recall_appendicitis": 0.9753086419753086,
+                    "ignore/recall_cholecystitis": 0.8723404255319149,
+                    "ignore/recall_diverticulitis": 0.7857142857142857,
+                    "ignore/recall_pancreatitis": 0.7878787878787878,
+                    "ignore/support_appendicitis": 81,
+                    "ignore/support_cholecystitis": 47,
+                    "ignore/support_diverticulitis": 14,
+                    "ignore/support_pancreatitis": 33,
+                    "none_fraction": 0.2708333333333333,
+                    "unknown_hypothesis_fraction": 0.0
+                  }
+                }
+              },
+              "no_cost": {
+                "intervals": {
+                  "direction": "single_arm",
+                  "method": "class-stratified patient percentile bootstrap",
+                  "metrics": {
+                    "T1": {
+                      "ci95": [
+                        79.16666666666666,
+                        92.70833333333334
+                      ],
+                      "estimate": 86.45833333333334,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T2": {
+                      "ci95": [
+                        66.15384615384615,
+                        86.15384615384616
+                      ],
+                      "estimate": 76.92307692307693,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T3": {
+                      "ci95": [
+                        48.0,
+                        84.0
+                      ],
+                      "estimate": 68.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T4": {
+                      "ci95": [
+                        38.88888888888889,
+                        64.81481481481481
+                      ],
+                      "estimate": 51.85185185185185,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T5": {
+                      "ci95": [
+                        64.35724937678063,
+                        77.23899572649573
+                      ],
+                      "estimate": 70.80831552706553,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T6": {
+                      "ci95": [
+                        74.42922374429224,
+                        83.90054717539189
+                      ],
+                      "estimate": 79.28730512249443,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T7": {
+                      "ci95": [
+                        70.1772362224011,
+                        81.77950719260122
+                      ],
+                      "estimate": 76.21635460345138,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T8": {
+                      "ci95": [
+                        1221.1066666666668,
+                        1419.3472916666667
+                      ],
+                      "estimate": 1321.3291666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "ece": {
+                      "ci95": [
+                        0.14956362848476096,
+                        0.2380973229922442
+                      ],
+                      "estimate": 0.19185059422750425,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "hypothesis_accuracy": {
+                      "ci95": [
+                        0.767402376910017,
+                        0.855652622142537
+                      ],
+                      "estimate": 0.8132427843803056,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "missing_count_mean": {
+                      "ci95": [
+                        0.85,
+                        1.3416666666666666
+                      ],
+                      "estimate": 1.0791666666666666,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "pooled_accuracy": {
+                      "ci95": [
+                        68.75,
+                        79.16666666666666
+                      ],
+                      "estimate": 74.16666666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "requested_cost_usd": {
+                      "ci95": [
+                        3000.9607291666666,
+                        3872.412395833333
+                      ],
+                      "estimate": 3428.516666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    }
+                  },
+                  "n": 240,
+                  "n_resamples": 10000,
+                  "seed": 971965967,
+                  "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+                },
+                "summary": {
+                  "claims": {
+                    "T1": 86.45833333333334,
+                    "T2": 76.92307692307693,
+                    "T3": 68.0,
+                    "T4": 51.85185185185185,
+                    "T5": 70.80831552706553,
+                    "T6": 79.28730512249443,
+                    "T7": 76.21635460345138,
+                    "T8": 1321.3291666666667
+                  },
+                  "cost": {
+                    "missing_count": 259,
+                    "missing_mean": 1.0791666666666666,
+                    "provided_count": 296,
+                    "provided_mean_usd": 1321.3291666666667,
+                    "provided_total_usd": 317119.0,
+                    "repeated_available_request_mean_usd": 313.6875,
+                    "requested_count": 618,
+                    "requested_mean_usd": 3428.516666666667,
+                    "requested_total_usd": 822844.0,
+                    "unavailable_requested_mean_usd": 1793.5
+                  },
+                  "hypothesis": {
+                    "accuracy": 0.8132427843803056,
+                    "ece": 0.19185059422750425,
+                    "ece_triplet_count": 589,
+                    "invalid_confidence_count": 0,
+                    "triplet_count": 589,
+                    "unknown_fraction": 0.0
+                  },
+                  "n": 240,
+                  "pooled_accuracy": 74.16666666666667,
+                  "upstream": {
+                    "all/accuracy": 0.7416666666666667,
+                    "all/f1_appendicitis": 0.8972972972972973,
+                    "all/f1_cholecystitis": 0.7936507936507936,
+                    "all/f1_diverticulitis": 0.7555555555555555,
+                    "all/f1_pancreatitis": 0.6021505376344086,
+                    "all/macro_f1": 0.7621635460345138,
+                    "all/macro_precision": 0.8300512796897951,
+                    "all/macro_recall": 0.7080831552706552,
+                    "all/micro_f1": 0.7928730512249443,
+                    "all/micro_precision": 0.8516746411483254,
+                    "all/micro_recall": 0.7416666666666667,
+                    "all/precision_appendicitis": 0.9325842696629213,
+                    "all/precision_cholecystitis": 0.819672131147541,
+                    "all/precision_diverticulitis": 0.85,
+                    "all/precision_pancreatitis": 0.717948717948718,
+                    "all/recall_appendicitis": 0.8645833333333334,
+                    "all/recall_cholecystitis": 0.7692307692307693,
+                    "all/recall_diverticulitis": 0.68,
+                    "all/recall_pancreatitis": 0.5185185185185185,
+                    "all/support_appendicitis": 96,
+                    "all/support_cholecystitis": 65,
+                    "all/support_diverticulitis": 25,
+                    "all/support_pancreatitis": 54,
+                    "ece": 0.19185059422750425,
+                    "hypothesis_accuracy": 0.8132427843803056,
+                    "ignore/accuracy": 0.8516746411483254,
+                    "ignore/f1_appendicitis": 0.9378531073446328,
+                    "ignore/f1_cholecystitis": 0.8264462809917356,
+                    "ignore/f1_diverticulitis": 0.8292682926829268,
+                    "ignore/f1_pancreatitis": 0.7088607594936709,
+                    "ignore/macro_f1": 0.8256071101282415,
+                    "ignore/macro_precision": 0.8300512796897951,
+                    "ignore/macro_recall": 0.8215097402597402,
+                    "ignore/micro_f1": 0.8516746411483254,
+                    "ignore/micro_precision": 0.8516746411483254,
+                    "ignore/micro_recall": 0.8516746411483254,
+                    "ignore/precision_appendicitis": 0.9325842696629213,
+                    "ignore/precision_cholecystitis": 0.819672131147541,
+                    "ignore/precision_diverticulitis": 0.85,
+                    "ignore/precision_pancreatitis": 0.717948717948718,
+                    "ignore/recall_appendicitis": 0.9431818181818182,
+                    "ignore/recall_cholecystitis": 0.8333333333333334,
+                    "ignore/recall_diverticulitis": 0.8095238095238095,
+                    "ignore/recall_pancreatitis": 0.7,
+                    "ignore/support_appendicitis": 88,
+                    "ignore/support_cholecystitis": 60,
+                    "ignore/support_diverticulitis": 21,
+                    "ignore/support_pancreatitis": 40,
+                    "none_fraction": 0.12916666666666668,
+                    "unknown_hypothesis_fraction": 0.0
+                  }
+                }
+              },
+              "primary": {
+                "intervals": {
+                  "direction": "single_arm",
+                  "method": "class-stratified patient percentile bootstrap",
+                  "metrics": {
+                    "T1": {
+                      "ci95": [
+                        84.375,
+                        95.83333333333334
+                      ],
+                      "estimate": 90.625,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T2": {
+                      "ci95": [
+                        61.53846153846154,
+                        83.07692307692308
+                      ],
+                      "estimate": 72.3076923076923,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T3": {
+                      "ci95": [
+                        56.00000000000001,
+                        88.0
+                      ],
+                      "estimate": 72.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T4": {
+                      "ci95": [
+                        44.44444444444444,
+                        70.37037037037037
+                      ],
+                      "estimate": 57.407407407407405,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T5": {
+                      "ci95": [
+                        66.65002003205129,
+                        79.19020655270654
+                      ],
+                      "estimate": 73.08502492877493,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T6": {
+                      "ci95": [
+                        76.47058823529412,
+                        85.52631578947368
+                      ],
+                      "estimate": 81.1529933481153,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T7": {
+                      "ci95": [
+                        72.31902244647098,
+                        83.44498546830991
+                      ],
+                      "estimate": 78.20021332516176,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T8": {
+                      "ci95": [
+                        1341.5026041666665,
+                        1537.6490625
+                      ],
+                      "estimate": 1439.5833333333333,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "ece": {
+                      "ci95": [
+                        0.08614713657633216,
+                        0.17491909385113272
+                      ],
+                      "estimate": 0.1281350482315113,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "hypothesis_accuracy": {
+                      "ci95": [
+                        0.7724127104422671,
+                        0.8589152146970912
+                      ],
+                      "estimate": 0.8167202572347267,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "missing_count_mean": {
+                      "ci95": [
+                        0.9,
+                        1.3541666666666667
+                      ],
+                      "estimate": 1.1125,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "pooled_accuracy": {
+                      "ci95": [
+                        70.83333333333334,
+                        81.25
+                      ],
+                      "estimate": 76.25,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "requested_cost_usd": {
+                      "ci95": [
+                        3096.9207291666667,
+                        3926.0794791666663
+                      ],
+                      "estimate": 3499.4166666666665,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    }
+                  },
+                  "n": 240,
+                  "n_resamples": 10000,
+                  "seed": 971965967,
+                  "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+                },
+                "summary": {
+                  "claims": {
+                    "T1": 90.625,
+                    "T2": 72.3076923076923,
+                    "T3": 72.0,
+                    "T4": 57.407407407407405,
+                    "T5": 73.08502492877493,
+                    "T6": 81.1529933481153,
+                    "T7": 78.20021332516176,
+                    "T8": 1439.5833333333333
+                  },
+                  "cost": {
+                    "missing_count": 267,
+                    "missing_mean": 1.1125,
+                    "provided_count": 350,
+                    "provided_mean_usd": 1439.5833333333333,
+                    "provided_total_usd": 345500.0,
+                    "repeated_available_request_mean_usd": 208.22083333333333,
+                    "requested_count": 661,
+                    "requested_mean_usd": 3499.4166666666665,
+                    "requested_total_usd": 839860.0,
+                    "unavailable_requested_mean_usd": 1851.6125
+                  },
+                  "hypothesis": {
+                    "accuracy": 0.8167202572347267,
+                    "ece": 0.1281350482315113,
+                    "ece_triplet_count": 622,
+                    "invalid_confidence_count": 0,
+                    "triplet_count": 622,
+                    "unknown_fraction": 0.0
+                  },
+                  "n": 240,
+                  "pooled_accuracy": 76.25,
+                  "upstream": {
+                    "all/accuracy": 0.7625,
+                    "all/f1_appendicitis": 0.9354838709677419,
+                    "all/f1_cholecystitis": 0.7899159663865546,
+                    "all/f1_diverticulitis": 0.782608695652174,
+                    "all/f1_pancreatitis": 0.62,
+                    "all/macro_f1": 0.7820021332516176,
+                    "all/macro_precision": 0.8420232344145387,
+                    "all/macro_recall": 0.7308502492877493,
+                    "all/micro_f1": 0.811529933481153,
+                    "all/micro_precision": 0.8672985781990521,
+                    "all/micro_recall": 0.7625,
+                    "all/precision_appendicitis": 0.9666666666666667,
+                    "all/precision_cholecystitis": 0.8703703703703703,
+                    "all/precision_diverticulitis": 0.8571428571428571,
+                    "all/precision_pancreatitis": 0.6739130434782609,
+                    "all/recall_appendicitis": 0.90625,
+                    "all/recall_cholecystitis": 0.7230769230769231,
+                    "all/recall_diverticulitis": 0.72,
+                    "all/recall_pancreatitis": 0.5740740740740741,
+                    "all/support_appendicitis": 96,
+                    "all/support_cholecystitis": 65,
+                    "all/support_diverticulitis": 25,
+                    "all/support_pancreatitis": 54,
+                    "ece": 0.1281350482315113,
+                    "hypothesis_accuracy": 0.8167202572347267,
+                    "ignore/accuracy": 0.8672985781990521,
+                    "ignore/f1_appendicitis": 0.9613259668508287,
+                    "ignore/f1_cholecystitis": 0.831858407079646,
+                    "ignore/f1_diverticulitis": 0.8571428571428571,
+                    "ignore/f1_pancreatitis": 0.7209302325581395,
+                    "ignore/macro_f1": 0.8428143659078678,
+                    "ignore/macro_precision": 0.8420232344145387,
+                    "ignore/macro_recall": 0.8461992456695846,
+                    "ignore/micro_f1": 0.8672985781990521,
+                    "ignore/micro_precision": 0.8672985781990521,
+                    "ignore/micro_recall": 0.8672985781990521,
+                    "ignore/precision_appendicitis": 0.9666666666666667,
+                    "ignore/precision_cholecystitis": 0.8703703703703703,
+                    "ignore/precision_diverticulitis": 0.8571428571428571,
+                    "ignore/precision_pancreatitis": 0.6739130434782609,
+                    "ignore/recall_appendicitis": 0.9560439560439561,
+                    "ignore/recall_cholecystitis": 0.7966101694915254,
+                    "ignore/recall_diverticulitis": 0.8571428571428571,
+                    "ignore/recall_pancreatitis": 0.775,
+                    "ignore/support_appendicitis": 91,
+                    "ignore/support_cholecystitis": 59,
+                    "ignore/support_diverticulitis": 21,
+                    "ignore/support_pancreatitis": 40,
+                    "none_fraction": 0.12083333333333333,
+                    "unknown_hypothesis_fraction": 0.0
+                  }
+                }
+              },
+              "zero_shot": {
+                "intervals": {
+                  "direction": "single_arm",
+                  "method": "class-stratified patient percentile bootstrap",
+                  "metrics": {
+                    "T1": {
+                      "ci95": [
+                        5.208333333333334,
+                        17.708333333333336
+                      ],
+                      "estimate": 11.458333333333332,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T2": {
+                      "ci95": [
+                        7.6923076923076925,
+                        24.615384615384617
+                      ],
+                      "estimate": 15.384615384615385,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T3": {
+                      "ci95": [
+                        8.0,
+                        40.0
+                      ],
+                      "estimate": 24.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T4": {
+                      "ci95": [
+                        0.0,
+                        0.0
+                      ],
+                      "estimate": 0.0,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T5": {
+                      "ci95": [
+                        8.036057692307693,
+                        17.864583333333332
+                      ],
+                      "estimate": 12.710737179487179,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T6": {
+                      "ci95": [
+                        12.996389891696749,
+                        24.832214765100673
+                      ],
+                      "estimate": 18.88111888111888,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T7": {
+                      "ci95": [
+                        13.042945456107255,
+                        25.829686115535765
+                      ],
+                      "estimate": 19.678007178007178,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "T8": {
+                      "ci95": [
+                        1626.131875,
+                        1853.6823958333332
+                      ],
+                      "estimate": 1740.575,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "ece": {
+                      "ci95": [
+                        0.25708762111091044,
+                        0.3478957915831662
+                      ],
+                      "estimate": 0.3021568627450979,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "hypothesis_accuracy": {
+                      "ci95": [
+                        0.2508990405540336,
+                        0.340997533290345
+                      ],
+                      "estimate": 0.2958904109589041,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "missing_count_mean": {
+                      "ci95": [
+                        2.2583333333333333,
+                        3.0083333333333333
+                      ],
+                      "estimate": 2.629166666666667,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "pooled_accuracy": {
+                      "ci95": [
+                        7.5,
+                        15.416666666666668
+                      ],
+                      "estimate": 11.25,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    },
+                    "requested_cost_usd": {
+                      "ci95": [
+                        7124.1641666666665,
+                        8973.923541666665
+                      ],
+                      "estimate": 8002.341666666666,
+                      "status": "assessed",
+                      "valid_resamples": 10000
+                    }
+                  },
+                  "n": 240,
+                  "n_resamples": 10000,
+                  "seed": 971965967,
+                  "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+                },
+                "summary": {
+                  "claims": {
+                    "T1": 11.458333333333332,
+                    "T2": 15.384615384615385,
+                    "T3": 24.0,
+                    "T4": 0.0,
+                    "T5": 12.710737179487179,
+                    "T6": 18.88111888111888,
+                    "T7": 19.678007178007178,
+                    "T8": 1740.575
+                  },
+                  "cost": {
+                    "missing_count": 631,
+                    "missing_mean": 2.629166666666667,
+                    "provided_count": 600,
+                    "provided_mean_usd": 1740.575,
+                    "provided_total_usd": 417738.0,
+                    "repeated_available_request_mean_usd": 1151.825,
+                    "requested_count": 1521,
+                    "requested_mean_usd": 8002.341666666666,
+                    "requested_total_usd": 1920562.0,
+                    "unavailable_requested_mean_usd": 5109.941666666667
+                  },
+                  "hypothesis": {
+                    "accuracy": 0.2958904109589041,
+                    "ece": 0.3021568627450979,
+                    "ece_triplet_count": 1020,
+                    "invalid_confidence_count": 0,
+                    "triplet_count": 1095,
+                    "unknown_fraction": 0.0684931506849315
+                  },
+                  "n": 240,
+                  "pooled_accuracy": 11.25,
+                  "upstream": {
+                    "all/accuracy": 0.1125,
+                    "all/f1_appendicitis": 0.2037037037037037,
+                    "all/f1_cholecystitis": 0.21978021978021978,
+                    "all/f1_diverticulitis": 0.36363636363636365,
+                    "all/f1_pancreatitis": 0.0,
+                    "all/macro_f1": 0.19678007178007179,
+                    "all/macro_precision": 0.5128205128205128,
+                    "all/macro_recall": 0.1271073717948718,
+                    "all/micro_f1": 0.1888111888111888,
+                    "all/micro_precision": 0.5869565217391305,
+                    "all/micro_recall": 0.1125,
+                    "all/precision_appendicitis": 0.9166666666666666,
+                    "all/precision_cholecystitis": 0.38461538461538464,
+                    "all/precision_diverticulitis": 0.75,
+                    "all/precision_pancreatitis": 0.0,
+                    "all/recall_appendicitis": 0.11458333333333333,
+                    "all/recall_cholecystitis": 0.15384615384615385,
+                    "all/recall_diverticulitis": 0.24,
+                    "all/recall_pancreatitis": 0.0,
+                    "all/support_appendicitis": 96,
+                    "all/support_cholecystitis": 65,
+                    "all/support_diverticulitis": 25,
+                    "all/support_pancreatitis": 54,
+                    "ece": 0.3021568627450979,
+                    "hypothesis_accuracy": 0.2958904109589041,
+                    "ignore/accuracy": 0.5869565217391305,
+                    "ignore/f1_appendicitis": 0.6470588235294118,
+                    "ignore/f1_cholecystitis": 0.5555555555555556,
+                    "ignore/f1_diverticulitis": 0.8571428571428571,
+                    "ignore/f1_pancreatitis": 0.0,
+                    "ignore/macro_f1": 0.5149393090569561,
+                    "ignore/macro_precision": 0.5128205128205128,
+                    "ignore/macro_recall": 0.625,
+                    "ignore/micro_f1": 0.5869565217391305,
+                    "ignore/micro_precision": 0.5869565217391305,
+                    "ignore/micro_recall": 0.5869565217391305,
+                    "ignore/precision_appendicitis": 0.9166666666666666,
+                    "ignore/precision_cholecystitis": 0.38461538461538464,
+                    "ignore/precision_diverticulitis": 0.75,
+                    "ignore/precision_pancreatitis": 0.0,
+                    "ignore/recall_appendicitis": 0.5,
+                    "ignore/recall_cholecystitis": 1.0,
+                    "ignore/recall_diverticulitis": 1.0,
+                    "ignore/recall_pancreatitis": 0.0,
+                    "ignore/support_appendicitis": 22,
+                    "ignore/support_cholecystitis": 10,
+                    "ignore/support_diverticulitis": 6,
+                    "ignore/support_pancreatitis": 8,
+                    "none_fraction": 0.8083333333333333,
+                    "unknown_hypothesis_fraction": 0.0684931506849315
+                  }
+                }
+              }
+            },
+            "comparisons": {
+              "decision_only": {
+                "direction": "a_minus_b",
+                "mcnemar": {
+                  "a_only_correct": 60,
+                  "b_only_correct": 25,
+                  "discordant": 85,
+                  "method": "two-sided exact McNemar binomial",
+                  "metric": "pooled_accuracy",
+                  "p_value": 0.00018679938527835335
+                },
+                "method": "class-stratified patient percentile bootstrap",
+                "metrics": {
+                  "T1": {
+                    "ci95": [
+                      -2.083333333333343,
+                      14.583333333333343
+                    ],
+                    "estimate": 6.25,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T2": {
+                    "ci95": [
+                      -6.153846153846153,
+                      24.615384615384613
+                    ],
+                    "estimate": 9.230769230769234,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T3": {
+                    "ci95": [
+                      -19.999999999999993,
+                      36.0
+                    ],
+                    "estimate": 8.0,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T4": {
+                    "ci95": [
+                      22.222222222222225,
+                      55.55555555555555
+                    ],
+                    "estimate": 38.888888888888886,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T5": {
+                    "ci95": [
+                      6.339425302706555,
+                      24.595265758547008
+                    ],
+                    "estimate": 15.592414529914535,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T6": {
+                    "ci95": [
+                      10.154508356536939,
+                      23.5857651531377
+                    ],
+                    "estimate": 16.944750398006846,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T7": {
+                    "ci95": [
+                      12.510511093163123,
+                      29.33623307322422
+                    ],
+                    "estimate": 20.981429197021967,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T8": {
+                    "ci95": [
+                      -254.4336458333334,
+                      -50.809062500000046
+                    ],
+                    "estimate": -153.64166666666665,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "ece": {
+                    "ci95": null,
+                    "estimate": null,
+                    "status": "unassessable",
+                    "valid_resamples": 0
+                  },
+                  "hypothesis_accuracy": {
+                    "ci95": null,
+                    "estimate": null,
+                    "status": "unassessable",
+                    "valid_resamples": 0
+                  },
+                  "missing_count_mean": {
+                    "ci95": [
+                      -0.37916666666666665,
+                      0.1333333333333333
+                    ],
+                    "estimate": -0.125,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "pooled_accuracy": {
+                    "ci95": [
+                      7.499999999999986,
+                      21.666666666666664
+                    ],
+                    "estimate": 14.583333333333329,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "requested_cost_usd": {
+                    "ci95": [
+                      -1245.9136458333337,
+                      -185.87447916666713
+                    ],
+                    "estimate": -717.7333333333331,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  }
+                },
+                "n": 240,
+                "n_resamples": 10000,
+                "seed": 971965967,
+                "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+              },
+              "incorrect_minus1": {
+                "direction": "a_minus_b",
+                "mcnemar": {
+                  "a_only_correct": 45,
+                  "b_only_correct": 19,
+                  "discordant": 64,
+                  "method": "two-sided exact McNemar binomial",
+                  "metric": "pooled_accuracy",
+                  "p_value": 0.0015627893448280279
+                },
+                "method": "class-stratified patient percentile bootstrap",
+                "metrics": {
+                  "T1": {
+                    "ci95": [
+                      -0.026041666666642746,
+                      17.708333333333314
+                    ],
+                    "estimate": 8.333333333333343,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T2": {
+                    "ci95": [
+                      -1.5384615384615472,
+                      20.000000000000007
+                    ],
+                    "estimate": 9.230769230769234,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T3": {
+                    "ci95": [
+                      0.0,
+                      52.0
+                    ],
+                    "estimate": 28.0,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T4": {
+                    "ci95": [
+                      -5.555555555555557,
+                      24.07407407407407
+                    ],
+                    "estimate": 9.25925925925926,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T5": {
+                    "ci95": [
+                      5.316165865384604,
+                      21.93176638176638
+                    ],
+                    "estimate": 13.705840455840459,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T6": {
+                    "ci95": [
+                      0.31475696894090455,
+                      10.711732107557742
+                    ],
+                    "estimate": 5.490342745705661,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T7": {
+                    "ci95": [
+                      1.1021239505304665,
+                      16.023510921736474
+                    ],
+                    "estimate": 8.333846232545781,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T8": {
+                    "ci95": [
+                      -280.99916666666655,
+                      -79.81000000000003
+                    ],
+                    "estimate": -179.6875,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "ece": {
+                    "ci95": [
+                      0.035757471963395474,
+                      0.10714037130625738
+                    ],
+                    "estimate": 0.07444111683309423,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "hypothesis_accuracy": {
+                    "ci95": [
+                      -0.05934781466784452,
+                      0.003722581279137258
+                    ],
+                    "estimate": -0.02760691954627592,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "missing_count_mean": {
+                    "ci95": [
+                      -0.925,
+                      -0.24583333333333335
+                    ],
+                    "estimate": -0.5791666666666666,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "pooled_accuracy": {
+                    "ci95": [
+                      4.583333333333329,
+                      17.083333333333336
+                    ],
+                    "estimate": 10.833333333333329,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "requested_cost_usd": {
+                    "ci95": [
+                      -2063.8560416666664,
+                      -888.3922916666669
+                    ],
+                    "estimate": -1477.0499999999997,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  }
+                },
+                "n": 240,
+                "n_resamples": 10000,
+                "seed": 971965967,
+                "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+              },
+              "no_cost": {
+                "direction": "a_minus_b",
+                "mcnemar": {
+                  "a_only_correct": 25,
+                  "b_only_correct": 20,
+                  "discordant": 45,
+                  "method": "two-sided exact McNemar binomial",
+                  "metric": "pooled_accuracy",
+                  "p_value": 0.5514843298025198
+                },
+                "method": "class-stratified patient percentile bootstrap",
+                "metrics": {
+                  "T1": {
+                    "ci95": [
+                      -4.166666666666657,
+                      12.5
+                    ],
+                    "estimate": 4.166666666666657,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T2": {
+                    "ci95": [
+                      -15.384615384615387,
+                      6.153846153846146
+                    ],
+                    "estimate": -4.615384615384627,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T3": {
+                    "ci95": [
+                      -16.0,
+                      24.0
+                    ],
+                    "estimate": 4.0,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T4": {
+                    "ci95": [
+                      -5.555555555555564,
+                      16.66666666666667
+                    ],
+                    "estimate": 5.555555555555557,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T5": {
+                    "ci95": [
+                      -4.642358885327641,
+                      9.12508903133903
+                    ],
+                    "estimate": 2.2767094017093967,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T6": {
+                    "ci95": [
+                      -2.704872620824052,
+                      6.479764104912537
+                    ],
+                    "estimate": 1.8656882256208718,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T7": {
+                    "ci95": [
+                      -3.609695653804837,
+                      7.682437626566302
+                    ],
+                    "estimate": 1.9838587217103765,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T8": {
+                    "ci95": [
+                      -0.2504166666666659,
+                      239.8602083333333
+                    ],
+                    "estimate": 118.2541666666666,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "ece": {
+                    "ci95": [
+                      -0.09921060818019799,
+                      -0.027281486065621856
+                    ],
+                    "estimate": -0.06371554599599294,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "hypothesis_accuracy": {
+                    "ci95": [
+                      -0.030014999620262706,
+                      0.03772838822800473
+                    ],
+                    "estimate": 0.0034774728544211264,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "missing_count_mean": {
+                    "ci95": [
+                      -0.25,
+                      0.31666666666666665
+                    ],
+                    "estimate": 0.03333333333333344,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "pooled_accuracy": {
+                    "ci95": [
+                      -3.3333333333333286,
+                      7.5
+                    ],
+                    "estimate": 2.0833333333333286,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "requested_cost_usd": {
+                    "ci95": [
+                      -443.81916666666683,
+                      574.960520833333
+                    ],
+                    "estimate": 70.89999999999964,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  }
+                },
+                "n": 240,
+                "n_resamples": 10000,
+                "seed": 971965967,
+                "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+              },
+              "zero_shot": {
+                "direction": "a_minus_b",
+                "mcnemar": {
+                  "a_only_correct": 158,
+                  "b_only_correct": 2,
+                  "discordant": 160,
+                  "method": "two-sided exact McNemar binomial",
+                  "metric": "pooled_accuracy",
+                  "p_value": 1.7627075702117157e-44
+                },
+                "method": "class-stratified patient percentile bootstrap",
+                "metrics": {
+                  "T1": {
+                    "ci95": [
+                      70.83333333333333,
+                      86.45833333333334
+                    ],
+                    "estimate": 79.16666666666667,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T2": {
+                    "ci95": [
+                      43.07692307692307,
+                      69.23076923076924
+                    ],
+                    "estimate": 56.92307692307692,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T3": {
+                    "ci95": [
+                      28.0,
+                      68.0
+                    ],
+                    "estimate": 48.0,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T4": {
+                    "ci95": [
+                      44.44444444444444,
+                      70.37037037037037
+                    ],
+                    "estimate": 57.407407407407405,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T5": {
+                    "ci95": [
+                      53.251302083333336,
+                      67.19727564102563
+                    ],
+                    "estimate": 60.374287749287745,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T6": {
+                    "ci95": [
+                      55.25416546629429,
+                      69.18182124504239
+                    ],
+                    "estimate": 62.27187446699642,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T7": {
+                    "ci95": [
+                      51.124474153888556,
+                      66.19539780339092
+                    ],
+                    "estimate": 58.52220614715458,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "T8": {
+                    "ci95": [
+                      -434.3677083333332,
+                      -164.63572916666675
+                    ],
+                    "estimate": -300.9916666666668,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "ece": {
+                    "ci95": [
+                      -0.23184501930725265,
+                      -0.11396709617756347
+                    ],
+                    "estimate": -0.1740218145135866,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "hypothesis_accuracy": {
+                    "ci95": [
+                      0.4640390142037707,
+                      0.5772893652305519
+                    ],
+                    "estimate": 0.5208298462758226,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "missing_count_mean": {
+                    "ci95": [
+                      -1.8958333333333333,
+                      -1.1375000000000002
+                    ],
+                    "estimate": -1.5166666666666668,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "pooled_accuracy": {
+                    "ci95": [
+                      58.75,
+                      70.83333333333333
+                    ],
+                    "estimate": 65.0,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  },
+                  "requested_cost_usd": {
+                    "ci95": [
+                      -5500.908645833333,
+                      -3553.9867708333336
+                    ],
+                    "estimate": -4502.924999999999,
+                    "status": "assessed",
+                    "valid_resamples": 10000
+                  }
+                },
+                "n": 240,
+                "n_resamples": 10000,
+                "seed": 971965967,
+                "uncertainty": "held-out sampling, conditional on fitted model; not training-seed uncertainty"
+              }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "git_sha": "7fcd9e512fb80a7576404b7c7daa1de1f9cad72d",
+      "runtime_lock_sha256": "f12ce556f8944470d5ef800b84817c94d493de084123670b38608bbf682c276a",
+      "source_fingerprint": "46504f9089878b93543a4934b6c95e35430c2400625c06d00a2be06caec65dab",
+      "stage_manifest_ids": {
+        "s0": "751d069567e1627bd8db6dfdd8874d05749566376f317cb35021c9e4e15e9c02",
+        "s1": "279dea6a14fbc25655c012b083c647d8064f0f311d3e476abfa5519960d2fec0",
+        "s2": "f9a6bbb31b6493f6cba76735d3dd0da741b527322a75af8c755a6bf5c42b2d8a",
+        "s3": "b840254c3405db169f46e206b734e6b3f34ef22571be25fdbb16ba49809baff2",
+        "s4": "7c9eb40678c88b3d9592ce1d4ec3d36761906405e930d2000c6a4f1c0a23c988",
+        "s5": "7316363008a439730acab00e4418536e338ba40d987a4ed4b01d643558d4b605",
+        "s6": "9036771f2193bf8feeddab04dac70085b78bb78ac698f2a495b98829122e9a5a"
+      },
+      "wandb_run_ids": [
+        "6hjrfg9b",
+        "cizesh3m",
+        "td2ei6i2",
+        "x1w1t16h"
+      ]
+    },
+    "source": "mimic",
+    "training": [
+      {
+        "arm": "decision_only",
+        "protocol": "parity",
+        "seed": 269,
+        "status": "PASS"
+      },
+      {
+        "arm": "primary",
+        "protocol": "parity",
+        "seed": 269,
+        "status": "PASS"
+      },
+      {
+        "arm": "no_cost",
+        "protocol": "parity",
+        "seed": 269,
+        "status": "PASS"
+      },
+      {
+        "arm": "incorrect_minus1",
+        "protocol": "parity",
+        "seed": 269,
+        "status": "PASS"
+      }
+    ],
+    "training_seeds": [
+      269
+    ],
+    "upstream_sha": "3f435a10f569c3255172c1ef8fe7880c6edb7fee"
+  },
+  "source": "mimic",
+  "upstream_sha": "3f435a10f569c3255172c1ef8fe7880c6edb7fee",
+  "written_at": "2026-11-08T05:13:10-05:00"
+}
