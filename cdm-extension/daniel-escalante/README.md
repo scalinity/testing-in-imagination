@@ -71,3 +71,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | hpi-audit | CPU job 50505000 (cai5731-b) | `results/credentialed/hpi-audit/` | counts of HPI length, classes and test mentions for train and val |
 | 2026-11-09 | inventory | CPU job 50505008 (cai5731-b) | `results/credentialed/inventory/` | private t=0 records for train and val; public card of availability counts and rates |
 | 2026-11-09 | wm-fit | CPU job 50505005 (cai5731-b) | `results/credentialed/wm-fit/` | learned models (C chosen by CV), base rates and their digests; validation quality for all 14 arms |
+| 2026-11-09 | leakage | CPU job 50505011 (cai5731-b) | `results/credentialed/leakage/` | diagnosis probes fitted on train, mean class recall on validation |
