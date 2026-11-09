@@ -54,3 +54,7 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - **Generation digest.** Only hypothesis and decision generations enter the digest the shadow control compares.
 - **Repeated requests.** `requests.repeated` counts, per patient, requests beyond the first for the same test; `requests.unavailable` counts every request for an unavailable test, so the two can overlap.
 - **Reference-path scoring (amendment A2).** bench-a found the prefix-reuse path outside the 1e-3 tolerance against the full-sequence reference, so decisions use the reference path; the bench comparison still runs both paths and reports the largest difference.
+
+## Approvals in practice
+
+- From 2026-11-09 (after bench-a and val-a, which Daniel committed himself) Daniel has authorized the agent to draft and commit each stage's approval file on his behalf; `approved_by` still names him as the approver of record. Every request and its summary is still posted before the stage runs, and the code's own gates still apply: test-a refuses to start unless Addendum A records a passed premise check and a passed (or amended) shadow control.
