@@ -1,2 +1,4 @@
 {"commit": "f3e67c08919d", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "validate", "type": "job_start"}
 {"status": "pass", "type": "job_end"}
+{"commit": "9e9631dec180", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "validate", "type": "job_start"}
+{"status": "pass", "type": "job_end"}

@@ -50,7 +50,7 @@
     },
     "requests": {
       "provided": 350,
-      "repeated": 44,
+      "repeated": 121,
       "requested": 661,
       "unavailable": 267
     }
