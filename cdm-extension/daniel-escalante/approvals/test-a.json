@@ -1,0 +1,39 @@
+{
+  "addendum_sha256": "d8bc061cc8a2ba92c486c0836c5db023c11e51fa42802782006265c293872a32",
+  "approved_by": "Daniel Escalante",
+  "code_commit": "6348b4a6eda6bbf823a738299360611afc9944e0",
+  "config_sha256": "8605192126410979c83d433bf6d772b1399149fa4fcc7a0104217eca2c00cb6e",
+  "expected_wall_hours": 0.348,
+  "gpu_hours": {
+    "V0-rerun": 0.348,
+    "V2": 0.348,
+    "V3": 0.348
+  },
+  "gpu_hours_total": 1.044,
+  "jobs": [
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-a",
+      "variant": "V0-rerun"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-a",
+      "variant": "V2"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-a",
+      "variant": "V3"
+    }
+  ],
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "queue_notes": "3 one-GPU jobs on hpg-rtx6000 (RTX PRO 6000), submitted together and spread across cai6734, cai5724; each course QOS caps 8 GPUs and 250 GB shared by its whole class, so jobs may wait for free GPUs.",
+  "stage": "test-a"
+}
