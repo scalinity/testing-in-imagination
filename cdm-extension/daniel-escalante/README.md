@@ -63,3 +63,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | val-a | GPU job 50465777 (V0-shadow) | `results/credentialed/val-a/` | pass: 240 val patients in 47 min |
 | 2026-11-09 | val-a | GPU job 50465778 (V2) | `results/credentialed/val-a/` | pass: 240 val patients in 24 min |
 | 2026-11-09 | val-a | GPU job 50465779 (V3) | `results/credentialed/val-a/` | pass: 240 val patients in 22 min |
+| 2026-11-09 | analyze-val-a | CPU job 50484950 (after a launch failure, job 50484120, exit 126 before Python started) | `results/credentialed/analyze-val-a/` | shadow control 240/240 identical (passed); premise 24 V0 nonanswers (passed); go: yes |
