@@ -1,13 +1,13 @@
 {
   "addendum_sha256": null,
-  "code_commit": "e51ca6eae1acf453820341693654457edd2d9419",
+  "code_commit": "bc4af01c62b60c2932c77ab2d3a58af924a4f2bd",
   "config_sha256": "8605192126410979c83d433bf6d772b1399149fa4fcc7a0104217eca2c00cb6e",
-  "expected_wall_hours": 0.075,
+  "expected_wall_hours": 0.618,
   "gpu_hours": {
-    "V0-shadow": 0.075,
-    "V3": 0.075
+    "V0-shadow": 0.618,
+    "V3": 0.618
   },
-  "gpu_hours_total": 0.15,
+  "gpu_hours_total": 1.236,
   "jobs": [
     {
       "arm": "primary",
