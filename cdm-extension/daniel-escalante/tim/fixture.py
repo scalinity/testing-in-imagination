@@ -165,3 +165,15 @@ class ScriptedPolicy:
             outputs.append(SimpleNamespace(prompt=prompt, prompt_token_ids=self.tokenizer.encode(prompt),
                                            outputs=[SimpleNamespace(text=text, token_ids=ids)]))
         return outputs
+
+
+class MockScorer:
+    """Deterministic CPU scorer: a disease scores how often the prompt names it; a test scores 0.5."""
+
+    def __init__(self, tokenizer):
+        self.tokenizer, self.calls = tokenizer, 0
+
+    def score(self, prompt_ids, thought, candidates, path=None):
+        self.calls += 1
+        return [float(list(prompt_ids).count(self.tokenizer.encode(a.name)[0])) if a.kind == "diagnosis" else 0.5
+                for a in candidates]
