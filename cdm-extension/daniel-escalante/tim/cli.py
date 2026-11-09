@@ -196,6 +196,9 @@ def main(argv=None):
         print(f"published: {publish(settings, args.target, results_root())}")
     elif args.command == "render":
         print(f"rendered: {render_phase_a(results_root() / 'credentialed' / 'phase-a' / 'metrics.json')}")
+    elif args.command == "addendum-a":
+        from tim import protocol
+        print(f"wrote {protocol.addendum_a().relative_to(ROOT)}")
     elif args.command == "check-git":
         check_git_command()
     elif args.command == "approval-request":

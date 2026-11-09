@@ -1,9 +1,10 @@
 """The frozen protocol (prereg/protocol.json) and the synthetic stand-in constants."""
 import hashlib
 import json
+from pathlib import Path
 
 from tim.enums import DISEASES
-from tim.paths import OWN
+from tim.paths import OWN, ROOT
 
 PATH = OWN / "prereg" / "protocol.json"
 # The synthetic run exercises the pipeline at fixture scale with fewer resamples; numbers are meaningless.
@@ -25,3 +26,37 @@ def load(settings) -> tuple[dict, str]:
     check_admission_path(settings, protocol)
     constants = SYNTHETIC if settings.synthetic else protocol["analysis"]
     return constants, hashlib.sha256(data).hexdigest()
+
+
+def addendum_a(root=None) -> Path:
+    """Addendum A (SPEC §5.3) from committed bundles only: premise check, shadow control,
+    sensitivity, bench measurements and the test-a budget they imply. Written once."""
+    from tim import approvals
+    root = root or ROOT
+    folder = root / approvals.FOLDER
+    results = folder / "results" / "credentialed"
+    target = folder / "prereg" / "addendum-a.json"
+    if target.exists():
+        raise FileExistsError("addendum A is already written")
+    validation_path = results / "analyze-val-a" / "validation.json"
+    bench_paths = {v: results / "bench-a" / f"bench.{v}.json" for v in ("V0-shadow", "V3")}
+    validation = json.loads(validation_path.read_text())
+    hours = {job["variant"]: round(approvals.estimate_hours("test-a", job, root), 3)
+             for job in approvals.jobs("test-a")}
+
+    def sha(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    addendum = {
+        "addendum": "A",
+        "protocol_sha256": sha(folder / "prereg" / "protocol.json"),
+        "premise": validation["premise"],
+        "shadow_control": {**validation["shadow"], "amendment": None},
+        "go": validation["go"],
+        "sensitivity": validation["sensitivity"],
+        "bench": {variant: json.loads(path.read_text()) for variant, path in bench_paths.items()},
+        "test_a_budget": {"gpu_hours": hours, "gpu_hours_total": round(sum(hours.values()), 3)},
+        "sources": {str(p.relative_to(folder)): sha(p) for p in (validation_path, *bench_paths.values())},
+    }
+    target.write_text(json.dumps(addendum, indent=2, sort_keys=True) + "\n")
+    return target
