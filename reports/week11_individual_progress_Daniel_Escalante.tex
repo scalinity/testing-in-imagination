@@ -1,0 +1,115 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{0.98}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.22em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.22em,topsep=0.25em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{0.65em}{0.25em}
+\titlespacing*{\subsection}{0pt}{0.45em}{0.15em}
+\hyphenation{splitter}
+
+\title{\textbf{CAI6734 Week~11 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{November 9, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~11 (November 4--10, 2026), from records through November~8. I report no November~9 or~10 activity. The credentialed run and the finalization checks in scope are finished. No new training was started during finalization. The numbers are a replication attempt, not a reproduction of the paper, and matching the original findings remains unresolved. No PHI. Week~10 synthetic checks are not these results.
+
+\section{Progress this week}
+
+\subsection{Access, storage, validation, and the split}
+\begin{itemize}
+  \item Access to MIMIC-IV-Ext CDM v1.1 opened on November~4. On November~5 I downloaded the release and verified all 12 listed SHA256 digests, line by line. PhysioNet's \texttt{SHA256SUMS.txt} uses a single space, so macOS \texttt{shasum -c} can reject a line and still exit~0.
+  \item Both copies are owner-only and outside every git repository: a private Mac directory that is not cloud-synced, and private HiPerGator storage the class group cannot enter. The Downloads copy was deleted on November~5 after a byte-for-byte comparison. No data file is in git. \texttt{check-git} printed \texttt{tracked-file check: PASS} before the related commits, including \texttt{b546c2e} and \texttt{2478dae}.
+  \item v1.1 ships CSVs; the pinned splitter reads four condition pickles. The pickle builder follows Hager et al.'s \texttt{ConvertPhysionet.py} (\texttt{4d33f98}). Outputs were byte-identical on the Mac (arm64) and on HiPerGator (x86\_64). \texttt{validate} passed on both. The cohort is 2,400 admissions, classes 957/648/257/538. The lab mapping has 1,209 rows (118 blank \texttt{itemid} groups). Labs are 138,788 rows plus 4,403 microbiology rows (143,191). Radiology has 5,960 reports where upstream states 5,959; that gap is unexplained. 373 reports use 10 modalities the upstream parser skips.
+  \item Seed 269 is the pinned splitter's seed. D-4 still says there is no canonical seed; I used 269 for parity and recorded the discrepancy. The split is 1,920/240/240, test classes 96/65/25/54, with no admission shared across train, validation, and test. v1.1 has no \texttt{subject\_id}, so subject leakage is unassessable and the subject-grouped split cannot run. I do not call that overlap zero. The S6 leakage audit says the same.
+\end{itemize}
+
+\subsection{Runtime, deviations, and the finished run}
+\begin{itemize}
+  \item HiPerGator has no A100s. The class QOS shares 32 CPUs, 250\,GB, and 8 GPUs; the burst QOS has no GPUs. Pinned torch 2.6.0+cu124 stops at \texttt{sm\_90} (job 49867089). The Blackwell runtime keeps upstream code at \texttt{3f435a10} and changes 28 pins (torch 2.7.0+cu128, vLLM 0.9.2, TRL 0.15.2, transformers 4.51.1). Adapters are evaluated as merged weights, as upstream does, because the vLLM LoRA kernel fails on \texttt{sm\_120} (job 49868789; fix \texttt{d434552}).
+  \item D-1 keeps incorrect reward 0 as primary and puts $-1$ only in the named ablation. D-3 and D-5 use \texttt{nvidia/}\allowbreak\texttt{Llama-3.1-Nemotron-Nano-8B-v1} at \texttt{54641c16} as summarizer and policy. The ledger records that as the authorized HiPerGator default: the paper's Qwen backbone is not permitted. Stock Llama-3.1-8B-Instruct is the fallback ablation, not a model the written criteria require, and it was not trained. D-6 is greedy evaluation; upstream samples at temperature 1.0.
+  \item Graph \texttt{7fcd9e5} finished. S0 passed at 4:04~PM EST on November~6. All 22 jobs were \texttt{COMPLETED 0:0}. S6 finished at 5:10~AM EST on November~8 (receipts \texttt{f323a460}, \texttt{05601581}, \texttt{a03cb630}, \texttt{800c18a6}). Four arms trained 3,840 steps, about 25--28~h each, then the 240 test admissions were scored. Graphs \texttt{b7190c5} and \texttt{4d22c70} were cancelled for the failures below and were not scored.
+\end{itemize}
+
+\subsection{Primary results (greedy) and the separate decoding check}
+Finalization did not re-run evaluation, S5, or S6. \texttt{metrics.json} is the S6 export. Intervals are 95\% class-stratified patient bootstraps (10,000 resamples) on one training seed, 269. They cover test-admission sampling only, not between-seed or subject-cluster uncertainty. A paper value inside an interval is a description of that comparison, not equivalence and not a reproduction.
+
+\begin{center}
+\vspace{-0.35em}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.94}
+\begin{tabular}{@{}llrrl@{}}
+\toprule
+ID & Metric & Paper & Observed & 95\% interval \\
+\midrule
+T1 & Appendicitis recall (\%) & 93.1 & 90.62 & [84.38, 95.83] \\
+T2 & Cholecystitis recall (\%) & 83.6 & 72.31 & [61.54, 83.08] \\
+T3 & Diverticulitis recall (\%) & 75.0 & 72.00 & [56.00, 88.00] \\
+T4 & Pancreatitis recall (\%) & 73.5 & 57.41 & [44.44, 70.37] \\
+T5 & Mean of four recalls (\%) & 81.3 & 73.09 & [66.65, 79.19] \\
+T6 & Micro F1 (\%) & 84.1 & 81.15 & [76.47, 85.53] \\
+T7 & Macro F1 (\%) & 81.3 & 78.20 & [72.32, 83.44] \\
+T8 & Provided-test cost (USD) & 1,295.61 & 1,439.58 & [1,341.50, 1,537.65] \\
+B1 & Zero-shot mean recall (\%) & 64.5 & 12.71 & [8.04, 17.86] \\
+B2 & ReAct mean recall (\%) & 74.9 & gap & no ReAct at the pin \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+T5 minus the paper is $-8.21$ [$-14.65$, $-2.11$]. The published points for T1, T3, T6, and T7 fall inside the intervals; T2, T4, T5, and B1 lie below; T8 lies above. Pooled accuracy is 76.25\%. Hypothesis accuracy went from 29.59\% to 81.67\% [77.24, 85.89] (C1; paper 75.7 to 81.9). ECE went from 0.3022 to 0.1281 [0.0861, 0.1749] (C2): improved, still above the paper's 0.037. These are held-out endpoints. Validation never used test data: 31.21\% before training, 75.15\% at the final checkpoint.
+
+\noindent
+C3, a lower cost from the cost reward, was not observed. The reward is present on all 3,840 primary steps (residual 0.0) but small, about $-0.09$ to $-0.11$ per rollout against about 0.17--0.53 for diagnosis. no\_cost to primary was \$1,321.33 to \$1,439.58 and 70.81\% to 73.09\%, paired cost $+\$118.25$ [$-0.25$, $239.86$], Holm $p = 0.551$. C4 was 57.49\% to 73.09\%, paired $+15.59$ [6.34, 24.60], Holm $p = 0.00056$; the paper's Table~3 number is absent, so only the direction is assessed. The D-1 ablation scored 59.38\% and \$1,619.27. Greedy primary minus that arm is $+13.71$ [5.32, 21.93], Holm $p = 0.0031$, and that call is decoding-sensitive.
+
+\noindent
+The audited zero-shot path matches upstream \texttt{3f435a10} on the prompt, chat template, regex parser, action names, stop string, and 256-token budget. The system message and greedy decoding are the D-5 and D-6 differences already named. No code bug was found on those paths. That is not proof that no bug exists. Greedy zero-shot left 194 of 240 episodes undiagnosed (23 with no valid test request, the only group that can be a first-action parse failure). The primary arm left 29, none of that kind. Episodes do not separate parse failures from the action budget or the token limit.
+
+\noindent
+Temperature 1.0 is a post-hoc check on the same 240 admissions (jobs 50282940--50282944 and report 50282959; code \texttt{4b79683}, then \texttt{d3ef9de}). It does not replace the greedy table. Zero-shot mean recall was 9.19 [5.55, 13.44], paired $-3.52$ [$-9.38$, 2.37]. Primary mean recall was 59.30 [52.23, 66.19], paired $-13.79$ [$-21.70$, $-6.24$]. Sampled decoding did not close the gap. That is not proof that decoding is causally ruled out. The backbone and summarizer stay untested candidate explanations, not a demonstrated sole cause. At 1.0, C3 is still absent (cost $+\$82.94$ [$-30.33$, $195.84$], Holm $p = 0.538$) and the D-1 recall gap is $+3.55$ [$-5.68$, 12.76], Holm $p = 0.474$. C4 stays positive ($+18.66$ [9.94, 27.21], Holm $p = 0.000049$). An independent code review raised five warnings; all were fixed test-first in \texttt{d3ef9de}, where 264 tests passed (181 here, 83 in \texttt{lacdm/tests}). Only the three aggregate files are tracked (\texttt{2478dae}). Four old work directories were removed at 1:30~PM EST on November~8; \texttt{7fcd9e5} was kept.
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{Validation would have crashed.} The best-metric setting expects \texttt{eval\_loss}, which per-patient validation does not report. I cancelled jobs 49874617--49874620 first. Commit \texttt{4d22c70} drops that setting and validates once per epoch. One pass takes about 80 minutes, so the old schedule would have added about 50 GPU-hours per arm. Smoke job 49889947 passed, and every finished arm passed both epoch checks.
+  \item \textbf{Out of memory at step 333} (\texttt{decision\_only}, job 49889996): 12.31\,GiB needed, 12.27\,GiB free, 4.70\,GiB fragmented. I resumed with expandable allocator segments (job 49924900) and then set that allocator in every stage (\texttt{7fcd9e5}).
+  \item \textbf{Crash at step 1,340} in the three hypothesis arms (jobs 49889995, 49889997, 49889998). Upstream runs \texttt{str.format} on the whole episode, and that record contains braces. A failing test led to a literal substitution in \texttt{7fcd9e5}. Smoke job 50010187 passed, and the finished run passed that step.
+  \item \textbf{Class memory cap.} Other jobs held about 240--246 of 250\,GB, so S4 waited. Host memory peaked at 6.8\,GB; queued requests dropped from 40\,GB to 16\,GB. CPU-only S4--S6 moved to the burst QOS. GPU evaluation waited 6~h 40~min to 7~h 20~min, then finished in 24--33 minutes each.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Keep paper matching unresolved. Full completion in the ledger is T5--T8 within an agreed tolerance, and no tolerance is stated, so that bar is unassessable. This run is not a reproduction.
+  \item Further GPU work is a separate decision, and neither option ran: about 105 GPU-hours for another seed, or about 110 for the stock Llama-3.1-8B ablation. That ablation would test one candidate. It would not reproduce the paper's Qwen and Mixtral stack. B2, subject leakage, and the 5,960-versus-5,959 radiology count stay open until that decision.
+\end{enumerate}
+
+\section*{Notes}
+The 22~September~2026 definition of done says to pick one option. Full completion is T5--T8 within an agreed tolerance. No tolerance was ever stated, so that option is unassessable, and a published point inside an interval does not meet it. The 8~November status says the partial option is met and exceeded, because training did run, and the README sets no numerical match. Figures are aggregates only. One seed, D-3, D-5, the 28-pin runtime, and D-6 keep this a replication attempt.
+
+\end{document}
