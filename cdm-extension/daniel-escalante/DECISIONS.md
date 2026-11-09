@@ -53,3 +53,4 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - **Locks.** A run's writer holds an exclusive `flock` in `$TIM_ADMISSION_DIR/locks/` from admission or resume until it finishes, the same mechanism the replication's `stage_lock` uses on this file system.
 - **Generation digest.** Only hypothesis and decision generations enter the digest the shadow control compares.
 - **Repeated requests.** `requests.repeated` counts, per patient, requests beyond the first for the same test; `requests.unavailable` counts every request for an unavailable test, so the two can overlap.
+- **Reference-path scoring (amendment A2).** bench-a found the prefix-reuse path outside the 1e-3 tolerance against the full-sequence reference, so decisions use the reference path; the bench comparison still runs both paths and reports the largest difference.

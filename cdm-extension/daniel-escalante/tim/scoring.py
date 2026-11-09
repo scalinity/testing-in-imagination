@@ -63,9 +63,13 @@ def deterministic():
 
 
 class HFScorer:
-    """A separate Hugging Face instance with the merged weights; vLLM never scores."""
+    """A separate Hugging Face instance with the merged weights; vLLM never scores.
 
-    def __init__(self, model, tokenizer, path="fast"):
+    Decisions use the full-sequence reference path: bench-a found the prefix-reuse path outside
+    the 1e-3 tolerance (amendment A2), so the fast path serves only the bench comparison.
+    """
+
+    def __init__(self, model, tokenizer, path="reference"):
         self.model, self.tokenizer, self.path = model.eval(), tokenizer, path
         self.device = next(model.parameters()).device
 
@@ -94,7 +98,7 @@ class HFScorer:
 
 
 class BenchScorer:
-    """Scores with the fast path and checks it against the reference path on every call (SPEC 3.4)."""
+    """Checks the fast path against the reference path on every call (SPEC 3.4); returns the reference."""
 
     def __init__(self, inner, tolerance=1e-3):
         self.inner, self.tolerance = inner, tolerance
@@ -106,7 +110,7 @@ class BenchScorer:
         diff = max(abs(a - b) for a, b in zip(fast, reference))
         self.max_diff = diff if self.max_diff is None else max(self.max_diff, diff)
         self.calls += 1
-        return fast
+        return reference
 
     def observe(self, prompt_ids, first_token):
         self.checks += 1
@@ -119,7 +123,7 @@ class BenchScorer:
                 "next_token_agreement": self.agreements / self.checks if self.checks else None}
 
 
-def load_scorer(cfg, adapter_dir, tokenizer, path="fast"):
+def load_scorer(cfg, adapter_dir, tokenizer, path="reference"):
     """Merged policy weights in bf16 via upstream load_model, PeftModel and merge_and_unload (GPU)."""
     from copy import deepcopy
     from importlib import import_module

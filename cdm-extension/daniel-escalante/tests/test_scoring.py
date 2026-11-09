@@ -70,3 +70,9 @@ def test_inputs_follow_the_canonical_strings():
     assert context == [11, 12] + tokenizer.encode("Thought: check it\nAction:")
     assert continuations == [tokenizer.encode(" Test\nAction Input: CT\nObservation:"),
                              tokenizer.encode(" Diagnosis\nAction Input: appendicitis<|eot_id|>")]
+
+
+def test_decisions_use_the_reference_path_by_default():
+    from tim.scoring import HFScorer
+    model = torch.nn.Linear(2, 2)
+    assert HFScorer(model, tokenizer=None).path == "reference"
