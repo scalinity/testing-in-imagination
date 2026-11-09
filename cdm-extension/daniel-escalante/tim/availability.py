@@ -58,6 +58,16 @@ def _vectorizer():
     return TfidfVectorizer(ngram_range=(1, 2), min_df=3, max_features=20000, sublinear_tf=True)
 
 
+def _fitted(vectorizer, histories):
+    """Fit, then drop two attributes that would make the pickled model, and so its published
+    digest, differ between identical fits: stop_words_ (an introspection-only set in hash-seeded
+    order) and _stop_words_id (a memory address cached to skip a repeated consistency check)."""
+    x = vectorizer.fit_transform(histories)
+    vectorizer.stop_words_ = None
+    vars(vectorizer).pop("_stop_words_id", None)
+    return x
+
+
 def _matrix(items, tests):
     return [i["patient_history"] for i in items], np.array([[bits(i, tests)[t] for t in tests] for i in items])
 
@@ -84,7 +94,7 @@ class LearnedModel:
 def _fit(histories, y, tests, c):
     from sklearn.linear_model import LogisticRegression
     vectorizer = _vectorizer()
-    x = vectorizer.fit_transform(histories)
+    x = _fitted(vectorizer, histories)
     models = {}
     for j, test in enumerate(tests):
         if _rare(y[:, j]):

@@ -1,0 +1,62 @@
+{
+  "train": {
+    "class_counts": {
+      "appendicitis": 12,
+      "cholecystitis": 12,
+      "diverticulitis": 12,
+      "pancreatitis": 12
+    },
+    "mentions": {
+      "BMP": 0,
+      "CBC": 0,
+      "CMP": 0,
+      "CT": 0,
+      "EP": 0,
+      "LFP": 0,
+      "MRI": 0,
+      "PE": 0,
+      "RFP": 0,
+      "UA": 0,
+      "US": 0,
+      "XR": 0
+    },
+    "n": 48,
+    "word_count": {
+      "max": 3439.0,
+      "median": 18.0,
+      "min": 17.0,
+      "q25": 17.0,
+      "q75": 19.0
+    }
+  },
+  "val": {
+    "class_counts": {
+      "appendicitis": 6,
+      "cholecystitis": 6,
+      "diverticulitis": 6,
+      "pancreatitis": 6
+    },
+    "mentions": {
+      "BMP": 0,
+      "CBC": 0,
+      "CMP": 0,
+      "CT": 0,
+      "EP": 0,
+      "LFP": 0,
+      "MRI": 0,
+      "PE": 0,
+      "RFP": 0,
+      "UA": 0,
+      "US": 0,
+      "XR": 0
+    },
+    "n": 24,
+    "word_count": {
+      "max": 3439.0,
+      "median": 18.0,
+      "min": 17.0,
+      "q25": 17.0,
+      "q75": 19.0
+    }
+  }
+}

@@ -294,3 +294,52 @@ def metrics(rows, official, cfg, source, majority, sensitivity_block, t5_referen
         "family_a": family, "descriptive": descriptive, "second_comparator": second,
         "sensitivity": sensitivity_block,
     }
+
+
+# ---- Phase B (SPEC 4.5, 4.6) ------------------------------------------------------------
+
+def arm_quality(settings, items, split) -> dict:
+    """World-model quality of every Phase-B arm's predictor on one split (all patient-test pairs)."""
+    import json as _json
+    from tim import availability as av
+    from tim.enums import CONFIGURED_TESTS as tests
+    from tim.runner import VARIANTS, make_predictor, wm_dir
+    from tim.enums import PHASE_B_ARMS
+    rates = _json.loads((wm_dir(settings) / "base_rates.json").read_text())
+    truth = [av.bits(item, tests) for item in items]
+    out = {}
+    for arm in PHASE_B_ARMS:
+        planner = VARIANTS[arm].planner
+        predict = make_predictor(settings, planner, split)
+        y, p, reference = [], [], []
+        for item, bits in zip(items, truth):
+            predicted = predict(item)
+            for t in tests:
+                y.append(bits[t]), p.append(predicted[t]), reference.append(rates[t])
+        out[arm] = {"alpha": planner.get("alpha"), **av.quality(y, p, reference)}
+    return out
+
+
+def validation_b(rows, p0, cfg, source, resamples=10_000) -> dict:
+    """analyze-val-b: the validation arms against P0 (V3), descriptive intervals only."""
+    from functools import partial
+    compare_ = partial(compare, resamples=resamples)
+    return {"source": source,
+            "variants": {"P0": summarize(p0, cfg), **{arm: summarize(r, cfg) for arm, r in rows.items()}},
+            "descriptive": {f"{arm}-P0": compare_(r, p0, cfg, f"{arm}-P0", "val", tested=False) for arm, r in rows.items()}}
+
+
+def metrics_b(rows, p0, cfg, source, quality, leakage, resamples=10_000) -> dict:
+    """analyze-b: Family B (Holm), every arm against P0, world-model quality and leakage (SPEC 4.5-4.7)."""
+    from functools import partial
+    compare_ = partial(compare, resamples=resamples)
+    family = holm({
+        "B-learned-s0-B-uniform": compare_(rows["B-learned-s0"], rows["B-uniform"], cfg, "B-learned-s0-B-uniform", "test"),
+        "B-learned-s0-B-marginal": compare_(rows["B-learned-s0"], rows["B-marginal"], cfg, "B-learned-s0-B-marginal", "test"),
+        "B-oracle-B-uniform": compare_(rows["B-oracle"], rows["B-uniform"], cfg, "B-oracle-B-uniform", "test"),
+    })
+    return {"source": source,
+            "variants": {"P0": summarize(p0, cfg), **{arm: summarize(r, cfg) for arm, r in rows.items()}},
+            "family_b": family,
+            "descriptive": {f"{arm}-P0": compare_(r, p0, cfg, f"{arm}-P0", "test", tested=False) for arm, r in rows.items()},
+            "quality": quality, "leakage": leakage}

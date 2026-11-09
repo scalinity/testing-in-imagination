@@ -58,3 +58,13 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 ## Approvals in practice
 
 - From 2026-11-09 (after bench-a and val-a, which Daniel committed himself) Daniel has authorized the agent to draft and commit each stage's approval file on his behalf; `approved_by` still names him as the approver of record. Every request and its summary is still posted before the stage runs, and the code's own gates still apply: test-a refuses to start unless Addendum A records a passed premise check and a passed (or amended) shadow control.
+
+## Phase B
+
+- **P0 is test-a's V3 run.** The 14 test-b arms are compared with the V3 rows already admitted in test-a rather than a second V3 run; on validation, P0 is val-a's V3 rows.
+- **Fitted files.** wm-fit writes the three bootstrap models and the training base rates to `$TIM_WORK_DIR/private/wm/`; their sha256 digests are public (wm_quality.json, Addendum B). Each vectorizer drops `stop_words_` and the cached `_stop_words_id` before pickling, so identical fits give identical files. The leakage stage saves its fitted probes there too, because analyze-b may read only the test split and evaluates them there.
+- **Test codes.** Public maps keyed by test use codes (CBC, BMP, CMP, RFP, LFP, UA, EP, CT, MRI, XR, US, PE): the replication's export check rejects raw field names such as "Physical Examination" as keys, and it is not loosened.
+- **Inventory.** `meta.available_tests_at_t` lists the action set at t = 0 (all 12 configured tests); chart availability is the record's `label`.
+- **HPI audit.** For each split: the number of summaries, word-count quantiles, per-class counts, and how many summaries name each test (case-insensitive whole words).
+- **Planner scoring** uses the reference path (amendment A2). A planner turn scores the untried tests, or the four diseases when it stops.
+- **bench-b** runs B-learned-s0 and B-oracle on the 24 bench patients. Before it, its request budgets twice V3's bench-a per-patient time.

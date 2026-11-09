@@ -272,12 +272,38 @@ def _gpu_rows(settings, split, data_dir, evaluator_for):
                             seed=stream_seed(269, split, "policy"), adapter_dir=selection["adapter_dir"])
 
 
+def wm_dir(settings):
+    return settings.work_dir / "private" / "wm"
+
+
+def make_predictor(settings, planner, split):
+    """p(test charted | patient) for an arm; the oracle and corruption arms see availability bits only."""
+    import pickle
+    from tim import availability as av
+    from tim.enums import CONFIGURED_TESTS as tests
+    rates = json.loads((wm_dir(settings) / "base_rates.json").read_text())
+    kind = planner["kind"]
+    if kind == "uniform":
+        return lambda item: {t: 0.5 for t in tests}
+    if kind == "marginal":
+        return lambda item: {t: av.clip(rates[t]) for t in tests}
+    if kind == "learned":
+        model = pickle.loads((wm_dir(settings) / f"learned-s{planner['seed']}.pkl").read_bytes())
+        return lambda item: model.predict(item["patient_history"])
+    if kind == "oracle":
+        return lambda item: {t: av.clip(b) for t, b in av.bits(item, tests).items()}
+    return lambda item: {t: av.corrupted(b, rates[t], planner["alpha"], planner["temperature"],
+                                         planner["noise_seed"], split, int(item["patient_id"]), t)
+                         for t, b in av.bits(item, tests).items()}
+
+
 def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock):
     """One (stage, variant) job: admission, resume, guarded evaluation, public counts."""
     from tim import access
     from tim.scoring import BenchScorer
     split = STAGE_SPECS[stage]["split"]
     variant, limits = VARIANTS[variant_name], Limits(**CONFIG["limits"])
+    predictor = make_predictor(settings, variant.planner, split) if variant.planner else None
     dataset = access.open_split(settings, stage, split)
     episodes = access.Episodes(settings, protocol_hash, stage, variant_name, split, commit, len(dataset))
     done = episodes.open()
@@ -301,12 +327,12 @@ def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock)
         elif settings.synthetic:
             from replication.shim import generation_settings
             from tim.fixture import MockScorer, ScriptedPolicy
-            evaluator = make_evaluator(variant, dataset, lambda cfg, tok: wrap(MockScorer(tok)), log, limits)
+            evaluator = make_evaluator(variant, dataset, lambda cfg, tok: wrap(MockScorer(tok)), log, limits, predictor)
             rows = evaluator(split_cfg(settings, split), None, ScriptedPolicy(), generation_settings(False))
         else:
             from tim.scoring import load_scorer
             rows = _gpu_rows(settings, split, dataset.data_dir, lambda adapter: make_evaluator(
-                variant, dataset, lambda cfg, tok: wrap(load_scorer(cfg, adapter, tok)), log, limits))
+                variant, dataset, lambda cfg, tok: wrap(load_scorer(cfg, adapter, tok)), log, limits, predictor))
         episodes.finish()
     finally:
         episodes.close()

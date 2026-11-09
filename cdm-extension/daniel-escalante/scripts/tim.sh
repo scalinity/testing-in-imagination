@@ -29,7 +29,7 @@ export PYTHONDONTWRITEBYTECODE=1 VLLM_USE_V1=0
 
 case "$command" in
   test) exec "$venv" -m pytest "$own/tests" -q "${@:2}" ;;
-  check-git|approval-request|render|addendum-a) exec "$python" "$own/scripts/run_tim.py" "$@" ;;
+  check-git|approval-request|render|addendum-a|addendum-b) exec "$python" "$own/scripts/run_tim.py" "$@" ;;
 esac
 
 : "${TIM_WORK_DIR:?set TIM_WORK_DIR in the untracked .env}"

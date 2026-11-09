@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "counts",
+    "availability_rate",
+    "hpi_words"
+  ],
+  "properties": {
+    "counts": {
+      "type": "object",
+      "keys": "split",
+      "values": {
+        "type": "object",
+        "keys": "test",
+        "values": {
+          "type": "object",
+          "keys": "availability",
+          "values": {
+            "$ref": "count"
+          }
+        }
+      }
+    },
+    "availability_rate": {
+      "type": "object",
+      "keys": "split",
+      "values": {
+        "type": "object",
+        "keys": "disease",
+        "values": {
+          "type": "object",
+          "keys": "test",
+          "values": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "hpi_words": {
+      "type": "object",
+      "keys": "split",
+      "values": {
+        "type": "object",
+        "keys": "quantile",
+        "values": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

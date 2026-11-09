@@ -8,7 +8,8 @@ import pytest
 from tim.events import load_schema, validate
 from tim.paths import OWN
 
-PUBLISHED = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "phase-a")
+PUBLISHED = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "phase-a",
+             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "test-b", "phase-b")
 
 
 def run_all(environ, results):
@@ -64,3 +65,20 @@ def test_report_carries_the_synthetic_banner_and_rendered_numbers(two_runs):
     metrics = json.loads((two_runs[0] / "phase-a" / "metrics.json").read_text())
     assert f"{metrics['primary']['delta_t5']:.2f}" in report
     assert "not a reproduction" in report.lower() or "not a reproduction of the paper" in report.lower()
+
+
+def test_phase_b_publishes_the_specs_deliverables(two_runs):
+    from tim.enums import FAMILY_B, PHASE_B_ARMS
+    phase_b = two_runs[0] / "phase-b"
+    assert {p.name for p in phase_b.iterdir() if p.is_file()} == {
+        "metrics.json", "REPORT.md", "wm_quality.json", "leakage.json", "inventory_card.json", "hpi_audit.json"}
+    metrics = json.loads((phase_b / "metrics.json").read_text())
+    validate(metrics, load_schema("metrics"))
+    assert set(metrics["family_b"]) == set(FAMILY_B)
+    assert all(metrics["family_b"][k]["p_holm"] is not None for k in FAMILY_B)
+    assert set(metrics["descriptive"]) == {f"{arm}-P0" for arm in PHASE_B_ARMS}
+    assert set(metrics["variants"]) == {"P0", *PHASE_B_ARMS}
+    assert set(metrics["quality"]) == {"val", "test"} and set(metrics["leakage"]) == {"val", "test"}
+    report = (phase_b / "REPORT.md").read_text()
+    assert report.startswith("> **SYNTHETIC**") and "not full world-model planning" in report
+    assert f"{metrics['family_b']['B-oracle-B-uniform']['delta_t5']:+.2f}" in report

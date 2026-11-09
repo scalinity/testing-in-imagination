@@ -124,3 +124,63 @@ def render(metrics: dict, disclosure: str) -> str:
               "- Person-level overlap is unassessable: the release ships no subject_id.",
               "- Baseline deviations D-1, D-3, D-5 and D-6 (REPRODUCTION.md) and the Blackwell runtime carry over.", ""]
     return "\n".join(lines)
+
+
+B_NAMES = {"B-learned-s0-B-uniform": "B-learned-s0 − B-uniform (information beyond the reranking mechanism)",
+           "B-learned-s0-B-marginal": "B-learned-s0 − B-marginal (patient-specific beyond test prevalence)",
+           "B-oracle-B-uniform": "B-oracle − B-uniform (privileged availability, same mechanism)"}
+PROBE_NAMES = {"hpi": "HPI TF-IDF", "hpi_bits": "HPI TF-IDF + 12 availability bits", "bits": "Availability bits only (descriptive)"}
+
+
+def render_b(metrics: dict, disclosure: str) -> str:
+    variants, family = metrics["variants"], metrics["family_b"]
+    lines = [BANNER if metrics["source"] == "synthetic" else "",
+             "# Phase B: retrospective chart-availability reranking\n",
+             "## Framing\n",
+             "Phase B estimates p(test present in chart | HPI) and reweights the policy's test requests on top of V3 "
+             "(P0). It does not predict result content, does not update from revealed findings and does not evaluate "
+             "imagined outcomes: it is retrospective chart-availability reranking, not full world-model planning. "
+             "The oracle is a privileged chart-availability oracle; chart presence encodes clinicians' completed "
+             "workups. These results are not a reproduction of the paper.\n",
+             f"Test-set status: a prospectively frozen follow-up analysis on a previously examined benchmark. {disclosure}\n",
+             "## Arms\n",
+             "| Arm | T1 | T2 | T3 | T4 | T5 | T8 ($) | Nonanswers | Reranks | Stops |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
+    from tim.enums import PHASE_B_ARMS
+    for arm in ("P0", *PHASE_B_ARMS):
+        block = variants[arm]
+        m, e = block["metrics"], block.get("events", {})
+        lines.append(f"| {arm} | " + " | ".join(_n(m[f"T{i}"]) for i in (1, 2, 3, 4, 5, 8)) +
+                     f" | {block['nonanswers']} | {e.get('wm_rerank', '—')} | {e.get('wm_stop', '—')} |")
+    lines += ["", "## Family B (Holm, α = 0.05)\n", "| Contrast | ΔT5 [95% CI] | p | Holm p | Statement |",
+              "|---|---|---|---|---|"]
+    for key, c in family.items():
+        lines.append(f"| {B_NAMES[key]} | {_interval(c)} | {_p(c['p_value'])} | {_p(c['p_holm'])} | {c['significance']} |")
+    lines += ["", "## Every arm against P0 (descriptive, intervals only)\n", "| Arm − P0 | ΔT5 [95% CI] |", "|---|---|"]
+    for arm in PHASE_B_ARMS:
+        lines.append(f"| {arm} − P0 | {_interval(metrics['descriptive'][f'{arm}-P0'])} |")
+    lines += ["", "## World-model quality\n",
+              "| Split | Arm | α | ECE | AUROC | Brier | Brier skill vs marginal |", "|---|---|---|---|---|---|---|"]
+    for split, arms in metrics["quality"].items():
+        for arm, q in arms.items():
+            lines.append(f"| {split} | {arm} | {_n(q['alpha'], 1)} | {_n(q['ece'], 3)} | {_n(q['auroc'], 3)} | "
+                         f"{_n(q['brier'], 3)} | {_n(q['brier_skill'], 3)} |")
+    lines += ["", "Brier skill is a descriptive summary only; calibration is measured, not assumed.\n",
+              "## Leakage probes\n", "| Split | Probe | T5 |", "|---|---|---|"]
+    for split, probes in metrics["leakage"].items():
+        for probe, r in probes.items():
+            lines.append(f"| {split} | {PROBE_NAMES[probe]} | {_n(r['T5'])} |")
+    lines += ["", "A weak probe cannot certify that leakage is absent.\n", "## Interpretation (SPEC §4.5, §11)\n"]
+    if not any(c["significance"] == "statistically significant" for c in family.values()):
+        lines.append("No Family-B contrast is statistically significant. This is a finding about this fixed reranker at "
+                     "the measured world-model precision, with the corruption arms and the oracle contrast above, and "
+                     "no general claim about availability.")
+    lines += ["Conclusions are limited to this fixed planner at the measured precision. Perfect information does not "
+              "make the heuristic optimal, so a non-positive oracle contrast does not show that availability has no "
+              "value. Learned seeds 1 and 2 and the corruption arms are descriptive.", "",
+              "The inventory card and HPI audit are published beside this report (`inventory_card.json`, `hpi_audit.json`).\n",
+              "## Limitations\n",
+              "- Previously examined benchmark; one policy seed, so between-seed variation is unassessable.",
+              "- Retrospective: availability in the chart reflects completed workups, not what a test would show.",
+              "- No clinical-safety inference.", ""]
+    return "\n".join(lines)

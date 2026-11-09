@@ -60,3 +60,35 @@ def addendum_a(root=None) -> Path:
     }
     target.write_text(json.dumps(addendum, indent=2, sort_keys=True) + "\n")
     return target
+
+
+def addendum_b(root=None) -> Path:
+    """Addendum B (SPEC §5.4) from committed bundles only: world-model file digests, validation
+    quality, bench-b measurements and the test-b budget. Written once, before test-b."""
+    from tim import approvals
+    root = root or ROOT
+    folder = root / approvals.FOLDER
+    results = folder / "results" / "credentialed"
+    target = folder / "prereg" / "addendum-b.json"
+    if target.exists():
+        raise FileExistsError("addendum B is already written")
+    wm_path = results / "wm-fit" / "wm_quality.json"
+    bench_paths = {v: results / "bench-b" / f"bench.{v}.json" for v in ("B-learned-s0", "B-oracle")}
+    wm = json.loads(wm_path.read_text())
+    hours = {job["variant"]: round(approvals.estimate_hours("test-b", job, root), 3)
+             for job in approvals.jobs("test-b")}
+
+    def sha(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    addendum = {
+        "addendum": "B",
+        "protocol_sha256": sha(folder / "prereg" / "protocol.json"),
+        "world_model": {"c": wm["c"], "files": wm["files"]},
+        "val_quality": wm["quality"]["val"],
+        "bench": {variant: json.loads(path.read_text()) for variant, path in bench_paths.items()},
+        "test_b_budget": {"gpu_hours": hours, "gpu_hours_total": round(sum(hours.values()), 3)},
+        "sources": {str(p.relative_to(folder)): sha(p) for p in (wm_path, *bench_paths.values())},
+    }
+    target.write_text(json.dumps(addendum, indent=2, sort_keys=True) + "\n")
+    return target

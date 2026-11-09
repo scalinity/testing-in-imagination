@@ -21,7 +21,8 @@ ADDENDA = {"test-a": "addendum-a.json", "test-a2": "addendum-a.json", "test-b": 
 LISTED = {"smoke": 2, "bench-a": 24, "bench-b": 24}
 SPLIT_SIZE = {"val": 240, "test": 240}
 # Provisional GPU-hours per job from SPEC §9 until bench measurements exist.
-PROVISIONAL = {"smoke": 0.25, "bench-a": 0.075, "val-a": 0.55, "test-a": 1.7 / 3}
+PROVISIONAL = {"smoke": 0.25, "bench-a": 0.075, "val-a": 0.55, "test-a": 1.7 / 3,
+               "bench-b": 0.075, "val-b": 1.7 / 3, "test-b": 7.7 / 14}
 BENCH_PROXY = {"V0": "V3", "V0-rerun": "V3", "V2": "V3", "V3": "V3", "V0-shadow": "V0-shadow"}
 
 
@@ -56,13 +57,21 @@ def binding(settings, stage, root=ROOT) -> dict:
 def estimate_hours(stage, job, root=ROOT) -> float:
     """Setup plus per-patient time measured by bench-a; the SPEC's provisional figure before it."""
     results = root / FOLDER / "results" / "credentialed"
-    bench = results / "bench-a" / f"bench.{BENCH_PROXY.get(job['variant'], 'V3')}.json"
+    phase = stage[-1]
+    proxy = BENCH_PROXY.get(job["variant"], "V3") if phase == "a" else (
+        "B-oracle" if job["variant"] == "B-oracle" else "B-learned-s0")
+    bench = results / f"bench-{phase}" / f"bench.{proxy}.json"
     smoke = results / "smoke" / "events" / "V3.jsonl"
     if stage == "bench-a" and smoke.exists():
         # Upper bound: smoke's seconds per patient include model loading, scaled to the bench patients.
         end = [json.loads(line) for line in smoke.read_text().splitlines()][-1]
         return end["seconds"] / end["patients"] * job["patients"] / 3600
-    if stage.endswith("-a") and stage != "bench-a" and bench.exists():
+    if stage == "bench-b" and (results / "bench-a" / "bench.V3.json").exists():
+        # The planner scores every test turn; twice V3's bench-a per-patient time is the upper bound.
+        m = json.loads((results / "bench-a" / "bench.V3.json").read_text())
+        per_patient = (m["seconds"] - m["setup_seconds"]) / max(m["patients"], 1)
+        return (m["setup_seconds"] + 2 * per_patient * job["patients"]) / 3600
+    if not stage.startswith("bench") and bench.exists():
         m = json.loads(bench.read_text())
         per_patient = (m["seconds"] - m["setup_seconds"]) / max(m["patients"], 1)
         return (m["setup_seconds"] + per_patient * job["patients"]) / 3600

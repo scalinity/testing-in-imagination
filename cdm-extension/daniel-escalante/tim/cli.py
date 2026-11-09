@@ -13,9 +13,13 @@ from tim.paths import OWN, ROOT
 from tim.settings import Settings
 
 CANARY = "TIM-CANARY-7f3a"
-GPU_STAGES = ("smoke", "bench-a", "val-a", "test-a")
-CPU_STAGES = ("validate", "analyze-val-a", "analyze-a")
-SYNTHETIC_ORDER = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "analyze-a")
+GPU_STAGES = ("smoke", "bench-a", "val-a", "test-a", "bench-b", "val-b", "test-b")
+CPU_STAGES = ("validate", "analyze-val-a", "analyze-a", "hpi-audit", "wm-fit", "inventory", "leakage",
+              "analyze-val-b", "analyze-b")
+SYNTHETIC_ORDER = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "analyze-a",
+                   "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b",
+                   "test-b", "analyze-b")
+WM_FILES = ("learned-s0.pkl", "learned-s1.pkl", "learned-s2.pkl", "base_rates.json")
 
 
 def run_stage(settings, stage, job, body, **start):
@@ -100,10 +104,89 @@ def stage_body(stage, job, constants, protocol_hash):
             constants["training_majority"], validation["sensitivity"], constants["t5_reference"],
             resamples=constants["bootstrap_resamples"]))
 
+    from tim.enums import CONFIGURED_TESTS, TEST_CODES
+    tests = list(CONFIGURED_TESTS)
+
+    def coded(value):
+        """Replace test names used as keys with their public codes."""
+        if isinstance(value, dict):
+            return {TEST_CODES.get(k, k): coded(v) for k, v in value.items()}
+        return value
+
+    def items(settings, split):
+        dataset = access.open_split(settings, stage, split)
+        return [dict(dataset[i]) for i in range(len(dataset))]
+
+    def hpi_audit(settings, bundle):
+        from tim import audit
+        bundle.aggregate("hpi_audit", coded(audit.hpi_audit({s: items(settings, s) for s in ("train", "val")}, tests)))
+
+    def wm_fit(settings, bundle):
+        import hashlib
+        import pickle
+        from tim import availability as av
+        train, val = items(settings, "train"), items(settings, "val")
+        folder = runner.wm_dir(settings)
+        folder.mkdir(parents=True, exist_ok=True)
+        c = av.choose_c(train, tests)
+        for seed in (0, 1, 2):
+            (folder / f"learned-s{seed}.pkl").write_bytes(pickle.dumps(av.fit_learned(train, tests, seed, c)))
+        (folder / "base_rates.json").write_text(json.dumps(av.base_rates(train, tests), sort_keys=True))
+        files = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest() for name in WM_FILES}
+        bundle.aggregate("wm_quality", {"c": c, "files": files,
+                                        "quality": {"val": analysis.arm_quality(settings, val, "val")}})
+
+    def inventory_stage(settings, bundle):
+        from tim import inventory
+        source = "synthetic" if settings.synthetic else "mimic_real"
+        by_split = {s: inventory.records(items(settings, s), tests, s, source) for s in ("train", "val")}
+        folder = settings.work_dir / "private" / "inventory"
+        folder.mkdir(parents=True, exist_ok=True)
+        for split, rows in by_split.items():
+            (folder / f"{split}.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
+        bundle.aggregate("inventory_card", coded(inventory.card(by_split, tests)))
+
+    def leakage_stage(settings, bundle):
+        import pickle
+        from tim import leakage
+        fitted = leakage.fit_probes(items(settings, "train"), tests)
+        runner.wm_dir(settings).mkdir(parents=True, exist_ok=True)
+        (runner.wm_dir(settings) / "leakage.pkl").write_bytes(pickle.dumps(fitted))
+        bundle.aggregate("leakage", {"val": leakage.evaluate(fitted, items(settings, "val"), tests)})
+
+    def analyze_val_b(settings, bundle):
+        from tim.runner import STAGE_SPECS
+        rows = {arm: _rows(settings, protocol_hash, "val-b", arm, stage) for arm in STAGE_SPECS["val-b"]["jobs"]}
+        p0 = _rows(settings, protocol_hash, "val-a", "V3", stage)
+        bundle.aggregate("validation_b", analysis.validation_b(rows, p0, access.baseline_cfg(settings), settings.source,
+                                                               resamples=constants["bootstrap_resamples"]))
+
+    def analyze_b(settings, bundle):
+        import pickle
+        from tim import leakage
+        from tim.runner import STAGE_SPECS
+        rows = {arm: _rows(settings, protocol_hash, "test-b", arm, stage) for arm in STAGE_SPECS["test-b"]["jobs"]}
+        p0 = _rows(settings, protocol_hash, "test-a", "V3", stage)
+        test = items(settings, "test")
+        staged = settings.work_dir / "staging"
+        wm = json.loads((staged / "wm-fit" / "wm_quality.json").read_text())
+        quality = {**wm["quality"], "test": analysis.arm_quality(settings, test, "test")}
+        fitted = pickle.loads((runner.wm_dir(settings) / "leakage.pkl").read_bytes())
+        leak = {**json.loads((staged / "leakage" / "leakage.json").read_text()),
+                "test": leakage.evaluate(fitted, test, tests)}
+        bundle.aggregate("metrics", analysis.metrics_b(rows, p0, access.baseline_cfg(settings), settings.source,
+                                                       quality, leak, resamples=constants["bootstrap_resamples"]))
+        bundle.aggregate("wm_quality", {**wm, "quality": quality})
+        bundle.aggregate("leakage", leak)
+        for name, source_stage in (("inventory_card", "inventory"), ("hpi_audit", "hpi-audit")):
+            bundle.aggregate(name, json.loads((staged / source_stage / f"{name}.json").read_text()))
+
     def gpu_job(settings, bundle):
         return runner.run_job(settings, stage, job, bundle, protocol_hash, commit(), _clock(settings))
 
-    return {"validate": validate, "analyze-val-a": analyze_val_a, "analyze-a": analyze_a}.get(stage, gpu_job)
+    return {"validate": validate, "analyze-val-a": analyze_val_a, "analyze-a": analyze_a, "hpi-audit": hpi_audit,
+            "wm-fit": wm_fit, "inventory": inventory_stage, "leakage": leakage_stage,
+            "analyze-val-b": analyze_val_b, "analyze-b": analyze_b}.get(stage, gpu_job)
 
 
 def run_command(settings, stage, job=None):
@@ -130,17 +213,18 @@ def results_root() -> Path:
     return Path(os.environ.get("TIM_RESULTS_DIR", OWN / "results"))
 
 
-def render_phase_a(metrics_path: Path) -> Path:
+def render_phase(metrics_path: Path) -> Path:
     from tim import protocol, render
     disclosure = (json.loads(protocol.PATH.read_text())["disclosure"]["test_set_status"]
                   if protocol.PATH.exists() else "No protocol is committed for this synthetic run.")
+    metrics = json.loads(metrics_path.read_text())
     path = metrics_path.parent / "REPORT.md"
-    path.write_text(render.render(json.loads(metrics_path.read_text()), disclosure))
+    path.write_text(render.render_b(metrics, disclosure) if "family_b" in metrics else render.render(metrics, disclosure))
     return path
 
 
 def synthetic_all(settings):
-    """Every Phase-A stage on a fresh fixture, published under results/synthetic/."""
+    """Every Phase-A and Phase-B stage on a fresh fixture, published under results/synthetic/."""
     from tim import fixture
     from tim.publish import publish
     if not settings.synthetic:
@@ -157,7 +241,8 @@ def synthetic_all(settings):
     for stage in SYNTHETIC_ORDER:
         run_command(run, stage)
         publish(run, stage, results_root())
-    render_phase_a(target / "phase-a" / "metrics.json")
+    for phase in ("phase-a", "phase-b"):
+        render_phase(target / phase / "metrics.json")
 
 
 def check_git_command():
@@ -195,10 +280,14 @@ def main(argv=None):
         from tim.publish import publish
         print(f"published: {publish(settings, args.target, results_root())}")
     elif args.command == "render":
-        print(f"rendered: {render_phase_a(results_root() / 'credentialed' / 'phase-a' / 'metrics.json')}")
-    elif args.command == "addendum-a":
+        for phase in ("phase-a", "phase-b"):
+            metrics = results_root() / "credentialed" / phase / "metrics.json"
+            if metrics.exists():
+                print(f"rendered: {render_phase(metrics)}")
+    elif args.command in ("addendum-a", "addendum-b"):
         from tim import protocol
-        print(f"wrote {protocol.addendum_a().relative_to(ROOT)}")
+        write = protocol.addendum_a if args.command == "addendum-a" else protocol.addendum_b
+        print(f"wrote {write().relative_to(ROOT)}")
     elif args.command == "check-git":
         check_git_command()
     elif args.command == "approval-request":

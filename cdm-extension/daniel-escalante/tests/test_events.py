@@ -52,7 +52,7 @@ def test_free_text_string_schemas_are_refused():
 
 
 def test_every_schema_file_loads():
-    for name in ("events", "validate", "bench", "validation", "metrics"):
+    for name in ("events", "validate", "bench", "validation", "metrics", "hpi_audit", "inventory_card", "leakage", "wm_quality", "validation_b"):
         assert load_schema(name)
 
 

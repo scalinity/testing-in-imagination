@@ -43,3 +43,17 @@ def test_protocol_records_the_admission_path_approver_and_disclosure():
 
 def test_protocol_names_the_spec_it_freezes():
     assert PROTOCOL["spec"]["sha256"] == hashlib.sha256((OWN / "SPEC.md").read_bytes()).hexdigest()
+
+
+def test_phase_b_configuration_matches_the_frozen_protocol():
+    from tim import availability
+    phase_b, planner = PROTOCOL["phase_b"], runner.CONFIG["planner"]
+    assert (planner["theta_stop"], planner["beta"]) == (phase_b["planner"]["theta_stop"], phase_b["planner"]["beta"])
+    assert availability.EPS == phase_b["clip_epsilon"]
+    assert list(availability.C_GRID) == phase_b["learned"]["c_grid"]
+    corrupt = [v["planner"] for v in runner.CONFIG["arms"].values() if v["planner"]["kind"] == "corrupt"]
+    assert sorted({c["alpha"] for c in corrupt}) == phase_b["corruption"]["alphas"]
+    assert sorted({c["temperature"] for c in corrupt}, reverse=True) == phase_b["corruption"]["temperatures"]
+    assert sorted({c["noise_seed"] for c in corrupt}) == phase_b["corruption"]["noise_seeds"]
+    assert sorted(v["planner"].get("seed") for v in runner.CONFIG["arms"].values()
+                  if v["planner"]["kind"] == "learned") == phase_b["learned"]["bootstrap_seeds"]

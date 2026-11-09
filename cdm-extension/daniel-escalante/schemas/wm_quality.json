@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "c",
+    "files",
+    "quality"
+  ],
+  "properties": {
+    "c": {
+      "type": "number"
+    },
+    "files": {
+      "type": "object",
+      "keys": "wm_file",
+      "values": {
+        "type": "string",
+        "format": "identifier"
+      }
+    },
+    "quality": {
+      "type": "object",
+      "keys": "split",
+      "values": {
+        "$ref": "quality_split"
+      }
+    }
+  }
+}

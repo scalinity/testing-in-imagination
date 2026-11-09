@@ -1,66 +1,302 @@
 {
-  "count": {"type": "integer", "minimum": 0},
-  "number_or_null": {"anyOf": [{"type": "null"}, {"type": "number"}]},
+  "count": {
+    "type": "integer",
+    "minimum": 0
+  },
+  "number_or_null": {
+    "anyOf": [
+      {
+        "type": "null"
+      },
+      {
+        "type": "number"
+      }
+    ]
+  },
   "requests": {
-    "type": "object", "additionalProperties": false,
-    "required": ["requested", "provided", "unavailable", "repeated"],
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "requested",
+      "provided",
+      "unavailable",
+      "repeated"
+    ],
     "properties": {
-      "requested": {"$ref": "count"}, "provided": {"$ref": "count"},
-      "unavailable": {"$ref": "count"}, "repeated": {"type": "integer"}
+      "requested": {
+        "$ref": "count"
+      },
+      "provided": {
+        "$ref": "count"
+      },
+      "unavailable": {
+        "$ref": "count"
+      },
+      "repeated": {
+        "type": "integer"
+      }
     }
   },
   "summary": {
-    "type": "object", "additionalProperties": false,
-    "required": ["n", "metrics", "nonanswers", "nonanswers_by_class", "requests", "confusion"],
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "n",
+      "metrics",
+      "nonanswers",
+      "nonanswers_by_class",
+      "requests",
+      "confusion"
+    ],
     "properties": {
-      "n": {"$ref": "count"},
-      "metrics": {"type": "object", "keys": "metric", "values": {"$ref": "number_or_null"}},
-      "nonanswers": {"$ref": "count"},
-      "nonanswers_by_class": {"type": "object", "keys": "disease", "values": {"$ref": "count"}},
-      "requests": {"$ref": "requests"},
-      "confusion": {"type": "object", "keys": "disease",
-                    "values": {"type": "object", "keys": "outcome", "values": {"$ref": "count"}}},
-      "termination": {"type": "object", "keys": "termination", "values": {"$ref": "count"}},
-      "events": {"type": "object", "keys": "guard_event", "values": {"$ref": "count"}},
-      "prediction_source": {"type": "object", "keys": "prediction_source", "values": {"$ref": "count"}},
-      "scorer_errors": {"$ref": "count"},
-      "replacement_failed": {"$ref": "count"}
+      "n": {
+        "$ref": "count"
+      },
+      "metrics": {
+        "type": "object",
+        "keys": "metric",
+        "values": {
+          "$ref": "number_or_null"
+        }
+      },
+      "nonanswers": {
+        "$ref": "count"
+      },
+      "nonanswers_by_class": {
+        "type": "object",
+        "keys": "disease",
+        "values": {
+          "$ref": "count"
+        }
+      },
+      "requests": {
+        "$ref": "requests"
+      },
+      "confusion": {
+        "type": "object",
+        "keys": "disease",
+        "values": {
+          "type": "object",
+          "keys": "outcome",
+          "values": {
+            "$ref": "count"
+          }
+        }
+      },
+      "termination": {
+        "type": "object",
+        "keys": "termination",
+        "values": {
+          "$ref": "count"
+        }
+      },
+      "events": {
+        "type": "object",
+        "keys": "guard_event",
+        "values": {
+          "$ref": "count"
+        }
+      },
+      "prediction_source": {
+        "type": "object",
+        "keys": "prediction_source",
+        "values": {
+          "$ref": "count"
+        }
+      },
+      "scorer_errors": {
+        "$ref": "count"
+      },
+      "replacement_failed": {
+        "$ref": "count"
+      }
     }
   },
   "comparison": {
-    "type": "object", "additionalProperties": false,
-    "required": ["delta_t5", "ci95", "p_value", "p_holm", "method", "discordant", "significance", "mcnemar_p"],
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "delta_t5",
+      "ci95",
+      "p_value",
+      "p_holm",
+      "method",
+      "discordant",
+      "significance",
+      "mcnemar_p"
+    ],
     "properties": {
-      "delta_t5": {"type": "number"},
-      "ci95": {"type": "array", "maxItems": 2, "items": {"type": "number"}},
-      "p_value": {"$ref": "number_or_null"},
-      "p_holm": {"$ref": "number_or_null"},
-      "method": {"anyOf": [{"type": "null"}, {"type": "string", "enum": "test_method"}]},
-      "discordant": {"$ref": "count"},
-      "significance": {"type": "string", "enum": "significance"},
-      "mcnemar_p": {"$ref": "number_or_null"}
+      "delta_t5": {
+        "type": "number"
+      },
+      "ci95": {
+        "type": "array",
+        "maxItems": 2,
+        "items": {
+          "type": "number"
+        }
+      },
+      "p_value": {
+        "$ref": "number_or_null"
+      },
+      "p_holm": {
+        "$ref": "number_or_null"
+      },
+      "method": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "string",
+            "enum": "test_method"
+          }
+        ]
+      },
+      "discordant": {
+        "$ref": "count"
+      },
+      "significance": {
+        "type": "string",
+        "enum": "significance"
+      },
+      "mcnemar_p": {
+        "$ref": "number_or_null"
+      }
     }
   },
   "recovery": {
-    "type": "object", "additionalProperties": false,
-    "required": ["baseline_nonanswers", "newly_answered", "correct_recoveries", "recovery_yield",
-                 "newly_answered_accuracy", "regressions"],
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "baseline_nonanswers",
+      "newly_answered",
+      "correct_recoveries",
+      "recovery_yield",
+      "newly_answered_accuracy",
+      "regressions"
+    ],
     "properties": {
-      "baseline_nonanswers": {"$ref": "count"}, "newly_answered": {"$ref": "count"},
-      "correct_recoveries": {"$ref": "count"}, "recovery_yield": {"$ref": "number_or_null"},
-      "newly_answered_accuracy": {"$ref": "number_or_null"}, "regressions": {"$ref": "count"}
+      "baseline_nonanswers": {
+        "$ref": "count"
+      },
+      "newly_answered": {
+        "$ref": "count"
+      },
+      "correct_recoveries": {
+        "$ref": "count"
+      },
+      "recovery_yield": {
+        "$ref": "number_or_null"
+      },
+      "newly_answered_accuracy": {
+        "$ref": "number_or_null"
+      },
+      "regressions": {
+        "$ref": "count"
+      }
     }
   },
   "sensitivity": {
-    "type": "object", "keys": "comparison",
+    "type": "object",
+    "keys": "comparison",
     "values": {
-      "type": "object", "additionalProperties": false,
-      "required": ["val_effect", "discordance", "power_at_val_effect", "mde_80"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "val_effect",
+        "discordance",
+        "power_at_val_effect",
+        "mde_80"
+      ],
       "properties": {
-        "val_effect": {"type": "number"},
-        "discordance": {"type": "object", "keys": "disease", "values": {"type": "number", "minimum": 0}},
-        "power_at_val_effect": {"type": "number", "minimum": 0, "maximum": 1},
-        "mde_80": {"$ref": "number_or_null"}
+        "val_effect": {
+          "type": "number"
+        },
+        "discordance": {
+          "type": "object",
+          "keys": "disease",
+          "values": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "power_at_val_effect": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "mde_80": {
+          "$ref": "number_or_null"
+        }
+      }
+    }
+  },
+  "leakage_split": {
+    "type": "object",
+    "keys": "probe",
+    "values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "C",
+        "T5",
+        "recall"
+      ],
+      "properties": {
+        "C": {
+          "type": "number"
+        },
+        "T5": {
+          "type": "number"
+        },
+        "recall": {
+          "type": "object",
+          "keys": "disease",
+          "values": {
+            "$ref": "number_or_null"
+          }
+        }
+      }
+    }
+  },
+  "quality_split": {
+    "type": "object",
+    "keys": "wm_arm",
+    "values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alpha",
+        "n",
+        "positives",
+        "ece",
+        "auroc",
+        "brier",
+        "brier_skill"
+      ],
+      "properties": {
+        "alpha": {
+          "$ref": "number_or_null"
+        },
+        "n": {
+          "$ref": "count"
+        },
+        "positives": {
+          "$ref": "count"
+        },
+        "ece": {
+          "type": "number"
+        },
+        "auroc": {
+          "$ref": "number_or_null"
+        },
+        "brier": {
+          "type": "number"
+        },
+        "brier_skill": {
+          "$ref": "number_or_null"
+        }
       }
     }
   }
