@@ -13,7 +13,9 @@ COMPARISONS = ("V3-official", "V1-official", "V3-V1", "V2-V1", "V3-V2", "V2raw-o
 TEST_METHODS = ("exact", "draws")
 SIGNIFICANCE = ("statistically significant", "not statistically significant")
 CHANGES = ("improved", "regressed", "unchanged")
-VARIANTS = ("V0", "V0-shadow", "V1", "V2", "V3", "V0-rerun")
+PHASE_B_ARMS = ("B-uniform", "B-marginal", "B-learned-s0", "B-learned-s1", "B-learned-s2", "B-oracle",
+                *(f"B-a{a}-T{t}-n{s}" for a in (0.1, 0.3) for t in (1, 0.25) for s in (0, 1)))
+VARIANTS = ("V0", "V0-shadow", "V1", "V2", "V3", "V0-rerun", "P0", *PHASE_B_ARMS)
 TERMINATIONS = ("diagnosis", "step_limit", "malformed", "length_completion", "length_observation")
 GUARD_EVENTS = ("g1_replace", "g2_commit", "replacement_failed", "scorer_error", "wm_rerank", "wm_stop")
 ACTION_KINDS = ("test", "diagnosis", "malformed", "unknown_action", "unknown_test", "repeated_test",

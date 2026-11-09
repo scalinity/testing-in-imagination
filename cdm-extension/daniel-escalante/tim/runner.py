@@ -10,6 +10,8 @@ import os
 import re
 import traceback
 
+import math
+
 from tim.actions import PATTERN, Vocabulary
 from tim.fallback import finalize
 from tim.guard import FIXED_THOUGHT, Limits, fit, trigger
@@ -23,10 +25,11 @@ class Variant:
     g2: bool = False
     g3: bool = False
     shadow: bool = False
+    planner: dict | None = None
 
     @property
     def scored(self) -> bool:
-        return self.g1 or self.g2 or self.shadow
+        return self.g1 or self.g2 or self.shadow or self.planner is not None
 
 
 def load_config() -> dict:
@@ -36,7 +39,8 @@ def load_config() -> dict:
 
 
 CONFIG = load_config()
-VARIANTS = {name: Variant(name, **flags) for name, flags in CONFIG["variants"].items()}
+VARIANTS = {name: Variant(name, **flags) for name, flags in {**CONFIG["variants"], **CONFIG["arms"]}.items()}
+STAGE_SPECS = {**CONFIG["stages"], **CONFIG["stages_b"]}
 
 
 @dataclass
@@ -57,10 +61,13 @@ def replace(trajectory, text, ids) -> None:
     trajectory.last_completion = text
 
 
-def guarded_class(base, variant, vocab, scorer, limits=Limits()):
+def guarded_class(base, variant, vocab, scorer, limits=Limits(), predictor=None):
+    theta, beta = CONFIG["planner"]["theta_stop"], CONFIG["planner"]["beta"]
+
     class Guarded(base):
         def run(self, prompts_text, inputs, model, sampling_params, processing_class):
             self.tim_state, self.tim_tokenizer = EpisodeState(), processing_class
+            self.tim_p = predictor(inputs[0]) if variant.planner is not None else None
             return super().run(prompts_text, inputs, model, sampling_params, processing_class)
 
         def _event(self, t, kind, from_kind, to_kind):
@@ -88,6 +95,8 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits()):
             found = trigger(t, len(prompt_ids), len(trajectory.completion_ids), proposal, requested, vocab,
                             variant.g1, variant.g2, limits)
             if found is None:
+                if self.tim_p is not None and proposal.kind == "test" and t < limits.max_steps:
+                    self._plan(trajectory, t, proposal, requested, prompt_ids)
                 return
             thought = proposal.thought if proposal.thought is not None else FIXED_THOUGHT[found.event]
             scores = self._score(t, prompt_ids, thought, found.candidates, found.from_kind)
@@ -101,6 +110,29 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits()):
                 return
             replace(trajectory, *fitted)
             self._event(t, found.event, found.from_kind, action.kind)
+
+        def _plan(self, trajectory, t, proposal, requested, prompt_ids):
+            """SPEC 4.4: stop when no untried test is likely charted, else rerank by score + beta log p."""
+            untried = vocab.untried(requested)
+            if max(self.tim_p[a.name] for a in untried) < theta:
+                event, candidates = "wm_stop", vocab.diseases
+            else:
+                event, candidates = "wm_rerank", untried
+            scores = self._score(t, prompt_ids, proposal.thought, candidates, "test")
+            if scores is None:
+                return
+            if event == "wm_rerank":
+                scores = [s + beta * math.log(self.tim_p[a.name]) for s, a in zip(scores, candidates)]
+            action = candidates[best(scores)]
+            if action == proposal.action:
+                return
+            fitted = fit(action, proposal.thought, event, len(prompt_ids), self.tim_tokenizer, limits)
+            if fitted is None:
+                self.tim_state.replacement_failed += 1
+                self._event(t, "replacement_failed", "test", action.kind)
+                return
+            replace(trajectory, *fitted)
+            self._event(t, event, "test", action.kind)
 
         def step(self, trajectory, step, tokenizer):
             self.tim_state.turns += 1
@@ -147,7 +179,7 @@ class Recorder:
         return getattr(self.model, name)
 
 
-def make_evaluator(variant, dataset, scorer_factory, log=None, limits=Limits()):
+def make_evaluator(variant, dataset, scorer_factory, log=None, limits=Limits(), predictor=None):
     """A drop-in for replication.shim._evaluate_with_model over tim.access's patient selection."""
 
     def evaluate(cfg, _baseline_dataset, model, sampling_params):
@@ -157,7 +189,7 @@ def make_evaluator(variant, dataset, scorer_factory, log=None, limits=Limits()):
         tokenizer = ensure_pad_token(model.get_tokenizer())
         vocab = Vocabulary(environment.test_list, environment.disease_list)
         scorer = scorer_factory(cfg, tokenizer) if variant.scored else None
-        environment.__class__ = guarded_class(type(environment), variant, vocab, scorer, limits)
+        environment.__class__ = guarded_class(type(environment), variant, vocab, scorer, limits, predictor)
         rewards = [instantiate(item) for item in cfg.reward_function.reward_functions]
         recorder, rows = Recorder(model), []
         if log is not None and hasattr(log, "started"):
@@ -244,7 +276,7 @@ def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock)
     """One (stage, variant) job: admission, resume, guarded evaluation, public counts."""
     from tim import access
     from tim.scoring import BenchScorer
-    split = CONFIG["stages"][stage]["split"]
+    split = STAGE_SPECS[stage]["split"]
     variant, limits = VARIANTS[variant_name], Limits(**CONFIG["limits"])
     dataset = access.open_split(settings, stage, split)
     episodes = access.Episodes(settings, protocol_hash, stage, variant_name, split, commit, len(dataset))

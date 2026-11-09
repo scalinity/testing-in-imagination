@@ -18,7 +18,7 @@ import tim.paths  # noqa: E402,F401
 from replication.config import read_env  # noqa: E402
 from tim import approvals  # noqa: E402
 from tim.cli import CPU_STAGES, GPU_STAGES  # noqa: E402
-from tim.runner import CONFIG  # noqa: E402
+from tim.runner import STAGE_SPECS  # noqa: E402
 from tim.settings import Settings  # noqa: E402
 
 
@@ -62,7 +62,7 @@ def main():
             # Unapproved smoke may not outlast what remains of its 0.5 GPU-hour allowance.
             smoke_left = int(approvals.SMOKE_CAP_SECONDS - approvals.smoke_used_seconds(settings)) // 60
         accounts = least_busy_first([a for a in site["SLURM_ACCOUNTS"].split(",") if a])
-        for i, job in enumerate(CONFIG["stages"][args.stage]["jobs"]):
+        for i, job in enumerate(STAGE_SPECS[args.stage]["jobs"]):
             account = accounts[i % len(accounts)]
             budget = hours.get(job, approvals.PROVISIONAL[args.stage])
             submissions.append((job, account, common + [

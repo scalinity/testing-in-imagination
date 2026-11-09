@@ -34,8 +34,8 @@ def _git(root, *args) -> subprocess.CompletedProcess:
 
 
 def jobs(stage) -> list[dict]:
-    from tim.runner import CONFIG
-    spec = CONFIG["stages"][stage]
+    from tim.runner import STAGE_SPECS
+    spec = STAGE_SPECS[stage]
     patients = LISTED.get(stage, SPLIT_SIZE[spec["split"]])
     return [{"stage": stage, "variant": v, "arm": "primary", "split": spec["split"], "patients": patients}
             for v in spec["jobs"]]

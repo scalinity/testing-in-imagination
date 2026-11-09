@@ -56,8 +56,8 @@ def _clock(settings):
 def _rows(settings, protocol_hash, run_stage_name, variant, reader):
     """Private rows of the latest completed run of (stage, variant), read through the access table."""
     from tim import access
-    from tim.runner import CONFIG
-    split = CONFIG["stages"][run_stage_name]["split"]
+    from tim.runner import STAGE_SPECS
+    split = STAGE_SPECS[run_stage_name]["split"]
     access.mode(reader, split)
     prefix = f"{protocol_hash[:16]}:{run_stage_name}:{variant}:primary"
     keys = [e["key"] for e in access.Ledger(settings.admission_dir).entries()
@@ -108,12 +108,12 @@ def stage_body(stage, job, constants, protocol_hash):
 
 def run_command(settings, stage, job=None):
     from tim import protocol
-    from tim.runner import CONFIG
+    from tim.runner import STAGE_SPECS
     constants, protocol_hash = protocol.load(settings)
     start = {} if settings.synthetic else {"commit": commit()[:12], "protocol": protocol_hash[:16]}
     if stage in CPU_STAGES:
         return [run_stage(settings, stage, "main", stage_body(stage, None, constants, protocol_hash), **start)]
-    jobs = CONFIG["stages"][stage]["jobs"]
+    jobs = STAGE_SPECS[stage]["jobs"]
     if not settings.synthetic:
         from tim import approvals
         if not os.environ.get("SLURM_JOB_ID"):
@@ -123,7 +123,7 @@ def run_command(settings, stage, job=None):
         approvals.check(settings, stage)
         jobs = [job]
     return [run_stage(settings, stage, j, stage_body(stage, j, constants, protocol_hash),
-                      variant=j, split=CONFIG["stages"][stage]["split"], **start) for j in jobs]
+                      variant=j, split=STAGE_SPECS[stage]["split"], **start) for j in jobs]
 
 
 def results_root() -> Path:
