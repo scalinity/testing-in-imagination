@@ -1,0 +1,4 @@
+{"source": "synthetic", "split": "val", "stage": "smoke", "type": "job_start", "variant": "V3"}
+{"completed": 1, "total": 2, "type": "progress"}
+{"completed": 2, "total": 2, "type": "progress"}
+{"patients": 2, "seconds": 0.0, "status": "pass", "type": "job_end"}

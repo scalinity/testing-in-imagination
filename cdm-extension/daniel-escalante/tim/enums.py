@@ -7,6 +7,12 @@ PHASE_A_STAGES = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "add
 PHASE_B_STAGES = ("hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b",
                   "analyze-val-b", "addendum-b", "test-b", "analyze-b")
 STAGES = (*PHASE_A_STAGES, *PHASE_B_STAGES, "canary-probe")
+LADDER = ("official", "V0", "V0-rerun", "V0-shadow", "V1", "V2-raw", "V2", "V3-raw", "V3")
+COMPARISONS = ("V3-official", "V1-official", "V3-V1", "V2-V1", "V3-V2", "V2raw-official", "V3raw-official",
+               "V3-V0rerun", "V1-V0", "V2-V0", "V3-V0")
+TEST_METHODS = ("exact", "draws")
+SIGNIFICANCE = ("statistically significant", "not statistically significant")
+CHANGES = ("improved", "regressed", "unchanged")
 VARIANTS = ("V0", "V0-shadow", "V1", "V2", "V3", "V0-rerun")
 TERMINATIONS = ("diagnosis", "step_limit", "malformed", "length_completion", "length_observation")
 GUARD_EVENTS = ("g1_replace", "g2_commit", "replacement_failed", "scorer_error", "wm_rerank", "wm_stop")
@@ -43,4 +49,9 @@ ENUMS = {
     "source": SOURCES,
     "digest_name": DIGEST_NAMES,
     "metric": ("T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"),
+    "ladder": LADDER,
+    "comparison": COMPARISONS,
+    "test_method": TEST_METHODS,
+    "significance": SIGNIFICANCE,
+    "change": CHANGES,
 }

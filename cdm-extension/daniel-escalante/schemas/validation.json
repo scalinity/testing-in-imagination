@@ -1,0 +1,25 @@
+{
+  "type": "object", "additionalProperties": false,
+  "required": ["source", "shadow", "premise", "go", "variants", "changes", "descriptive", "sensitivity"],
+  "properties": {
+    "source": {"type": "string", "enum": "source"},
+    "shadow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identical", "total", "scorer_errors", "passed"],
+      "properties": {"identical": {"$ref": "count"}, "total": {"$ref": "count"},
+                     "scorer_errors": {"$ref": "count"}, "passed": {"type": "boolean"}}
+    },
+    "premise": {
+      "type": "object", "additionalProperties": false,
+      "required": ["v0_nonanswers", "minimum", "passed"],
+      "properties": {"v0_nonanswers": {"$ref": "count"}, "minimum": {"$ref": "count"}, "passed": {"type": "boolean"}}
+    },
+    "go": {"type": "boolean"},
+    "variants": {"type": "object", "keys": "ladder", "values": {"$ref": "summary"}},
+    "changes": {"type": "object", "keys": "comparison",
+                "values": {"type": "object", "keys": "disease",
+                           "values": {"type": "object", "keys": "change", "values": {"$ref": "count"}}}},
+    "descriptive": {"type": "object", "keys": "comparison", "values": {"$ref": "comparison"}},
+    "sensitivity": {"$ref": "sensitivity"}
+  }
+}

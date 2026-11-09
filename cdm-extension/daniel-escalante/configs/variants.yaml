@@ -1,0 +1,13 @@
+# Phase-A variants, limits and stage jobs (SPEC 3.3-3.5, 9). Every approval binds this file's digest.
+limits: {max_steps: 13, max_length: 4096, context: 4352, completion: 256}
+variants:
+  V0: {}
+  V0-rerun: {}
+  V0-shadow: {shadow: true}
+  V2: {g2: true, g3: true}
+  V3: {g1: true, g2: true, g3: true}
+stages:
+  smoke: {split: val, jobs: [V3]}
+  bench-a: {split: val, jobs: [V0-shadow, V3]}
+  val-a: {split: val, jobs: [V0, V0-shadow, V2, V3]}
+  test-a: {split: test, jobs: [V0-rerun, V2, V3]}

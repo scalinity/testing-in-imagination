@@ -52,7 +52,7 @@ def test_free_text_string_schemas_are_refused():
 
 
 def test_every_schema_file_loads():
-    for name in ("events", "validate"):
+    for name in ("events", "validate", "bench", "validation", "metrics"):
         assert load_schema(name)
 
 
@@ -95,3 +95,20 @@ def test_aggregates_are_validated_and_reject_patient_keys(tmp_path):
     with pytest.raises(SchemaError):
         bundle.aggregate("validate", {"patient_id": 1})
     assert not (bundle.dir / "validate.json").exists()
+
+
+def test_schema_references_are_inlined_and_still_allowlisted(tmp_path, monkeypatch):
+    import tim.events as events
+    (tmp_path / "ref.json").write_text(json.dumps({
+        "$defs": {"count": {"type": "integer", "minimum": 0}},
+        "type": "object", "additionalProperties": False,
+        "properties": {"a": {"$ref": "count"}, "b": {"type": "array", "items": {"$ref": "count"}}}}))
+    (tmp_path / "bad.json").write_text(json.dumps({"$defs": {"x": {"type": "string"}}, "$ref": "x"}))
+    monkeypatch.setattr(events, "SCHEMAS", tmp_path)
+    events.load_schema.cache_clear()
+    validate({"a": 1, "b": [2]}, events.load_schema("ref"))
+    with pytest.raises(SchemaError):
+        validate({"a": -1}, events.load_schema("ref"))
+    with pytest.raises(SchemaError, match="allowlist"):
+        events.load_schema("bad")
+    events.load_schema.cache_clear()

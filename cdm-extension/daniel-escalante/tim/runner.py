@@ -28,13 +28,14 @@ class Variant:
         return self.g1 or self.g2 or self.shadow
 
 
-VARIANTS = {
-    "V0": Variant("V0"),
-    "V0-rerun": Variant("V0-rerun"),
-    "V0-shadow": Variant("V0-shadow", shadow=True),
-    "V2": Variant("V2", g2=True, g3=True),
-    "V3": Variant("V3", g1=True, g2=True, g3=True),
-}
+def load_config() -> dict:
+    import yaml
+    from tim.paths import OWN
+    return yaml.safe_load((OWN / "configs" / "variants.yaml").read_text())
+
+
+CONFIG = load_config()
+VARIANTS = {name: Variant(name, **flags) for name, flags in CONFIG["variants"].items()}
 
 
 @dataclass
@@ -80,6 +81,9 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits()):
             if variant.shadow:
                 self._score(t, prompt_ids, proposal.thought or FIXED_THOUGHT["g1_replace"],
                             vocab.tests + vocab.diseases, proposal.kind)
+                generated = trajectory.output.outputs[0].token_ids
+                if hasattr(scorer, "observe") and len(generated):
+                    scorer.observe(prompt_ids, generated[0])
             found = trigger(t, len(prompt_ids), len(trajectory.completion_ids), proposal, requested, vocab,
                             variant.g1, variant.g2, limits)
             if found is None:
@@ -191,3 +195,77 @@ def split_cfg(settings, split):
     cfg = baseline_cfg(settings)
     cfg.training.seed = stream_seed(stream_seed(269, split, "policy"), split, "evaluation")
     return cfg
+
+
+class Progress:
+    """Episode log plus public progress events, one per completed patient."""
+
+    def __init__(self, episodes, bundle, total, already):
+        self.episodes, self.bundle, self.total, self.count = episodes, bundle, total, already
+        self.done = episodes.done
+
+    def append(self, patient_id, row):
+        self.episodes.append(patient_id, row)
+        self.count += 1
+        self.bundle.emit("progress", completed=self.count, total=self.total)
+
+
+def _gpu_rows(settings, split, evaluator_for):
+    """Run the baseline's own GPU evaluator with tim's evaluator patched in (SPEC 3.6)."""
+    from unittest.mock import patch
+    from replication import gpu, pipeline
+    from replication.config import stream_seed
+    from replication.manifest import file_digest
+    from tim.events import TimError
+    baseline = settings.baseline()
+    pipeline._assert_runtime(baseline)
+    selection = pipeline.read_json(baseline.work_dir / "models/parity/269/primary/selection.json")
+    for path, expected in selection["run_outputs"].items():
+        if file_digest(path) != expected:
+            raise TimError("baseline_mismatch", "the selected primary model changed")
+    with patch.object(gpu, "_evaluate_with_model", evaluator_for(selection["adapter_dir"])):
+        return gpu.evaluate(pipeline.cfg_for(baseline, "primary"), pipeline.prepared(baseline), split=split,
+                            seed=stream_seed(269, split, "policy"), adapter_dir=selection["adapter_dir"])
+
+
+def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock):
+    """One (stage, variant) job: admission, resume, guarded evaluation, public counts."""
+    from tim import access
+    from tim.scoring import BenchScorer
+    split = CONFIG["stages"][stage]["split"]
+    variant, limits = VARIANTS[variant_name], Limits(**CONFIG["limits"])
+    dataset = access.open_split(settings, stage, split)
+    episodes = access.Episodes(settings, protocol_hash, stage, variant_name, split, commit, len(dataset))
+    done = episodes.open()
+    if done:
+        bundle.emit("progress", completed=len(done), total=len(dataset), resumed=True)
+    log = Progress(episodes, bundle, len(dataset), len(done))
+    bench = [] if stage.startswith("bench") and variant.shadow else None
+
+    def wrap(scorer):
+        if bench is None:
+            return scorer
+        bench.append(BenchScorer(scorer))
+        return bench[-1]
+
+    start = clock()
+    if settings.synthetic:
+        from replication.shim import generation_settings
+        from tim.fixture import MockScorer, ScriptedPolicy
+        evaluator = make_evaluator(variant, dataset, lambda cfg, tok: wrap(MockScorer(tok)), log, limits)
+        rows = evaluator(split_cfg(settings, split), None, ScriptedPolicy(), generation_settings(False))
+    else:
+        from tim.scoring import load_scorer
+        rows = _gpu_rows(settings, split, lambda adapter: make_evaluator(
+            variant, dataset, lambda cfg, tok: wrap(load_scorer(cfg, adapter, tok)), log, limits))
+    episodes.finish()
+    rows, seconds = done + rows, clock() - start
+    if stage == "smoke" and not settings.synthetic:
+        episodes.ledger.record("smoke_seconds", key=episodes.key, seconds=seconds)
+    if stage.startswith("bench"):
+        measured = bench[0].measurements() if bench else {
+            "scoring_calls": 0, "max_abs_fast_minus_reference": None, "fast_within_tolerance": None,
+            "next_token_checks": 0, "next_token_agreement": None}
+        bundle.aggregate("bench", {"variant": variant_name, "patients": len(rows), "seconds": seconds,
+                                   "decision_turns": sum(r["n_turns"] for r in rows), **measured}, job=variant_name)
+    return {"patients": len(rows), "seconds": seconds}

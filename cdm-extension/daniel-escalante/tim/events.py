@@ -126,9 +126,23 @@ def _lint(schema, path="schema"):
         raise SchemaError(path, NOT_ALLOWLIST)
 
 
+def _inline(node, defs):
+    """Replace {"$ref": name} with the named entry of the file's top-level "$defs"."""
+    if isinstance(node, dict):
+        if "$ref" in node:
+            return _inline(defs[node["$ref"]], defs)
+        return {key: _inline(value, defs) for key, value in node.items()}
+    if isinstance(node, list):
+        return [_inline(item, defs) for item in node]
+    return node
+
+
 @lru_cache(maxsize=None)
 def load_schema(name: str) -> dict:
-    schema = json.loads((SCHEMAS / f"{name}.json").read_text())
+    raw = json.loads((SCHEMAS / f"{name}.json").read_text())
+    shared = SCHEMAS / "_defs.json"
+    defs = {**(json.loads(shared.read_text()) if shared.exists() else {}), **raw.get("$defs", {})}
+    schema = _inline({k: v for k, v in raw.items() if k != "$defs"}, defs)
     if name == "events":
         for event_type, item in schema.items():
             _enum("event_type", "schema")
@@ -167,11 +181,11 @@ class Bundle:
         with self.events_path.open("a") as handle:
             handle.write(json.dumps(event, sort_keys=True, allow_nan=False) + "\n")
 
-    def aggregate(self, name: str, value) -> Path:
+    def aggregate(self, name: str, value, job: str | None = None) -> Path:
         from replication.manifest import assert_aggregate
         validate(value, load_schema(name))
         assert_aggregate(value)
-        path = self.dir / f"{name}.json"
+        path = self.dir / (f"{name}.{job}.json" if job else f"{name}.json")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(dumps(value))
         return path

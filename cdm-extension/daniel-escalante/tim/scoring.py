@@ -80,12 +80,43 @@ class HFScorer:
         cache.batch_repeat_interleave(len(batch))
         return self.model(input_ids=batch.to(self.device), past_key_values=cache, use_cache=True).logits
 
+    def next_token(self, prompt_ids) -> int:
+        """The HF model's greedy next token for a decision prompt (bench agreement check)."""
+        with deterministic(), torch.inference_mode():
+            return int(self._prefill(torch.tensor(list(prompt_ids)))[0].argmax())
+
     def score(self, prompt_ids, thought, candidates, path=None) -> list[float]:
         context, continuations = encode(self.tokenizer, prompt_ids, thought, candidates)
         with deterministic(), torch.inference_mode():
             if (path or self.path) == "fast":
                 return fast_scores(self._prefill, self._extend, context, continuations)
             return reference_scores(self._forward, context, continuations)
+
+
+class BenchScorer:
+    """Scores with the fast path and checks it against the reference path on every call (SPEC 3.4)."""
+
+    def __init__(self, inner, tolerance=1e-3):
+        self.inner, self.tolerance = inner, tolerance
+        self.calls, self.max_diff, self.checks, self.agreements = 0, None, 0, 0
+
+    def score(self, prompt_ids, thought, candidates, path=None):
+        fast = self.inner.score(prompt_ids, thought, candidates, path="fast")
+        reference = self.inner.score(prompt_ids, thought, candidates, path="reference")
+        diff = max(abs(a - b) for a, b in zip(fast, reference))
+        self.max_diff = diff if self.max_diff is None else max(self.max_diff, diff)
+        self.calls += 1
+        return fast
+
+    def observe(self, prompt_ids, first_token):
+        self.checks += 1
+        self.agreements += int(self.inner.next_token(prompt_ids) == first_token)
+
+    def measurements(self) -> dict:
+        return {"scoring_calls": self.calls, "max_abs_fast_minus_reference": self.max_diff,
+                "fast_within_tolerance": None if self.max_diff is None else self.max_diff <= self.tolerance,
+                "next_token_checks": self.checks,
+                "next_token_agreement": self.agreements / self.checks if self.checks else None}
 
 
 def load_scorer(cfg, adapter_dir, tokenizer, path="fast"):

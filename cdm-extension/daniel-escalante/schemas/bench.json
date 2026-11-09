@@ -1,0 +1,16 @@
+{
+  "type": "object", "additionalProperties": false,
+  "required": ["variant", "patients", "seconds", "decision_turns", "scoring_calls",
+               "max_abs_fast_minus_reference", "fast_within_tolerance", "next_token_checks", "next_token_agreement"],
+  "properties": {
+    "variant": {"type": "string", "enum": "variant"},
+    "patients": {"$ref": "count"},
+    "seconds": {"type": "number", "minimum": 0},
+    "decision_turns": {"$ref": "count"},
+    "scoring_calls": {"$ref": "count"},
+    "max_abs_fast_minus_reference": {"$ref": "number_or_null"},
+    "fast_within_tolerance": {"anyOf": [{"type": "null"}, {"type": "boolean"}]},
+    "next_token_checks": {"$ref": "count"},
+    "next_token_agreement": {"$ref": "number_or_null"}
+  }
+}

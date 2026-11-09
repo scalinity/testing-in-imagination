@@ -22,6 +22,14 @@ def admission_ids(work_dir: Path) -> set[str]:
     return {line for path in folder.glob("*.txt") for line in path.read_text().split()} if folder.exists() else set()
 
 
+def _schema_name(stem: str):
+    """Aggregate files are <schema>.json or <schema>.<job>.json."""
+    name, _, job = stem.partition(".")
+    if name in ("events", "_defs") or not (SCHEMAS / f"{name}.json").is_file():
+        return None
+    return name if not job or IDENTIFIER.fullmatch(job) else None
+
+
 def _check_file(staging: Path, path: Path) -> None:
     from replication.manifest import assert_aggregate
     relative = path.relative_to(staging)
@@ -31,10 +39,9 @@ def _check_file(staging: Path, path: Path) -> None:
                 and IDENTIFIER.fullmatch(relative.stem):
             for line in text.splitlines():
                 validate_event(json.loads(line))
-        elif len(relative.parts) == 1 and relative.suffix == ".json" and relative.stem != "events" \
-                and (SCHEMAS / relative.name).is_file():
+        elif len(relative.parts) == 1 and relative.suffix == ".json" and _schema_name(relative.stem):
             value = json.loads(text)
-            validate(value, load_schema(relative.stem))
+            validate(value, load_schema(_schema_name(relative.stem)))
             assert_aggregate(value)
         else:
             raise SchemaError("$", "unexpected_file")

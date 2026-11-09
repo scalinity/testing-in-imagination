@@ -1,0 +1,67 @@
+{
+  "baseline": {
+    "confusion": {
+      "appendicitis": {
+        "appendicitis": 1,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0,
+        "undiagnosed": 5
+      },
+      "cholecystitis": {
+        "appendicitis": 0,
+        "cholecystitis": 1,
+        "diverticulitis": 1,
+        "pancreatitis": 0,
+        "undiagnosed": 4
+      },
+      "diverticulitis": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 1,
+        "undiagnosed": 5
+      },
+      "pancreatitis": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0,
+        "undiagnosed": 6
+      }
+    },
+    "metrics": {
+      "T1": 16.666666666666664,
+      "T2": 16.666666666666664,
+      "T3": 0.0,
+      "T4": 0.0,
+      "T5": 8.333333333333332,
+      "T6": 14.285714285714285,
+      "T7": 14.285714285714285,
+      "T8": 714.7916666666666
+    },
+    "n": 24,
+    "nonanswers": 20,
+    "nonanswers_by_class": {
+      "appendicitis": 5,
+      "cholecystitis": 4,
+      "diverticulitis": 5,
+      "pancreatitis": 6
+    },
+    "requests": {
+      "provided": 25,
+      "repeated": 30,
+      "requested": 66,
+      "unavailable": 11
+    }
+  },
+  "digests": {
+    "lab_test_mapping.csv": "9dea74cf2fd9aa00e01225aabd8d8534b8c823dc91a45c7fac8b74ad6c6039ea",
+    "official_rows": "2beb065cb75c2fb846f526826b805ae2112d3e27855e0e76e215a9be9e627814",
+    "test.csv": "1d9acff61e105b35585daa505cebd72e8e5964e400d912b812aa5ef2542ac4b3",
+    "train.csv": "5f91d786f06f2460c3f637c281a6b977d75f5039fb4c81beac5d725732f759b9",
+    "val.csv": "fe7157e2be1d8c3d771bebce6aa56d5562c870357ad4a7b12316de6024781d6d"
+  },
+  "source": "synthetic",
+  "t5_matches_reference": null
+}

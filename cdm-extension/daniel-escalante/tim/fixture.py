@@ -173,6 +173,9 @@ class MockScorer:
     def __init__(self, tokenizer):
         self.tokenizer, self.calls = tokenizer, 0
 
+    def next_token(self, prompt_ids):
+        return -1  # no language model on CPU; bench agreement is measured on GPU only
+
     def score(self, prompt_ids, thought, candidates, path=None):
         self.calls += 1
         return [float(list(prompt_ids).count(self.tokenizer.encode(a.name)[0])) if a.kind == "diagnosis" else 0.5
