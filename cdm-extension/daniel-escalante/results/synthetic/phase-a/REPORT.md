@@ -7,7 +7,7 @@
 
 Phase A is termination recovery and action validation under the frozen metric. Its fallback (G3) reuses the hypothesis agent's answer, so it is not a new diagnostic predictor, and it supports no clinical-safety claim. The comparator is the replication's trained Nemotron Nano 8B policy (run 7fcd9e5, seed 269, greedy); these results are not a reproduction of the paper.
 
-Test-set status: a prospectively frozen follow-up analysis on a previously examined benchmark. No protocol is committed for this synthetic run.
+Test-set status: a prospectively frozen follow-up analysis on a previously examined benchmark. These published test aggregates informed the design: per-arm confusion matrices with an undiagnosed column (greedy and temperature 1.0), undiagnosed / valid / repeated request counts, the cost decomposition (267 unavailable requests), ignore/* metrics (84.62), test hypothesis accuracy (81.67% over 622 triplets), and the zero-shot hypothesis distribution (904 of 1,095 cholecystitis) with its undiagnosed-by-request-count breakdown. No patient rows or trajectories were viewed. The hypothesis fallback (G3) has not been computed on test rows by anyone. Related test results already seen: the undiagnosed counts per arm and the C1 hypothesis accuracy.
 
 ## Baseline recomputation
 

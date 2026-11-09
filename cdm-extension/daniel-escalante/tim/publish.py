@@ -71,3 +71,36 @@ def publish(settings, stage: str, results_root: Path = OWN / "results") -> Path:
         shutil.rmtree(target)
     shutil.copytree(settings.work_dir / "staging" / stage, target)
     return target
+
+
+# Built from fragments so this module does not match its own scan.
+ATTRIBUTION = re.compile("|".join(("co-auth" + "ored-by", "gener" + "ated with", "cla" + "ude", "anth" + "ropic")),
+                         re.IGNORECASE)
+
+
+def check_git(root: Path, folder: str) -> list[tuple[str, str]]:
+    """Tracked files in the folder: names the root .gitignore would hide, public files that are not
+    schema-valid bundles or reports, canaries, and attribution text."""
+    import subprocess
+    listed = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", folder],
+                            capture_output=True, text=True, check=True).stdout.split("\0")
+    violations = []
+    for relative in filter(None, listed):
+        inner = Path(relative).relative_to(folder)
+        if any(part.lower().startswith("mimic") for part in inner.parts[:-1]) or "physionet" in inner.name.lower():
+            violations.append((relative, "hidden by the root .gitignore"))
+            continue
+        data = (Path(root) / relative).read_bytes()
+        if inner.parts[0] == "results" and inner.suffix != ".md":
+            stage_dir = Path(root) / folder / Path(*inner.parts[:3])
+            try:
+                _check_file(stage_dir, Path(root) / relative)
+            except SchemaError as error:
+                violations.append((relative, "unexpected public file" if error.code == "unexpected_file"
+                                   else "schema violation"))
+                continue
+        if inner.parts[0] == "results" and CANARY.search(data):
+            violations.append((relative, "canary"))
+        elif ATTRIBUTION.search(data.decode("utf-8", errors="replace")):
+            violations.append((relative, "attribution text"))
+    return violations

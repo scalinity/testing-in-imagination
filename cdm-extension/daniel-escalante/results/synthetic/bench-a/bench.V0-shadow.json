@@ -7,5 +7,6 @@
   "patients": 24,
   "scoring_calls": 162,
   "seconds": 0.0,
+  "setup_seconds": 0.0,
   "variant": "V0-shadow"
 }

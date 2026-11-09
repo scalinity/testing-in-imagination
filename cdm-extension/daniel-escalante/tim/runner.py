@@ -153,6 +153,8 @@ def make_evaluator(variant, dataset, scorer_factory, log=None, limits=Limits()):
         environment.__class__ = guarded_class(type(environment), variant, vocab, scorer, limits)
         rewards = [instantiate(item) for item in cfg.reward_function.reward_functions]
         recorder, rows = Recorder(model), []
+        if log is not None and hasattr(log, "started"):
+            log.started()
         for index in range(len(dataset)):
             item = dict(dataset[index])
             patient_id = int(item["patient_id"])
@@ -200,9 +202,12 @@ def split_cfg(settings, split):
 class Progress:
     """Episode log plus public progress events, one per completed patient."""
 
-    def __init__(self, episodes, bundle, total, already):
+    def __init__(self, episodes, bundle, total, already, clock):
         self.episodes, self.bundle, self.total, self.count = episodes, bundle, total, already
-        self.done = episodes.done
+        self.done, self.clock, self.setup_done = episodes.done, clock, None
+
+    def started(self):
+        self.setup_done = self.clock()
 
     def append(self, patient_id, row):
         self.episodes.append(patient_id, row)
@@ -239,7 +244,7 @@ def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock)
     done = episodes.open()
     if done:
         bundle.emit("progress", completed=len(done), total=len(dataset), resumed=True)
-    log = Progress(episodes, bundle, len(dataset), len(done))
+    log = Progress(episodes, bundle, len(dataset), len(done), clock)
     bench = [] if stage.startswith("bench") and variant.shadow else None
 
     def wrap(scorer):
@@ -267,5 +272,6 @@ def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock)
             "scoring_calls": 0, "max_abs_fast_minus_reference": None, "fast_within_tolerance": None,
             "next_token_checks": 0, "next_token_agreement": None}
         bundle.aggregate("bench", {"variant": variant_name, "patients": len(rows), "seconds": seconds,
+                                   "setup_seconds": (log.setup_done or start) - start,
                                    "decision_turns": sum(r["n_turns"] for r in rows), **measured}, job=variant_name)
     return {"patients": len(rows), "seconds": seconds}

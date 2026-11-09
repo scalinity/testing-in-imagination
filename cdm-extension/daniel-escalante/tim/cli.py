@@ -160,6 +160,21 @@ def synthetic_all(settings):
     render_phase_a(target / "phase-a" / "metrics.json")
 
 
+def check_git_command():
+    from tim.approvals import FOLDER
+    from tim.publish import ATTRIBUTION, check_git
+    violations = check_git(ROOT, str(FOLDER))
+    messages = subprocess.run(["git", "-C", str(ROOT), "log", "origin/main..HEAD", "--format=%B"],
+                              capture_output=True, text=True, check=True).stdout
+    if ATTRIBUTION.search(messages):
+        violations.append(("commit messages since origin/main", "attribution text"))
+    for path, rule in violations:
+        print(f"{rule}: {path}")
+    if violations:
+        raise SystemExit(1)
+    print("check-git: PASS")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="tim")
     parser.add_argument("command")
@@ -181,6 +196,14 @@ def main(argv=None):
         print(f"published: {publish(settings, args.target, results_root())}")
     elif args.command == "render":
         print(f"rendered: {render_phase_a(results_root() / 'credentialed' / 'phase-a' / 'metrics.json')}")
+    elif args.command == "check-git":
+        check_git_command()
+    elif args.command == "approval-request":
+        from tim import approvals
+        path = approvals.request(settings, args.target)
+        body = json.loads(path.read_text())
+        print(f"drafted {path.relative_to(ROOT)}: {len(body['jobs'])} jobs, {body['gpu_hours_total']} GPU-h, "
+              f"about {body['expected_wall_hours']} h of wall time if the jobs start together")
     elif args.command in (*GPU_STAGES, *CPU_STAGES):
         run_command(settings, args.command, args.job)
     else:
