@@ -1,0 +1,24 @@
+{
+  "type": "object", "additionalProperties": false,
+  "required": ["source", "digests", "class_counts", "metrics", "confusion", "requests", "t5_matches_reference"],
+  "properties": {
+    "source": {"type": "string", "enum": "source"},
+    "digests": {"type": "object", "keys": "digest_name", "values": {"type": "string", "format": "identifier"}},
+    "class_counts": {"type": "object", "keys": "split",
+                     "values": {"type": "object", "keys": "disease", "values": {"type": "integer", "minimum": 0}}},
+    "metrics": {"type": "object", "keys": "metric", "values": {"anyOf": [{"type": "null"}, {"type": "number"}]}},
+    "confusion": {"type": "object", "keys": "disease",
+                  "values": {"type": "object", "keys": "outcome", "values": {"type": "integer", "minimum": 0}}},
+    "requests": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requested", "provided", "unavailable", "repeated"],
+      "properties": {
+        "requested": {"type": "integer", "minimum": 0},
+        "provided": {"type": "integer", "minimum": 0},
+        "unavailable": {"type": "integer", "minimum": 0},
+        "repeated": {"type": "integer", "minimum": 0}
+      }
+    },
+    "t5_matches_reference": {"type": "boolean"}
+  }
+}
