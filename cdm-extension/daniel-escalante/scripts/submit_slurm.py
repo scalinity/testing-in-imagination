@@ -40,6 +40,8 @@ def main():
     logs.mkdir(parents=True, exist_ok=True)
     logs.chmod(0o700)
     export = f"ALL,TIM_WORK_DIR={settings.work_dir},CDM_WORK_DIR={settings.baseline_dir}"
+    if site.get("HF_HOME"):  # the model cache the baseline run used
+        export += f",HF_HOME={site['HF_HOME']}"
     common = ["sbatch", "--parsable", "--nodes=1", "--ntasks=1", f"--chdir={OWN}", f"--export={export}",
               f"--output={logs}/slurm-%j.out", f"--error={logs}/slurm-%j.err"]
     submissions = []
