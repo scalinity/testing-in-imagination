@@ -80,6 +80,15 @@ Analytic references on the official nonanswers (expected T5 gains, not results):
 
 A null result is read against these figures: an effect smaller than the minimum detectable effect would usually go undetected at this sample size.
 
+## Interpretation (SPEC §11)
+
+V1 − official is statistically significant but V3 − V1 is not: the hypothesis agent already held the missing answers, and the online guards added nothing measurable.
+
+## Protocol notes
+
+- `prereg/amendments/A1-code-fixes.md`: code fixes made before test access after an independent review, including the disclosure that the first smoke job's loader parsed the train and test files.
+- `prereg/amendments/A2-reference-scoring.md`: decisions use the reference scoring path after bench-a found the fast path outside its tolerance.
+
 ## Limitations
 
 - Previously examined benchmark (see the disclosure above).

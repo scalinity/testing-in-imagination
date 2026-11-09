@@ -67,3 +67,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | test-a | GPU job 50486142 (V0-rerun) | `results/credentialed/test-a/` | pass: 240 test admissions in 26 min |
 | 2026-11-09 | test-a | GPU job 50486143 (V2) | `results/credentialed/test-a/` | pass: 240 test admissions in 26 min |
 | 2026-11-09 | test-a | GPU job 50486144 (V3) | `results/credentialed/test-a/` | pass: 240 test admissions in 22 min |
+| 2026-11-09 | analyze-a | CPU job 50494729 (cai5731-b) | `results/credentialed/phase-a/` | V0-rerun 240/240 identical; V3 T5 81.83 vs official 73.09; ΔT5 +8.75 [4.67, 13.35], statistically significant |

@@ -98,7 +98,24 @@ def render(metrics: dict, disclosure: str) -> str:
         lines.append(f"- {NAMES[key]}: validation effect {_signed(s['val_effect'])} points, power at that effect "
                      f"{_n(s['power_at_val_effect'], 3)}, minimum detectable effect at 80% power {_n(s['mde_80'])} points.")
     lines += ["", "A null result is read against these figures: an effect smaller than the minimum detectable effect "
-              "would usually go undetected at this sample size.\n",
+              "would usually go undetected at this sample size.\n", "## Interpretation (SPEC §11)\n"]
+    significant = {key: c["significance"] == "statistically significant" for key, c in metrics["family_a"].items()}
+    primary_significant = primary["significance"] == "statistically significant"
+    if significant["V1-official"] and not significant["V3-V1"]:
+        lines.append("V1 − official is statistically significant but V3 − V1 is not: the hypothesis agent already held "
+                     "the missing answers, and the online guards added nothing measurable.")
+    if not primary_significant:
+        lines.append("V3 − official is not statistically significant. Read it against the ladder, recovery yield "
+                     "versus the analytic references, regressions, termination changes and the sensitivity figures: "
+                     "G3 is the V1 row, G2 the V2 rows and G1 the step from V2 to V3.")
+    if primary_significant and not (significant["V1-official"] and not significant["V3-V1"]):
+        lines.append("The primary comparison is statistically significant; the Family-A rows separate the "
+                     "fallback (V1) from the online guards (V3 − V1).")
+    lines += ["", "## Protocol notes\n",
+              "- `prereg/amendments/A1-code-fixes.md`: code fixes made before test access after an independent "
+              "review, including the disclosure that the first smoke job's loader parsed the train and test files.",
+              "- `prereg/amendments/A2-reference-scoring.md`: decisions use the reference scoring path after "
+              "bench-a found the fast path outside its tolerance.", "",
               "## Limitations\n",
               "- Previously examined benchmark (see the disclosure above).",
               "- One policy seed: between-seed variation is unassessable.",
