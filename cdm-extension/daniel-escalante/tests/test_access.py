@@ -174,3 +174,28 @@ def test_a_run_with_every_row_but_no_finish_completes_without_evaluation(setting
     assert len(resumed.open()) == 3 and resumed.done == {90002001, 90002002, 90002003}
     resumed.finish()
     assert access.Ledger(settings.admission_dir).entries()[-1]["event"] == "completed"
+
+
+def test_a_concurrent_reader_never_sees_a_partly_written_split_file(settings, monkeypatch):
+    access.open_split(settings, "val-a", "val")
+    final = settings.work_dir / "private/prepared/val-a/val.csv"
+    complete, seen, real_writer = final.read_text(), [], access.csv.writer
+
+    class Watching:
+        """Writes the header, then looks at the final path as another job would, then the rest."""
+
+        def __init__(self, handle):
+            self.handle, self.writer = handle, real_writer(handle)
+
+        def writerows(self, rows):
+            rows = list(rows)
+            self.writer.writerows(rows[:1])
+            self.handle.flush()
+            seen.append(final.read_text())
+            self.writer.writerows(rows[1:])
+
+    monkeypatch.setattr(access.csv, "writer", Watching)
+    access.open_split(settings, "val-a", "val")
+    assert seen == [complete]
+    assert final.read_text() == complete
+    assert sorted(p.name for p in final.parent.iterdir()) == ["lab_test_mapping.csv", "val.csv"]

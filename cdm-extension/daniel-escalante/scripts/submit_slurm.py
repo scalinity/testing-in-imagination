@@ -39,6 +39,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", required=True, choices=(*GPU_STAGES, *CPU_STAGES))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--jobs", help="comma-separated subset of the stage's jobs (for jobs that never started)")
     args = parser.parse_args()
     settings = Settings.load()
     if settings.synthetic:
@@ -62,7 +63,13 @@ def main():
             # Unapproved smoke may not outlast what remains of its 0.5 GPU-hour allowance.
             smoke_left = int(approvals.SMOKE_CAP_SECONDS - approvals.smoke_used_seconds(settings)) // 60
         accounts = least_busy_first([a for a in site["SLURM_ACCOUNTS"].split(",") if a])
-        for i, job in enumerate(STAGE_SPECS[args.stage]["jobs"]):
+        selected = STAGE_SPECS[args.stage]["jobs"]
+        if args.jobs:
+            unknown = set(args.jobs.split(",")) - set(selected)
+            if unknown:
+                parser.error("jobs not in this stage: " + ", ".join(sorted(unknown)))
+            selected = [j for j in selected if j in args.jobs.split(",")]
+        for i, job in enumerate(selected):
             account = accounts[i % len(accounts)]
             budget = hours.get(job, approvals.PROVISIONAL[args.stage])
             submissions.append((job, account, common + [

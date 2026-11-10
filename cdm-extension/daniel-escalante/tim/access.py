@@ -55,10 +55,19 @@ def listed(stage: str, ids, labels) -> list:
     return sorted(chosen, key=lambda p: _order("bench", p))
 
 
+def _replace(path: Path, write) -> None:
+    """Write through a uniquely named temporary file, then rename it into place, so a job
+    reading the same private file while another job rewrites it sees a complete file."""
+    import socket
+    temporary = path.with_name(f".{path.name}.{socket.gethostname()}.{os.getpid()}.tmp")
+    write(temporary)
+    os.replace(temporary, path)
+
+
 def _record_ids(settings, split, ids):
     folder = settings.work_dir / "private" / "ids"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{split}.txt").write_text("".join(f"{i}\n" for i in ids))
+    _replace(folder / f"{split}.txt", lambda tmp: tmp.write_text("".join(f"{i}\n" for i in ids)))
 
 
 def baseline_cfg(settings):
@@ -93,9 +102,12 @@ def open_split(settings, stage: str, split: str):
         records = [records[position[p]] for p in chosen]
     data_dir = settings.work_dir / "private" / "prepared" / stage
     data_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source / "lab_test_mapping.csv", data_dir / "lab_test_mapping.csv")
-    with (data_dir / f"{split}.csv").open("w", newline="", encoding="utf-8") as handle:
-        csv.writer(handle).writerows([header, *records])
+    _replace(data_dir / "lab_test_mapping.csv", lambda tmp: shutil.copyfile(source / "lab_test_mapping.csv", tmp))
+
+    def write_split(tmp):
+        with tmp.open("w", newline="", encoding="utf-8") as handle:
+            csv.writer(handle).writerows([header, *records])
+    _replace(data_dir / f"{split}.csv", write_split)
     dataset = MIMICCDMDataset(data_file=str(data_dir / f"{split}.csv"),
                               lab_test_mapping_file=str(data_dir / "lab_test_mapping.csv"),
                               lab_tests=list(dataset_cfg.lab_tests), imaging_tests=list(dataset_cfg.imaging_tests),
