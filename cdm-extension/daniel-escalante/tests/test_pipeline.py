@@ -40,7 +40,7 @@ def two_runs(tmp_path_factory):
 
 def test_synthetic_end_to_end_publishes_every_phase_a_bundle(two_runs):
     first, _ = two_runs
-    assert sorted(p.name for p in first.iterdir()) == sorted(PUBLISHED)
+    assert sorted(p.name for p in first.iterdir() if p.is_dir()) == sorted(PUBLISHED)
     metrics = json.loads((first / "phase-a" / "metrics.json").read_text())
     validate(metrics, load_schema("metrics"))
     assert metrics["source"] == "synthetic"
@@ -82,3 +82,13 @@ def test_phase_b_publishes_the_specs_deliverables(two_runs):
     report = (phase_b / "REPORT.md").read_text()
     assert report.startswith("> **SYNTHETIC**") and "not full world-model planning" in report
     assert f"{metrics['family_b']['B-oracle-B-uniform']['delta_t5']:+.2f}" in report
+
+
+def test_the_writeup_and_slide_are_rendered_beside_the_phases(two_runs):
+    first = two_runs[0]
+    assert sorted(p.name for p in first.iterdir() if p.is_file()) == ["SLIDE.md", "WRITEUP.md"]
+    metrics = json.loads((first / "phase-a" / "metrics.json").read_text())
+    for name in ("WRITEUP.md", "SLIDE.md"):
+        text = (first / name).read_text()
+        assert text.startswith("> **SYNTHETIC**")
+        assert f"{metrics['primary']['delta_t5']:+.2f}" in text

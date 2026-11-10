@@ -46,7 +46,7 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | `prereg/` | the frozen protocol, addenda and amendment notes |
 | `approvals/` | approval requests and Daniel's committed approvals |
 | `scripts/` | `tim.sh` (capture wrapper), `run_tim.py`, `gpu.slurm`, `cpu.slurm`, `submit_slurm.py` |
-| `results/credentialed/` | published credentialed bundles and the Phase reports |
+| `results/credentialed/` | published credentialed bundles, the Phase reports, and `WRITEUP.md` and `SLIDE.md` covering both phases |
 | `results/synthetic/` | the same structure from the synthetic fixture |
 
 ## Run log
@@ -81,3 +81,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | test-b | 14 GPU jobs (one per arm) | `results/credentialed/test-b/` | 14 of 14 arms completed all 240 test admissions; B-learned-s1's first job (50526631) failed before admission and nine arms were cancelled before starting (amendment A3), then resubmitted |
 | 2026-11-09 | analyze-b | CPU job 50535726 (cai5731-b) | `results/credentialed/phase-b/` | Family B (Holm): B-learned-s0-B-marginal +1.93 [-0.46, 4.85] not statistically significant; B-learned-s0-B-uniform -1.15 [-3.70, 1.47] not statistically significant; B-oracle-B-uniform +1.46 [-1.71, 4.98] not statistically significant |
 | 2026-11-09 | analyze-* re-run (SPEC §10.5) | CPU jobs 50537126, 50537128, 50538237, 50538238 | — | validation.json, validation_b.json, phase-a and phase-b metrics.json, wm_quality.json and leakage.json all byte-identical to the committed bundles |
+| 2026-11-10 | render (M9) | local, no data access | `results/credentialed/WRITEUP.md`, `SLIDE.md` | rendered from the committed phase-a and phase-b metrics.json and the replication's paper_values.json; both REPORT.md files re-rendered unchanged |
