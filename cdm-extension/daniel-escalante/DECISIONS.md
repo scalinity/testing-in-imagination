@@ -68,3 +68,4 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - **HPI audit.** For each split: the number of summaries, word-count quantiles, per-class counts, and how many summaries name each test (case-insensitive whole words).
 - **Planner scoring** uses the reference path (amendment A2). A planner turn scores the untried tests, or the four diseases when it stops.
 - **bench-b** runs B-learned-s0 and B-oracle on the 24 bench patients. Before it, its request budgets twice V3's bench-a per-patient time.
+- **Smaller host requests when a class pool is nearly full.** A pending GPU job may be reduced from SPEC §8's 4 CPUs and 16 GB to 2 CPUs and 14 GB with `scontrol update` so it fits the room a class pool has left. Every GPU job so far peaked at 10.5–11 GB of host memory, and generation and scoring run on the GPU, so the request does not change results. bench-b's B-oracle job (SLURM 50505468) was reduced this way on 2026-11-09.
