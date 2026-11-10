@@ -77,3 +77,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | val-b | GPU job 50522082 (B-uniform) | `results/credentialed/val-b/` | pass: 240 val patients in 28 min |
 | 2026-11-09 | val-b | GPU job 50522083 (B-learned-s0) | `results/credentialed/val-b/` | pass: 240 val patients in 27 min |
 | 2026-11-09 | val-b | GPU job 50522084 (B-oracle) | `results/credentialed/val-b/` | pass: 240 val patients in 28 min |
+| 2026-11-09 | analyze-val-b | CPU job 50526372 (cai5731-b) | `results/credentialed/analyze-val-b/` | validation arms against P0 (val-a V3), descriptive intervals |
