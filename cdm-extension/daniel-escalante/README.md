@@ -79,3 +79,4 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | val-b | GPU job 50522084 (B-oracle) | `results/credentialed/val-b/` | pass: 240 val patients in 28 min |
 | 2026-11-09 | analyze-val-b | CPU job 50526372 (cai5731-b) | `results/credentialed/analyze-val-b/` | validation arms against P0 (val-a V3), descriptive intervals |
 | 2026-11-09 | test-b | 14 GPU jobs (one per arm) | `results/credentialed/test-b/` | 14 of 14 arms completed all 240 test admissions; B-learned-s1's first job (50526631) failed before admission and nine arms were cancelled before starting (amendment A3), then resubmitted |
+| 2026-11-09 | analyze-b | CPU job 50535726 (cai5731-b) | `results/credentialed/phase-b/` | Family B (Holm): B-learned-s0-B-marginal +1.93 [-0.46, 4.85] not statistically significant; B-learned-s0-B-uniform -1.15 [-3.70, 1.47] not statistically significant; B-oracle-B-uniform +1.46 [-1.71, 4.98] not statistically significant |
