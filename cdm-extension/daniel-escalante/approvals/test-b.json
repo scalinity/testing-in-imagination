@@ -1,7 +1,7 @@
 {
   "addendum_sha256": "3ab4dca55f32b4045be6a8de70ddd3e9fefaaf121782bb92de34949a9083493b",
   "approved_by": "Daniel Escalante",
-  "code_commit": "561da890ff65c3b0953778ff9441666723200c1a",
+  "code_commit": "a90fa9159f2e655cfee38bf1618cf7357452104f",
   "config_sha256": "66952a8a87d71a466de8e641dcd6d4c8e379898cd00917b7b75e1a5a352ba85c",
   "expected_wall_hours": 0.458,
   "gpu_hours": {
