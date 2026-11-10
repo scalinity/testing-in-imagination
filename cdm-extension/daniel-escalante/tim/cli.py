@@ -213,14 +213,31 @@ def results_root() -> Path:
     return Path(os.environ.get("TIM_RESULTS_DIR", OWN / "results"))
 
 
+def _disclosure() -> str:
+    from tim import protocol
+    return (json.loads(protocol.PATH.read_text())["disclosure"]["test_set_status"]
+            if protocol.PATH.exists() else "No protocol is committed for this synthetic run.")
+
+
 def render_phase(metrics_path: Path) -> Path:
-    from tim import protocol, render
-    disclosure = (json.loads(protocol.PATH.read_text())["disclosure"]["test_set_status"]
-                  if protocol.PATH.exists() else "No protocol is committed for this synthetic run.")
+    from tim import render
+    disclosure = _disclosure()
     metrics = json.loads(metrics_path.read_text())
     path = metrics_path.parent / "REPORT.md"
     path.write_text(render.render_b(metrics, disclosure) if "family_b" in metrics else render.render(metrics, disclosure))
     return path
+
+
+def render_summary(kind_dir: Path) -> list[Path]:
+    """WRITEUP.md and SLIDE.md beside the phase folders, from both phases' metrics.json (SPEC §7, M9)."""
+    from tim import render
+    from tim.paths import REPLICATION
+    a, b = (json.loads((kind_dir / phase / "metrics.json").read_text()) for phase in ("phase-a", "phase-b"))
+    paper = json.loads((REPLICATION / "results" / "paper_values.json").read_text())
+    writeup, slide = kind_dir / "WRITEUP.md", kind_dir / "SLIDE.md"
+    writeup.write_text(render.render_writeup(a, b, paper, _disclosure()))
+    slide.write_text(render.render_slide(a, b, paper))
+    return [writeup, slide]
 
 
 def synthetic_all(settings):
@@ -243,6 +260,7 @@ def synthetic_all(settings):
         publish(run, stage, results_root())
     for phase in ("phase-a", "phase-b"):
         render_phase(target / phase / "metrics.json")
+    render_summary(target)
 
 
 def check_git_command():
@@ -284,6 +302,9 @@ def main(argv=None):
             metrics = results_root() / "credentialed" / phase / "metrics.json"
             if metrics.exists():
                 print(f"rendered: {render_phase(metrics)}")
+        if all((results_root() / "credentialed" / phase / "metrics.json").exists() for phase in ("phase-a", "phase-b")):
+            for path in render_summary(results_root() / "credentialed"):
+                print(f"rendered: {path}")
     elif args.command in ("addendum-a", "addendum-b"):
         from tim import protocol
         write = protocol.addendum_a if args.command == "addendum-a" else protocol.addendum_b

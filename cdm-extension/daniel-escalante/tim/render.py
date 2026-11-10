@@ -184,3 +184,179 @@ def render_b(metrics: dict, disclosure: str) -> str:
               "- Retrospective: availability in the chart reflects completed workups, not what a test would show.",
               "- No clinical-safety inference.", ""]
     return "\n".join(lines)
+
+
+def _money(value):
+    return "—" if value is None else f"${value:,.2f}"
+
+
+def _holm(c):
+    return f"Holm-adjusted {_p_clause(c['p_holm'])}"
+
+
+def _significant(c):
+    return c["significance"] == "statistically significant"
+
+
+def _headline(official, v3, primary, n):
+    if not _significant(primary):
+        return (f"On the {n} test admissions, the commit guard (V3) scores mean per-class recall (T5) "
+                f"{_n(v3['T5'])} against {_n(official['T5'])} for the trained policy: ΔT5 = {_interval(primary)} "
+                f"percentage points, and the difference is not statistically significant "
+                f"({_p_clause(primary['p_value'])}).")
+    verb = "raises" if primary["delta_t5"] > 0 else "lowers"
+    text = (f"On the {n} test admissions, the commit guard (V3) {verb} mean per-class recall (T5) from "
+            f"{_n(official['T5'])} to {_n(v3['T5'])}: ΔT5 = {_interval(primary)} percentage points, statistically "
+            f"significant (paired sign-flip randomization, {_p_clause(primary['p_value'])}).")
+    if primary["delta_t5"] > 0:
+        missed = (100 - official["T5"], 100 - v3["T5"])
+        text += (f" That is a {_n(100 * primary['delta_t5'] / official['T5'], 1)}% relative increase, and "
+                 f"the average share of each disease's patients that are missed falls from {_n(missed[0])}% to "
+                 f"{_n(missed[1])}%, {_n(100 * (missed[0] - missed[1]) / missed[0], 1)}% fewer.")
+    return text
+
+
+PHASE_B_SHOWN = (("P0", "P0 = V3, no reranking"), ("B-learned-s0", "Learned availability (seed 0)"),
+                 ("B-marginal", "Test prevalence only"), ("B-uniform", "Uniform availability"),
+                 ("B-oracle", "Privileged oracle (true chart availability)"))
+
+
+def render_writeup(a: dict, b: dict, paper: dict, disclosure: str) -> str:
+    """WRITEUP.md: both phases in one short account (SPEC §7, M9); every number comes from the arguments."""
+    va, primary, family_a = a["variants"], a["primary"], a["family_a"]
+    official, v1, v3 = (va[k]["metrics"] for k in ("official", "V1", "V3"))
+    n, rec = va["official"]["n"], a["recovery"]["V3"]
+    paper_t1 = paper["table1"]
+    paper_t5, gap = paper_t1["T5"]["value"], v3["T5"] - paper_t1["T5"]["value"]
+    v1_off, v3_v1 = family_a["V1-official"], family_a["V3-V1"]
+    t, rerun = va["V0-rerun"]["termination"], a["v0_rerun"]
+    lines = [BANNER if a["source"] == "synthetic" else "",
+             "# Commit guard and chart-availability reranking on LA-CDM\n",
+             f"**Summary.** {_headline(official, v3, primary, n)} The comparator is the replication's trained "
+             "Nemotron Nano 8B policy; these results are not a reproduction of the paper.\n",
+             "## The question\n",
+             f"The trained LA-CDM policy ends {va['official']['nonanswers']} of {n} test episodes without a "
+             "diagnosis, and the frozen metric counts each of those as wrong. In the guard-off re-run "
+             f"({rerun['identical']}/{rerun['total']} predictions identical to the official rows), {t['step_limit']} "
+             f"hit the step limit, {t['length_completion'] + t['length_observation']} ran out of context "
+             f"({t['length_completion']} while generating, {t['length_observation']} after an observation) and "
+             f"{t['malformed']} ended on a malformed action. Phase A asks whether guarding the "
+             "policy's actions and committing to an answer recovers those admissions. Phase B asks whether "
+             "reweighting the policy's test requests by how likely each test is to be in the chart, given the "
+             "history of present illness (HPI), helps further.\n",
+             "## What was built\n",
+             "- **G1 validity guard.** When the policy proposes a malformed, unknown or repeated action, the guard "
+             "replaces it with the candidate the policy itself scores highest (teacher-forced log-probability).",
+             "- **G2 budget commit.** At the last allowed step, or when the trajectory would overflow, the guard "
+             "makes the policy commit to its highest-scoring diagnosis.",
+             "- **G3 hypothesis fallback.** If an episode still ends without a diagnosis, the hypothesis agent's "
+             "latest valid hypothesis becomes the answer. It reuses an answer the system already produced, so it "
+             "is not a new diagnostic predictor.",
+             "- **Phase B reranking.** A TF-IDF logistic regression per test estimates p(test present in chart | "
+             "HPI); a fixed planner reweights the policy's test requests on top of V3. The prevalence-only, uniform, "
+             "oracle and corrupted arms isolate where any change comes from.\n",
+             "## How it was tested\n",
+             f"- The protocol (`prereg/protocol.json`) was frozen before any test access; amendments A1–A3 record "
+             f"code fixes made before the affected test runs. Test-set status: a prospectively frozen follow-up "
+             f"analysis on a previously examined benchmark. {disclosure}",
+             f"- Re-running the policy with every guard off reproduced {rerun['identical']}/{rerun['total']} of the "
+             "official test predictions.",
+             "- ΔT5 is tested with a two-sided paired sign-flip randomization test; intervals are 95% "
+             "class-stratified paired bootstrap; comparisons within Family A and Family B are Holm-adjusted.\n",
+             "## Phase A: commit guard\n",
+             "| Arm | Mean recall (T5) | Micro F1 (T6) | Macro F1 (T7) | Avg test cost (T8) | Nonanswers |",
+             "|---|---|---|---|---|---|"]
+    for key, label in (("official", "Trained policy, official rows (comparator)"), ("V1", "V1: fallback only"),
+                       ("V3", "V3: G1 + G2 + G3 (method)")):
+        m = va[key]["metrics"]
+        lines.append(f"| {label} | {_n(m['T5'])} | {_n(m['T6'])} | {_n(m['T7'])} | {_money(m['T8'])} | "
+                     f"{va[key]['nonanswers']}/{va[key]['n']} |")
+    lines += [f"| Paper, as reported | {_n(paper_t5)} | {_n(paper_t1['T6']['value'])} | "
+              f"{_n(paper_t1['T7']['value'])} | {_money(paper_t1['T8']['value'])} | — |", "",
+              f"- **Recovery.** V3 answered {rec['newly_answered']} of the {rec['baseline_nonanswers']} admissions the "
+              f"trained policy left without a diagnosis, {rec['correct_recoveries']} of them correctly; "
+              f"{rec['regressions']} admissions the policy had right became wrong.",
+              f"- **Where the gain comes from.** V1 − official (fallback only): {_interval(v1_off)}, "
+              f"{v1_off['significance']} ({_holm(v1_off)}). V3 − V1 (adding the online guards): {_interval(v3_v1)}, "
+              f"{v3_v1['significance']} ({_holm(v3_v1)}).",
+              f"- **Cost.** Average provided-test cost is {_money(v3['T8'])} for V3, {_money(v1['T8'])} for V1 and "
+              f"{_money(official['T8'])} for the trained policy.",
+              f"- **The paper's figure.** The paper reports T5 {_n(paper_t5)}; V3 is {_n(abs(gap))} points "
+              f"{'above' if gap > 0 else 'below'} it. That figure comes from the authors' own run and has no interval "
+              "here, so this comparison is descriptive, not a test.", "",
+              "| Arm | " + " | ".join(DISEASES) + " |", "|---|---|---|---|---|"]
+    for key, label in (("official", "Trained policy"), ("V1", "V1"), ("V3", "V3")):
+        m = va[key]["metrics"]
+        lines.append(f"| {label} | " + " | ".join(_n(m[f"T{i}"]) for i in range(1, 5)) + " |")
+    lines += ["", "Per-class recall (%) on the test admissions.\n"]
+    if _significant(v1_off) and not _significant(v3_v1):
+        lines.append(f"The fallback alone (V1) scores {_n(v1['T5'])}, and the online guards change that by an amount "
+                     "that is not statistically significant: the hypothesis agent already held the missing answers, "
+                     "and the online guards added nothing measurable.\n")
+    vb, family_b = b["variants"], b["family_b"]
+    lines += ["## Phase B: chart-availability reranking\n",
+              "| Arm | Mean recall (T5) | ΔT5 vs P0 [95% CI], descriptive | Avg test cost (T8) | Nonanswers |",
+              "|---|---|---|---|---|"]
+    for key, label in PHASE_B_SHOWN:
+        m = vb[key]["metrics"]
+        delta = "—" if key == "P0" else _interval(b["descriptive"][f"{key}-P0"])
+        lines.append(f"| {label} | {_n(m['T5'])} | {delta} | {_money(m['T8'])} | "
+                     f"{vb[key]['nonanswers']}/{vb[key]['n']} |")
+    lines += ["", "| Family B contrast | ΔT5 [95% CI] | Holm-adjusted p | Statement |", "|---|---|---|---|"]
+    for key, c in family_b.items():
+        lines.append(f"| {B_NAMES[key]} | {_interval(c)} | {_p(c['p_holm'])} | {c['significance']} |")
+    significant_b = [B_NAMES[key] for key, c in family_b.items() if _significant(c)]
+    bits = b["leakage"]["test"]["bits"]
+    lines += ["", ("No Family-B contrast is statistically significant: at the measured world-model precision, "
+                   "patient-specific availability estimates did not measurably beat prevalence-only or uniform "
+                   "weights under this fixed reranker. That is a finding about this reranker, not a general claim "
+                   "about chart availability.\n" if not significant_b else
+                   "Statistically significant Family-B contrasts: " + "; ".join(significant_b) + ".\n"),
+              f"The learned model's test AUROC for chart presence is "
+              f"{_n(b['quality']['test']['B-learned-s0']['auroc'], 3)}. The oracle arm sees which tests are actually "
+              "in the chart, so its difference from P0 is descriptive only. It is privileged: "
+              f"the availability bits alone predict the diagnosis with T5 {_n(bits['T5'])} on test, against "
+              f"{_n(100 / len(DISEASES))} by chance, because chart presence encodes the clinicians' completed "
+              "workup.\n",
+              "## Limitations\n",
+              "- A previously examined benchmark (see the test-set status above) and one policy seed, so "
+              "between-seed variation is unassessable.",
+              "- The guard scores candidates with the policy's own likelihood, not a calibrated posterior; "
+              "verbalizer and length effects remain.",
+              "- Phase B is retrospective: chart availability reflects completed workups, not what a test would show.",
+              "- No clinical-safety inference; person-level overlap is unassessable because the release ships no "
+              "subject_id.\n",
+              "## More detail\n",
+              "- Full reports: [`phase-a/REPORT.md`](phase-a/REPORT.md), [`phase-b/REPORT.md`](phase-b/REPORT.md).",
+              "- Specification, preregistration and decisions: [`SPEC.md`](../../SPEC.md), "
+              "[`prereg/`](../../prereg/), [`DECISIONS.md`](../../DECISIONS.md).", ""]
+    return "\n".join(lines)
+
+
+def render_slide(a: dict, b: dict, paper: dict) -> str:
+    """SLIDE.md: one slide of headline numbers (SPEC §7, M9); every number comes from the arguments."""
+    va, vb, primary = a["variants"], b["variants"], a["primary"]
+    v1_off, v3_v1 = a["family_a"]["V1-official"], a["family_a"]["V3-V1"]
+    paper_t1 = paper["table1"]
+    significant_b = sum(_significant(c) for c in b["family_b"].values())
+    lines = [BANNER if a["source"] == "synthetic" else "",
+             f"# Commit guard on LA-CDM: mean recall {_n(va['official']['metrics']['T5'])} → "
+             f"{_n(va['V3']['metrics']['T5'])}\n",
+             "| | Mean recall (T5) | Nonanswers | Avg test cost |", "|---|---|---|---|"]
+    for block, label in ((va["official"], "Trained policy (comparator)"), (va["V1"], "+ hypothesis fallback (V1)"),
+                         (va["V3"], "**V3: guards + fallback (method)**"),
+                         (vb["B-learned-s0"], "V3 + learned availability reranking")):
+        m = block["metrics"]
+        lines.append(f"| {label} | {_n(m['T5'])} | {block['nonanswers']}/{block['n']} | {_money(m['T8'])} |")
+    lines += [f"| Paper, as reported | {_n(paper_t1['T5']['value'])} | — | {_money(paper_t1['T8']['value'])} |", "",
+              f"- **ΔT5 (V3 − comparator) = {_interval(primary)}** points, {primary['significance']} (paired "
+              f"sign-flip {_p_clause(primary['p_value'])}, {va['official']['n']} test admissions).",
+              f"- The fallback carries the gain: V1 − comparator {_interval(v1_off)}, {v1_off['significance']}; "
+              f"V3 − V1 {_interval(v3_v1)}, {v3_v1['significance']} (Holm).",
+              f"- Availability reranking: {significant_b} of {len(b['family_b'])} Family-B contrasts statistically "
+              f"significant (Holm); privileged oracle − V3 {_interval(b['descriptive']['B-oracle-P0'])}, descriptive.",
+              "",
+              "These results are not a reproduction of the paper. One policy seed, a previously examined benchmark, "
+              "no clinical-safety inference. Every number is rendered from `phase-a/metrics.json`, "
+              "`phase-b/metrics.json` and the replication's `paper_values.json`.", ""]
+    return "\n".join(lines)

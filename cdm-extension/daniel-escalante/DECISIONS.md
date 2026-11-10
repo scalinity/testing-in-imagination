@@ -70,3 +70,8 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - **bench-b** runs B-learned-s0 and B-oracle on the 24 bench patients. Before it, its request budgets twice V3's bench-a per-patient time.
 - **Smaller host requests when a class pool is nearly full.** A pending GPU job may be reduced from SPEC §8's 4 CPUs and 16 GB to 2 CPUs and 14 GB with `scontrol update` so it fits the room a class pool has left. Every GPU job so far peaked at 10.5–11 GB of host memory, and generation and scoring run on the GPU, so the request does not change results. bench-b's B-oracle job (SLURM 50505468) was reduced this way on 2026-11-09.
 - **Shared private files are replaced atomically (amendment A3).** Jobs of one stage share `$TIM_WORK_DIR/private/prepared/<stage>/`; each file is written to a temporary name and renamed into place. `submit_slurm.py --jobs` resubmits only named jobs of a stage, for jobs that never started.
+
+## Write-up and slide (M9)
+- `WRITEUP.md` and `SLIDE.md` sit beside the phase folders under `results/credentialed/` and `results/synthetic/`. `tim.sh render` and the synthetic run write them, so the byte-identical synthetic check and check-git cover them like the phase reports.
+- Their numbers come from both phases' metrics.json. The paper's reported figures come from the replication's committed `results/paper_values.json`, read only. The comparison with the paper is descriptive: that figure comes from the authors' own run and has no interval.
+- results_table.tex and figures (SPEC §7) are not produced.
