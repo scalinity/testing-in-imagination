@@ -1,0 +1,12 @@
+{
+  "decision_turns": 61,
+  "fast_within_tolerance": null,
+  "max_abs_fast_minus_reference": null,
+  "next_token_agreement": null,
+  "next_token_checks": 0,
+  "patients": 24,
+  "scoring_calls": 0,
+  "seconds": 0.0,
+  "setup_seconds": 0.0,
+  "variant": "B-oracle"
+}

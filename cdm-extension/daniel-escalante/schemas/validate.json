@@ -1,0 +1,10 @@
+{
+  "type": "object", "additionalProperties": false,
+  "required": ["source", "digests", "baseline", "t5_matches_reference"],
+  "properties": {
+    "source": {"type": "string", "enum": "source"},
+    "digests": {"type": "object", "keys": "digest_name", "values": {"type": "string", "format": "identifier"}},
+    "baseline": {"$ref": "summary"},
+    "t5_matches_reference": {"anyOf": [{"type": "null"}, {"type": "boolean"}]}
+  }
+}

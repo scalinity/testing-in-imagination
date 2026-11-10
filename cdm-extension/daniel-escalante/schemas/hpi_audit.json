@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "keys": "split",
+  "values": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "n",
+      "word_count",
+      "mentions",
+      "class_counts"
+    ],
+    "properties": {
+      "n": {
+        "$ref": "count"
+      },
+      "word_count": {
+        "type": "object",
+        "keys": "quantile",
+        "values": {
+          "type": "number"
+        }
+      },
+      "mentions": {
+        "type": "object",
+        "keys": "test",
+        "values": {
+          "$ref": "count"
+        }
+      },
+      "class_counts": {
+        "type": "object",
+        "keys": "disease",
+        "values": {
+          "$ref": "count"
+        }
+      }
+    }
+  }
+}

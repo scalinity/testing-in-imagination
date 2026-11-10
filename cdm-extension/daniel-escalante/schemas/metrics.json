@@ -1,0 +1,172 @@
+{
+  "$defs": {
+    "phase_a": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "variants",
+        "v0_rerun",
+        "controls",
+        "recovery",
+        "primary",
+        "family_a",
+        "descriptive",
+        "second_comparator",
+        "sensitivity",
+        "t5_reference"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": "source"
+        },
+        "t5_reference": {
+          "$ref": "number_or_null"
+        },
+        "variants": {
+          "type": "object",
+          "keys": "ladder",
+          "values": {
+            "$ref": "summary"
+          }
+        },
+        "v0_rerun": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identical",
+            "total",
+            "qualified"
+          ],
+          "properties": {
+            "identical": {
+              "$ref": "count"
+            },
+            "total": {
+              "$ref": "count"
+            },
+            "qualified": {
+              "type": "boolean"
+            }
+          }
+        },
+        "controls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "uniform_random",
+            "training_majority",
+            "perfect_recovery"
+          ],
+          "properties": {
+            "uniform_random": {
+              "type": "number"
+            },
+            "training_majority": {
+              "type": "number"
+            },
+            "perfect_recovery": {
+              "type": "number"
+            }
+          }
+        },
+        "recovery": {
+          "type": "object",
+          "keys": "ladder",
+          "values": {
+            "$ref": "recovery"
+          }
+        },
+        "primary": {
+          "$ref": "comparison"
+        },
+        "family_a": {
+          "type": "object",
+          "keys": "comparison",
+          "values": {
+            "$ref": "comparison"
+          }
+        },
+        "descriptive": {
+          "type": "object",
+          "keys": "comparison",
+          "values": {
+            "$ref": "comparison"
+          }
+        },
+        "second_comparator": {
+          "type": "object",
+          "keys": "comparison",
+          "values": {
+            "$ref": "comparison"
+          }
+        },
+        "sensitivity": {
+          "$ref": "sensitivity"
+        }
+      }
+    },
+    "phase_b": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "variants",
+        "family_b",
+        "descriptive",
+        "quality",
+        "leakage"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": "source"
+        },
+        "variants": {
+          "type": "object",
+          "keys": "arm_b",
+          "values": {
+            "$ref": "summary"
+          }
+        },
+        "family_b": {
+          "type": "object",
+          "keys": "comparison",
+          "values": {
+            "$ref": "comparison"
+          }
+        },
+        "descriptive": {
+          "type": "object",
+          "keys": "comparison",
+          "values": {
+            "$ref": "comparison"
+          }
+        },
+        "quality": {
+          "type": "object",
+          "keys": "split",
+          "values": {
+            "$ref": "quality_split"
+          }
+        },
+        "leakage": {
+          "type": "object",
+          "keys": "split",
+          "values": {
+            "$ref": "leakage_split"
+          }
+        }
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "phase_a"
+    },
+    {
+      "$ref": "phase_b"
+    }
+  ]
+}

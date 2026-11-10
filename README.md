@@ -24,6 +24,7 @@
 | `baseline/` | Upstream LA-CDM as submodule (later); never vendor |
 | `extension/` | Synthetic env, world model, planners |
 | `extension/envs/synthetic_diagnosis/` | Stage 1 synthetic CDM env + JSONL tuple export |
+| `cdm-extension/daniel-escalante/` | Commit guard and chart-availability reranking on the replication baseline (Daniel); results in `results/credentialed/phase-{a,b}/` |
 | `tools/` | Offline verification scripts |
 | `results/` | Logged metrics only |
 

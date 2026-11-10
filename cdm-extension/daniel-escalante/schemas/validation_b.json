@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "variants",
+    "descriptive"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": "source"
+    },
+    "variants": {
+      "type": "object",
+      "keys": "arm_b",
+      "values": {
+        "$ref": "summary"
+      }
+    },
+    "descriptive": {
+      "type": "object",
+      "keys": "comparison",
+      "values": {
+        "$ref": "comparison"
+      }
+    }
+  }
+}

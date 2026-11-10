@@ -1,0 +1,8 @@
+{"commit": "f3e67c08919d", "protocol": "7fc5cda72158e08d", "source": "mimic", "split": "val", "stage": "smoke", "type": "job_start", "variant": "V3"}
+{"completed": 1, "total": 2, "type": "progress"}
+{"completed": 2, "total": 2, "type": "progress"}
+{"patients": 2, "seconds": 185.54234640300274, "status": "pass", "type": "job_end"}
+{"commit": "4eed07738dcf", "protocol": "7fc5cda72158e08d", "source": "mimic", "split": "val", "stage": "smoke", "type": "job_start", "variant": "V3"}
+{"completed": 1, "total": 2, "type": "progress"}
+{"completed": 2, "total": 2, "type": "progress"}
+{"patients": 2, "seconds": 182.6252525150776, "status": "pass", "type": "job_end"}

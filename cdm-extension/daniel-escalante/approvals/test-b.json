@@ -1,0 +1,127 @@
+{
+  "addendum_sha256": "3ab4dca55f32b4045be6a8de70ddd3e9fefaaf121782bb92de34949a9083493b",
+  "approved_by": "Daniel Escalante",
+  "code_commit": "a90fa9159f2e655cfee38bf1618cf7357452104f",
+  "config_sha256": "66952a8a87d71a466de8e641dcd6d4c8e379898cd00917b7b75e1a5a352ba85c",
+  "expected_wall_hours": 0.458,
+  "gpu_hours": {
+    "B-a0.1-T0.25-n0": 0.458,
+    "B-a0.1-T0.25-n1": 0.458,
+    "B-a0.1-T1-n0": 0.458,
+    "B-a0.1-T1-n1": 0.458,
+    "B-a0.3-T0.25-n0": 0.458,
+    "B-a0.3-T0.25-n1": 0.458,
+    "B-a0.3-T1-n0": 0.458,
+    "B-a0.3-T1-n1": 0.458,
+    "B-learned-s0": 0.458,
+    "B-learned-s1": 0.458,
+    "B-learned-s2": 0.458,
+    "B-marginal": 0.458,
+    "B-oracle": 0.452,
+    "B-uniform": 0.458
+  },
+  "gpu_hours_total": 6.406,
+  "jobs": [
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-uniform"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-marginal"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-learned-s0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-learned-s1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-learned-s2"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-oracle"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.1-T1-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.1-T1-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.1-T0.25-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.1-T0.25-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.3-T1-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.3-T1-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.3-T0.25-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "test",
+      "stage": "test-b",
+      "variant": "B-a0.3-T0.25-n1"
+    }
+  ],
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "queue_notes": "14 one-GPU jobs on hpg-rtx6000 (RTX PRO 6000), submitted together and spread across cai6734, cai5724; each course QOS caps 8 GPUs and 250 GB shared by its whole class, so jobs may wait for free GPUs.",
+  "stage": "test-b"
+}

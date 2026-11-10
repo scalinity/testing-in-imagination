@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "keys": "split",
+  "values": {
+    "$ref": "leakage_split"
+  }
+}

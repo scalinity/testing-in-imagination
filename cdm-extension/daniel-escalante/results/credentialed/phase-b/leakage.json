@@ -1,0 +1,66 @@
+{
+  "test": {
+    "bits": {
+      "C": 10,
+      "T5": 43.12633547008547,
+      "recall": {
+        "appendicitis": 90.625,
+        "cholecystitis": 70.76923076923077,
+        "diverticulitis": 0.0,
+        "pancreatitis": 11.11111111111111
+      }
+    },
+    "hpi": {
+      "C": 10,
+      "T5": 62.22409188034188,
+      "recall": {
+        "appendicitis": 92.70833333333334,
+        "cholecystitis": 63.07692307692307,
+        "diverticulitis": 32.0,
+        "pancreatitis": 61.111111111111114
+      }
+    },
+    "hpi_bits": {
+      "C": 10,
+      "T5": 64.20014245014245,
+      "recall": {
+        "appendicitis": 91.66666666666666,
+        "cholecystitis": 64.61538461538461,
+        "diverticulitis": 32.0,
+        "pancreatitis": 68.51851851851852
+      }
+    }
+  },
+  "val": {
+    "bits": {
+      "C": 10,
+      "T5": 46.456740140950664,
+      "recall": {
+        "appendicitis": 89.47368421052632,
+        "cholecystitis": 81.53846153846153,
+        "diverticulitis": 0.0,
+        "pancreatitis": 14.814814814814813
+      }
+    },
+    "hpi": {
+      "C": 10,
+      "T5": 62.31706402759034,
+      "recall": {
+        "appendicitis": 93.6842105263158,
+        "cholecystitis": 67.6923076923077,
+        "diverticulitis": 23.076923076923077,
+        "pancreatitis": 64.81481481481481
+      }
+    },
+    "hpi_bits": {
+      "C": 10,
+      "T5": 64.76683160893687,
+      "recall": {
+        "appendicitis": 94.73684210526315,
+        "cholecystitis": 80.0,
+        "diverticulitis": 26.923076923076923,
+        "pancreatitis": 57.407407407407405
+      }
+    }
+  }
+}

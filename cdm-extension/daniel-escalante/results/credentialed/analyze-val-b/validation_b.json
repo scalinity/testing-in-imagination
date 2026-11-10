@@ -1,0 +1,358 @@
+{
+  "descriptive": {
+    "B-learned-s0-P0": {
+      "ci95": [
+        -1.8518518518518476,
+        1.4522417153996088
+      ],
+      "delta_t5": -0.19980506822612654,
+      "discordant": 4,
+      "mcnemar_p": 1.0,
+      "method": null,
+      "p_holm": null,
+      "p_value": null,
+      "significance": "not statistically significant"
+    },
+    "B-oracle-P0": {
+      "ci95": [
+        -0.7193732193732153,
+        3.8252923976608306
+      ],
+      "delta_t5": 1.4672364672364608,
+      "discordant": 9,
+      "mcnemar_p": 0.5078125,
+      "method": null,
+      "p_holm": null,
+      "p_value": null,
+      "significance": "not statistically significant"
+    },
+    "B-uniform-P0": {
+      "ci95": [
+        0.2631578947368354,
+        3.2688559004348434
+      ],
+      "delta_t5": 1.573699205278146,
+      "discordant": 4,
+      "mcnemar_p": 0.125,
+      "method": null,
+      "p_holm": null,
+      "p_value": null,
+      "significance": "not statistically significant"
+    }
+  },
+  "source": "mimic",
+  "variants": {
+    "B-learned-s0": {
+      "confusion": {
+        "appendicitis": {
+          "appendicitis": 91,
+          "cholecystitis": 0,
+          "diverticulitis": 2,
+          "pancreatitis": 2,
+          "undiagnosed": 0
+        },
+        "cholecystitis": {
+          "appendicitis": 1,
+          "cholecystitis": 55,
+          "diverticulitis": 2,
+          "pancreatitis": 7,
+          "undiagnosed": 0
+        },
+        "diverticulitis": {
+          "appendicitis": 1,
+          "cholecystitis": 1,
+          "diverticulitis": 22,
+          "pancreatitis": 2,
+          "undiagnosed": 0
+        },
+        "pancreatitis": {
+          "appendicitis": 4,
+          "cholecystitis": 11,
+          "diverticulitis": 3,
+          "pancreatitis": 36,
+          "undiagnosed": 0
+        }
+      },
+      "events": {
+        "g1_replace": 97,
+        "g2_commit": 2,
+        "replacement_failed": 0,
+        "scorer_error": 0,
+        "wm_rerank": 159,
+        "wm_stop": 0
+      },
+      "metrics": {
+        "T1": 95.78947368421052,
+        "T2": 84.61538461538461,
+        "T3": 84.61538461538461,
+        "T4": 66.66666666666666,
+        "T5": 82.92172739541161,
+        "T6": 85.0,
+        "T7": 82.35303217821782,
+        "T8": 1457.5083333333334
+      },
+      "n": 240,
+      "nonanswers": 0,
+      "nonanswers_by_class": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0
+      },
+      "prediction_source": {
+        "diagnosis": 239,
+        "hypothesis_fallback": 1,
+        "none": 0
+      },
+      "replacement_failed": 0,
+      "requests": {
+        "provided": 435,
+        "repeated": 0,
+        "requested": 588,
+        "unavailable": 153
+      },
+      "scorer_errors": 0,
+      "termination": {
+        "diagnosis": 239,
+        "length_completion": 0,
+        "length_observation": 1,
+        "malformed": 0,
+        "step_limit": 0
+      }
+    },
+    "B-oracle": {
+      "confusion": {
+        "appendicitis": {
+          "appendicitis": 90,
+          "cholecystitis": 1,
+          "diverticulitis": 2,
+          "pancreatitis": 2,
+          "undiagnosed": 0
+        },
+        "cholecystitis": {
+          "appendicitis": 1,
+          "cholecystitis": 54,
+          "diverticulitis": 2,
+          "pancreatitis": 8,
+          "undiagnosed": 0
+        },
+        "diverticulitis": {
+          "appendicitis": 2,
+          "cholecystitis": 0,
+          "diverticulitis": 22,
+          "pancreatitis": 2,
+          "undiagnosed": 0
+        },
+        "pancreatitis": {
+          "appendicitis": 1,
+          "cholecystitis": 10,
+          "diverticulitis": 2,
+          "pancreatitis": 41,
+          "undiagnosed": 0
+        }
+      },
+      "events": {
+        "g1_replace": 67,
+        "g2_commit": 2,
+        "replacement_failed": 0,
+        "scorer_error": 0,
+        "wm_rerank": 242,
+        "wm_stop": 6
+      },
+      "metrics": {
+        "T1": 94.73684210526315,
+        "T2": 83.07692307692308,
+        "T3": 84.61538461538461,
+        "T4": 75.92592592592592,
+        "T5": 84.5887689308742,
+        "T6": 86.25,
+        "T7": 84.10800345379783,
+        "T8": 1528.1333333333334
+      },
+      "n": 240,
+      "nonanswers": 0,
+      "nonanswers_by_class": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0
+      },
+      "prediction_source": {
+        "diagnosis": 240,
+        "hypothesis_fallback": 0,
+        "none": 0
+      },
+      "replacement_failed": 0,
+      "requests": {
+        "provided": 493,
+        "repeated": 0,
+        "requested": 559,
+        "unavailable": 66
+      },
+      "scorer_errors": 0,
+      "termination": {
+        "diagnosis": 240,
+        "length_completion": 0,
+        "length_observation": 0,
+        "malformed": 0,
+        "step_limit": 0
+      }
+    },
+    "B-uniform": {
+      "confusion": {
+        "appendicitis": {
+          "appendicitis": 91,
+          "cholecystitis": 0,
+          "diverticulitis": 1,
+          "pancreatitis": 3,
+          "undiagnosed": 0
+        },
+        "cholecystitis": {
+          "appendicitis": 1,
+          "cholecystitis": 56,
+          "diverticulitis": 2,
+          "pancreatitis": 6,
+          "undiagnosed": 0
+        },
+        "diverticulitis": {
+          "appendicitis": 2,
+          "cholecystitis": 1,
+          "diverticulitis": 22,
+          "pancreatitis": 1,
+          "undiagnosed": 0
+        },
+        "pancreatitis": {
+          "appendicitis": 3,
+          "cholecystitis": 11,
+          "diverticulitis": 1,
+          "pancreatitis": 39,
+          "undiagnosed": 0
+        }
+      },
+      "events": {
+        "g1_replace": 104,
+        "g2_commit": 3,
+        "replacement_failed": 0,
+        "scorer_error": 0,
+        "wm_rerank": 69,
+        "wm_stop": 0
+      },
+      "metrics": {
+        "T1": 95.78947368421052,
+        "T2": 86.15384615384616,
+        "T3": 84.61538461538461,
+        "T4": 72.22222222222221,
+        "T5": 84.69523166891588,
+        "T6": 86.66666666666667,
+        "T7": 84.83643323441164,
+        "T8": 1428.7333333333333
+      },
+      "n": 240,
+      "nonanswers": 0,
+      "nonanswers_by_class": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0
+      },
+      "prediction_source": {
+        "diagnosis": 240,
+        "hypothesis_fallback": 0,
+        "none": 0
+      },
+      "replacement_failed": 0,
+      "requests": {
+        "provided": 391,
+        "repeated": 0,
+        "requested": 594,
+        "unavailable": 203
+      },
+      "scorer_errors": 0,
+      "termination": {
+        "diagnosis": 240,
+        "length_completion": 0,
+        "length_observation": 0,
+        "malformed": 0,
+        "step_limit": 0
+      }
+    },
+    "P0": {
+      "confusion": {
+        "appendicitis": {
+          "appendicitis": 90,
+          "cholecystitis": 0,
+          "diverticulitis": 2,
+          "pancreatitis": 3,
+          "undiagnosed": 0
+        },
+        "cholecystitis": {
+          "appendicitis": 1,
+          "cholecystitis": 55,
+          "diverticulitis": 1,
+          "pancreatitis": 8,
+          "undiagnosed": 0
+        },
+        "diverticulitis": {
+          "appendicitis": 1,
+          "cholecystitis": 0,
+          "diverticulitis": 22,
+          "pancreatitis": 3,
+          "undiagnosed": 0
+        },
+        "pancreatitis": {
+          "appendicitis": 4,
+          "cholecystitis": 11,
+          "diverticulitis": 2,
+          "pancreatitis": 37,
+          "undiagnosed": 0
+        }
+      },
+      "events": {
+        "g1_replace": 93,
+        "g2_commit": 4,
+        "replacement_failed": 0,
+        "scorer_error": 0,
+        "wm_rerank": 0,
+        "wm_stop": 0
+      },
+      "metrics": {
+        "T1": 94.73684210526315,
+        "T2": 84.61538461538461,
+        "T3": 84.61538461538461,
+        "T4": 68.51851851851852,
+        "T5": 83.12153246363773,
+        "T6": 85.0,
+        "T7": 82.9263404364772,
+        "T8": 1447.0333333333333
+      },
+      "n": 240,
+      "nonanswers": 0,
+      "nonanswers_by_class": {
+        "appendicitis": 0,
+        "cholecystitis": 0,
+        "diverticulitis": 0,
+        "pancreatitis": 0
+      },
+      "prediction_source": {
+        "diagnosis": 239,
+        "hypothesis_fallback": 1,
+        "none": 0
+      },
+      "replacement_failed": 0,
+      "requests": {
+        "provided": 394,
+        "repeated": 0,
+        "requested": 601,
+        "unavailable": 207
+      },
+      "scorer_errors": 0,
+      "termination": {
+        "diagnosis": 239,
+        "length_completion": 0,
+        "length_observation": 1,
+        "malformed": 0,
+        "step_limit": 0
+      }
+    }
+  }
+}

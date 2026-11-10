@@ -1,0 +1,238 @@
+{
+  "availability_rate": {
+    "train": {
+      "appendicitis": {
+        "BMP": 0.9973890339425587,
+        "CBC": 0.9973890339425587,
+        "CMP": 0.9986945169712794,
+        "CT": 0.9360313315926893,
+        "EP": 0.9960835509138382,
+        "LFP": 0.814621409921671,
+        "MRI": 0.022193211488250653,
+        "PE": 1.0,
+        "RFP": 0.9973890339425587,
+        "UA": 0.8694516971279374,
+        "US": 0.2506527415143603,
+        "XR": 0.17754569190600522
+      },
+      "cholecystitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.4189189189189189,
+        "EP": 1.0,
+        "LFP": 1.0,
+        "MRI": 0.017374517374517374,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.7664092664092664,
+        "US": 0.8764478764478765,
+        "XR": 0.5077220077220077
+      },
+      "diverticulitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.9174757281553398,
+        "EP": 1.0,
+        "LFP": 0.9077669902912622,
+        "MRI": 0.02912621359223301,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.883495145631068,
+        "US": 0.18446601941747573,
+        "XR": 0.5097087378640777
+      },
+      "pancreatitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.5093023255813953,
+        "EP": 1.0,
+        "LFP": 1.0,
+        "MRI": 0.04186046511627907,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.7395348837209302,
+        "US": 0.7441860465116279,
+        "XR": 0.6
+      }
+    },
+    "val": {
+      "appendicitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.9578947368421052,
+        "EP": 1.0,
+        "LFP": 0.8526315789473684,
+        "MRI": 0.021052631578947368,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.8526315789473684,
+        "US": 0.16842105263157894,
+        "XR": 0.18947368421052632
+      },
+      "cholecystitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.35384615384615387,
+        "EP": 1.0,
+        "LFP": 1.0,
+        "MRI": 0.0,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.8461538461538461,
+        "US": 0.9230769230769231,
+        "XR": 0.4307692307692308
+      },
+      "diverticulitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.8846153846153846,
+        "EP": 1.0,
+        "LFP": 0.8076923076923077,
+        "MRI": 0.038461538461538464,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.8846153846153846,
+        "US": 0.23076923076923078,
+        "XR": 0.46153846153846156
+      },
+      "pancreatitis": {
+        "BMP": 1.0,
+        "CBC": 1.0,
+        "CMP": 1.0,
+        "CT": 0.5,
+        "EP": 1.0,
+        "LFP": 1.0,
+        "MRI": 0.05555555555555555,
+        "PE": 1.0,
+        "RFP": 1.0,
+        "UA": 0.7407407407407407,
+        "US": 0.5925925925925926,
+        "XR": 0.5
+      }
+    }
+  },
+  "counts": {
+    "train": {
+      "BMP": {
+        "available": 1918,
+        "unavailable": 2
+      },
+      "CBC": {
+        "available": 1918,
+        "unavailable": 2
+      },
+      "CMP": {
+        "available": 1919,
+        "unavailable": 1
+      },
+      "CT": {
+        "available": 1342,
+        "unavailable": 578
+      },
+      "EP": {
+        "available": 1917,
+        "unavailable": 3
+      },
+      "LFP": {
+        "available": 1759,
+        "unavailable": 161
+      },
+      "MRI": {
+        "available": 50,
+        "unavailable": 1870
+      },
+      "PE": {
+        "available": 1920,
+        "unavailable": 0
+      },
+      "RFP": {
+        "available": 1918,
+        "unavailable": 2
+      },
+      "UA": {
+        "available": 1563,
+        "unavailable": 357
+      },
+      "US": {
+        "available": 1004,
+        "unavailable": 916
+      },
+      "XR": {
+        "available": 762,
+        "unavailable": 1158
+      }
+    },
+    "val": {
+      "BMP": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "CBC": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "CMP": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "CT": {
+        "available": 164,
+        "unavailable": 76
+      },
+      "EP": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "LFP": {
+        "available": 221,
+        "unavailable": 19
+      },
+      "MRI": {
+        "available": 6,
+        "unavailable": 234
+      },
+      "PE": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "RFP": {
+        "available": 240,
+        "unavailable": 0
+      },
+      "UA": {
+        "available": 199,
+        "unavailable": 41
+      },
+      "US": {
+        "available": 114,
+        "unavailable": 126
+      },
+      "XR": {
+        "available": 85,
+        "unavailable": 155
+      }
+    }
+  },
+  "hpi_words": {
+    "train": {
+      "max": 418.0,
+      "median": 243.0,
+      "min": 57.0,
+      "q25": 186.0,
+      "q75": 308.0
+    },
+    "val": {
+      "max": 398.0,
+      "median": 240.5,
+      "min": 74.0,
+      "q25": 176.0,
+      "q75": 310.25
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "decision_turns": 98,
+  "fast_within_tolerance": false,
+  "max_abs_fast_minus_reference": 0.36254215240478516,
+  "next_token_agreement": 1.0,
+  "next_token_checks": 96,
+  "patients": 24,
+  "scoring_calls": 96,
+  "seconds": 461.69209781847894,
+  "setup_seconds": 177.44135114829987,
+  "variant": "V0-shadow"
+}

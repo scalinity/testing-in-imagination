@@ -1,0 +1,250 @@
+{
+  "title": "Commit guard and retrospective chart-availability reranking",
+  "spec": {
+    "version": "v2",
+    "path": "cdm-extension/daniel-escalante/SPEC.md",
+    "sha256": "bcb867aa44d380652f6038f7dcd0e34d880649448a10a937b01c05e5a9a6604f"
+  },
+  "frozen_on": "2026-11-09",
+  "approver": "Daniel Escalante",
+  "admission_dir": "/blue/cai6734/daniel.escalante/private/tim-admissions",
+  "baseline": {
+    "run_graph": "7fcd9e5",
+    "upstream_sha": "3f435a10f569c3255172c1ef8fe7880c6edb7fee",
+    "model": "nvidia/Llama-3.1-Nemotron-Nano-8B-v1",
+    "revision": "54641c1611fcff44fa4865626462445e0a153fc7",
+    "policy_seed": 269,
+    "split_seed": 269,
+    "decoding": "greedy (temperature 0)",
+    "runtime": "blackwell",
+    "rows": "episodes/parity/269/primary-test.json in the baseline work directory, read-only",
+    "hardware": "one RTX PRO 6000 (hpg-rtx6000) per GPU job"
+  },
+  "disclosure": {
+    "test_set_status": "These published test aggregates informed the design: per-arm confusion matrices with an undiagnosed column (greedy and temperature 1.0), undiagnosed / valid / repeated request counts, the cost decomposition (267 unavailable requests), ignore/* metrics (84.62), test hypothesis accuracy (81.67% over 622 triplets), and the zero-shot hypothesis distribution (904 of 1,095 cholecystitis) with its undiagnosed-by-request-count breakdown. No patient rows or trajectories were viewed. The hypothesis fallback (G3) has not been computed on test rows by anyone. Related test results already seen: the undiagnosed counts per arm and the C1 hypothesis accuracy.",
+    "g3_on_test": "The hypothesis fallback (G3) has not been computed on test rows by anyone. Related test results already seen: the undiagnosed counts per arm and the C1 hypothesis accuracy."
+  },
+  "phase_a": {
+    "primary_method": "V3",
+    "comparator": "official",
+    "claim": "termination recovery and action validation under the frozen metric; not a new diagnostic predictor",
+    "variants": {
+      "V0": {},
+      "V0-rerun": {},
+      "V0-shadow": {
+        "shadow": true
+      },
+      "V2": {
+        "g2": true,
+        "g3": true
+      },
+      "V3": {
+        "g1": true,
+        "g2": true,
+        "g3": true
+      }
+    },
+    "limits": {
+      "max_steps": 13,
+      "max_length": 4096,
+      "context": 4352,
+      "completion": 256
+    },
+    "stages": {
+      "smoke": {
+        "split": "val",
+        "jobs": [
+          "V3"
+        ]
+      },
+      "bench-a": {
+        "split": "val",
+        "jobs": [
+          "V0-shadow",
+          "V3"
+        ]
+      },
+      "val-a": {
+        "split": "val",
+        "jobs": [
+          "V0",
+          "V0-shadow",
+          "V2",
+          "V3"
+        ]
+      },
+      "test-a": {
+        "split": "test",
+        "jobs": [
+          "V0-rerun",
+          "V2",
+          "V3"
+        ]
+      }
+    },
+    "v1": "V0 rows (official rows on test) with G3 applied on CPU; never changes a non-null prediction",
+    "fixed_thoughts": {
+      "g1_replace": "I will choose the next step.",
+      "g2_commit": "I must now give my final diagnosis."
+    },
+    "decision_table": "SPEC 3.3 steps 1-8; precedence G2 > G1 > planner; untriggered turns execute the greedy completion byte for byte",
+    "g3": "at finalization only: if no diagnosis, the most recent hypothesis that is one of the four diseases, else null",
+    "scorer": {
+      "score": "teacher-forced log-probability of the complete canonical continuation after 'Action:', terminator included",
+      "test_continuation": " Test\nAction Input: {x}\nObservation:",
+      "diagnosis_continuation": " Diagnosis\nAction Input: {d}<|eot_id|>",
+      "context": "trajectory.output.prompt_token_ids + tokenizer('Thought: {thought}\\nAction:', add_special_tokens=False)",
+      "ties": "configured tests, then diseases",
+      "backend": "separate Hugging Face instance: upstream load_model, PeftModel, merge_and_unload, bf16; eval mode; torch.use_deterministic_algorithms(True); CUBLAS_WORKSPACE_CONFIG=:4096:8; float32 log-softmax",
+      "paths": "fast (prefix KV reuse, batched continuations) used for decisions; reference (full sequence) for checks",
+      "bench_tolerance": 0.001,
+      "errors": "the turn executes the original completion and logs scorer_error; on test these are protocol deviations"
+    },
+    "bench_patients_per_class": 6,
+    "bench_order": "sha256('bench|patient_id')",
+    "smoke_patients": 2,
+    "smoke_order": "sha256('smoke|patient_id')",
+    "smoke_cap_gpu_hours": 0.5,
+    "shadow_control": "V0 and V0-shadow on all 240 val patients, fresh identically configured engines, identical request order; every generated token sequence identical, else test-a is blocked until an amendment explains it",
+    "premise": "if V0 has fewer than 10 val nonanswers, stop before test access and report",
+    "v0_rerun": "240/240 identical finalized predictions to the official rows permits an unqualified comparison; otherwise report k/240, add V0-rerun as a second comparator and qualify every Phase-A claim",
+    "validation_role": "go / no-go only; nothing is selected on validation"
+  },
+  "phase_b": {
+    "claim": "retrospective chart-availability prediction and reranking; not full world-model planning",
+    "label": "y(p, x) = 1 if test_results[x] != 'not available.\\n'",
+    "clip_epsilon": 0.001,
+    "learned": {
+      "features": "TF-IDF of the HPI summary the agent sees: word 1-2-grams, min_df 3, max_features 20000, sublinear tf",
+      "model": "one L2 logistic regression per test",
+      "c_grid": [
+        0.01,
+        0.1,
+        1,
+        10
+      ],
+      "c_selection": "5-fold CV log-loss on train, fold seed 0",
+      "bootstrap_seeds": [
+        0,
+        1,
+        2
+      ],
+      "training_admissions": 1920,
+      "base_rate_rule": "a test with fewer than 10 positives or negatives uses its base rate",
+      "storage": "private, never exported"
+    },
+    "marginal": "train base rate",
+    "uniform": 0.5,
+    "oracle": "y itself through an availability-bits-only accessor",
+    "corruption": {
+      "draw": "u = first 16 hex digits of sha256('tim-mask|seed|split|patient|test') / 16^16",
+      "flip": "1 - y if u < alpha",
+      "alphas": [
+        0.1,
+        0.3
+      ],
+      "temperatures": [
+        1,
+        0.25
+      ],
+      "noise_seeds": [
+        0,
+        1
+      ],
+      "posterior": "SPEC 4.3"
+    },
+    "planner": {
+      "applies": "on top of V3 when the action is a Test and t < 13",
+      "theta_stop": 0.05,
+      "beta": 1,
+      "rule": "if max p(x) over untried tests < theta_stop commit to the highest-scoring diagnosis; else argmax score(Test(x)) + beta log p(x)"
+    },
+    "arms": [
+      "P0=V3",
+      "B-uniform",
+      "B-marginal",
+      "B-learned-s0",
+      "B-learned-s1",
+      "B-learned-s2",
+      "B-oracle",
+      "8 corruption arms (alpha x temperature x noise seed)"
+    ],
+    "quality": "per arm and split: alpha, ECE (10 bins), AUROC, Brier and Brier skill vs marginal (descriptive)",
+    "leakage": "multinomial logistic regressions on HPI TF-IDF and on HPI TF-IDF plus the 12 availability bits; T5 on val in Phase-B prep, on test only in analyze-b",
+    "inventory": "SPEC 4.8; private JSONL, train and val only"
+  },
+  "statistics": {
+    "estimand": "Delta-T5 in percentage points over the 240 test admissions, conditional on the trained policy (seed 269): sum of w_i d_i with w_i = 100 / (4 n_class(i))",
+    "primary": {
+      "comparison": "V3-official",
+      "alpha": 0.05,
+      "test": "two-sided paired sign-flip randomization",
+      "statistic": "S = sum w_i d_i",
+      "exact_up_to_discordant": 20,
+      "draws": 100000,
+      "p_value": "(1 + #{|S*| >= |S_obs|}) / (B + 1); ties count as extreme",
+      "seed": "stream_seed(269, 'test', 'tim-permutation:<comparison>')",
+      "null": "exchangeability within each patient; not exact for Delta-T5 = 0 when diseases move in opposite directions"
+    },
+    "interval": {
+      "method": "replication.stats.paired_bootstrap, class-stratified, pairs resampled together",
+      "resamples": 10000,
+      "level": 0.95,
+      "seed": "stream_seed(269, 'test', 'tim-bootstrap')"
+    },
+    "family_a": {
+      "members": [
+        "V1-official",
+        "V3-V1"
+      ],
+      "adjustment": "Holm",
+      "alpha": 0.05
+    },
+    "family_b": {
+      "members": [
+        "B-learned-s0 - B-uniform",
+        "B-learned-s0 - B-marginal",
+        "B-oracle - B-uniform"
+      ],
+      "adjustment": "Holm",
+      "alpha": 0.05
+    },
+    "descriptive": [
+      "V2 - V1",
+      "V3 - V2",
+      "raw vs finalized",
+      "analytic controls",
+      "per-class recalls",
+      "T6-T8",
+      "requests",
+      "termination counts",
+      "recovery yield",
+      "regressions",
+      "McNemar (never used for a decision)"
+    ],
+    "wording": {
+      "not_significant": "if p >= 0.05 (Holm-adjusted inside a family) or the interval includes 0, the report says 'not statistically significant'",
+      "seeds": "with one policy seed, between-seed variation is unassessable, and the report says so",
+      "families": "families are separate; no global 'some variant wins' claim"
+    }
+  },
+  "sensitivity": {
+    "inputs": "val per-disease improved / regressed / unchanged counts, V3 vs V0 and V1 vs V0",
+    "simulations": 10000,
+    "power_target": 0.8,
+    "p_value": "exact sign-flip distribution by class (equal to the randomization test's exact enumeration)"
+  },
+  "analysis": {
+    "t5_reference": 73.08502492877493,
+    "training_majority": "appendicitis",
+    "test_class_sizes": {
+      "appendicitis": 96,
+      "cholecystitis": 65,
+      "diverticulitis": 25,
+      "pancreatitis": 54
+    },
+    "bootstrap_resamples": 10000,
+    "sensitivity_simulations": 10000,
+    "premise_minimum_nonanswers": 10
+  }
+}

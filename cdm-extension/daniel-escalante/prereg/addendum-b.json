@@ -1,0 +1,191 @@
+{
+  "addendum": "B",
+  "bench": {
+    "B-learned-s0": {
+      "decision_turns": 78,
+      "fast_within_tolerance": null,
+      "max_abs_fast_minus_reference": null,
+      "next_token_agreement": null,
+      "next_token_checks": 0,
+      "patients": 24,
+      "scoring_calls": 0,
+      "seconds": 339.983490456827,
+      "setup_seconds": 194.61762759741396,
+      "variant": "B-learned-s0"
+    },
+    "B-oracle": {
+      "decision_turns": 74,
+      "fast_within_tolerance": null,
+      "max_abs_fast_minus_reference": null,
+      "next_token_agreement": null,
+      "next_token_checks": 0,
+      "patients": 24,
+      "scoring_calls": 0,
+      "seconds": 334.6378555893898,
+      "setup_seconds": 191.14369271788746,
+      "variant": "B-oracle"
+    }
+  },
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "sources": {
+    "results/credentialed/bench-b/bench.B-learned-s0.json": "d54bd3492a735695b5d83cc6d4ea54f29565a6accc0c66713193b4574c75b800",
+    "results/credentialed/bench-b/bench.B-oracle.json": "c764fee0b73a0dd4588a0706461363469eef9a28e3871432cb71b2705e744328",
+    "results/credentialed/wm-fit/wm_quality.json": "89a93a0460b97a8f88cc8e01ba1398d52012025764544897fc545b102da080cd"
+  },
+  "test_b_budget": {
+    "gpu_hours": {
+      "B-a0.1-T0.25-n0": 0.458,
+      "B-a0.1-T0.25-n1": 0.458,
+      "B-a0.1-T1-n0": 0.458,
+      "B-a0.1-T1-n1": 0.458,
+      "B-a0.3-T0.25-n0": 0.458,
+      "B-a0.3-T0.25-n1": 0.458,
+      "B-a0.3-T1-n0": 0.458,
+      "B-a0.3-T1-n1": 0.458,
+      "B-learned-s0": 0.458,
+      "B-learned-s1": 0.458,
+      "B-learned-s2": 0.458,
+      "B-marginal": 0.458,
+      "B-oracle": 0.452,
+      "B-uniform": 0.458
+    },
+    "gpu_hours_total": 6.406
+  },
+  "val_quality": {
+    "B-a0.1-T0.25-n0": {
+      "alpha": 0.1,
+      "auroc": 0.9609173587378771,
+      "brier": 0.03829451948936728,
+      "brier_skill": 0.5101130829106677,
+      "ece": 0.035004220963497285,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.1-T0.25-n1": {
+      "alpha": 0.1,
+      "auroc": 0.9616695576188478,
+      "brier": 0.03951758798039673,
+      "brier_skill": 0.4944668426536022,
+      "ece": 0.03720411248724946,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.1-T1-n0": {
+      "alpha": 0.1,
+      "auroc": 0.9871833304733926,
+      "brier": 0.03317179626032154,
+      "brier_skill": 0.5756460918958287,
+      "ece": 0.0034366440652595473,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.1-T1-n1": {
+      "alpha": 0.1,
+      "auroc": 0.9876147335879026,
+      "brier": 0.03334403929121554,
+      "brier_skill": 0.5734426536879615,
+      "ece": 0.005389600086723215,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.3-T0.25-n0": {
+      "alpha": 0.3,
+      "auroc": 0.9486816362169117,
+      "brier": 0.08531121494875891,
+      "brier_skill": -0.09135324431990632,
+      "ece": 0.07369099352676317,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.3-T0.25-n1": {
+      "alpha": 0.3,
+      "auroc": 0.950831760365907,
+      "brier": 0.07942663382521914,
+      "brier_skill": -0.016074083139325346,
+      "ece": 0.06483066007998421,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.3-T1-n0": {
+      "alpha": 0.3,
+      "auroc": 0.9577455810469313,
+      "brier": 0.06892563262742407,
+      "brier_skill": 0.1182611473776044,
+      "ece": 0.008859786954087527,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-a0.3-T1-n1": {
+      "alpha": 0.3,
+      "auroc": 0.9605403978694474,
+      "brier": 0.06629890532534155,
+      "brier_skill": 0.15186384972797273,
+      "ece": 0.009013314448151915,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-learned-s0": {
+      "alpha": null,
+      "auroc": 0.957366897322613,
+      "brier": 0.07025975579132863,
+      "brier_skill": 0.10119422781580811,
+      "ece": 0.0297484870117065,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-learned-s1": {
+      "alpha": null,
+      "auroc": 0.95884166196327,
+      "brier": 0.06854537336665739,
+      "brier_skill": 0.12312565643622786,
+      "ece": 0.023459915604872466,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-learned-s2": {
+      "alpha": null,
+      "auroc": 0.9583661537380116,
+      "brier": 0.06970287171622237,
+      "brier_skill": 0.10831822953635972,
+      "ece": 0.028118421014277615,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-marginal": {
+      "alpha": null,
+      "auroc": 0.944331425098151,
+      "brier": 0.07817026486545138,
+      "brier_skill": -1.84291711158302e-06,
+      "ece": 0.011147569444444639,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-oracle": {
+      "alpha": null,
+      "auroc": 1.0,
+      "brier": 1.0000000000000016e-06,
+      "brier_skill": 0.9999872073883255,
+      "ece": 0.0010000000000000868,
+      "n": 2880,
+      "positives": 2229
+    },
+    "B-uniform": {
+      "alpha": null,
+      "auroc": 0.5,
+      "brier": 0.25,
+      "brier_skill": -2.198152918626858,
+      "ece": 0.2739583333333333,
+      "n": 2880,
+      "positives": 2229
+    }
+  },
+  "world_model": {
+    "c": 10,
+    "files": {
+      "base_rates.json": "0869e4e496f62e33138995787c01098760a492a7bb51313089a27c9db3cdf200",
+      "learned-s0.pkl": "9248074555cf0c7f454d73152c289951c184a5e20782db5db5bf6348a6fc35e6",
+      "learned-s1.pkl": "37a58c7797da2d457606e4360aa8fbcce8acb0c562c4de8263ef68f3ed0bf7c0",
+      "learned-s2.pkl": "e2bd5ec0fb33a378074a2b88a0ac16f390913d7e0a63be5519ac40f7884fb6cf"
+    }
+  }
+}

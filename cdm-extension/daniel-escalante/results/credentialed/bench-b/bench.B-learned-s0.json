@@ -1,0 +1,12 @@
+{
+  "decision_turns": 78,
+  "fast_within_tolerance": null,
+  "max_abs_fast_minus_reference": null,
+  "next_token_agreement": null,
+  "next_token_checks": 0,
+  "patients": 24,
+  "scoring_calls": 0,
+  "seconds": 339.983490456827,
+  "setup_seconds": 194.61762759741396,
+  "variant": "B-learned-s0"
+}
