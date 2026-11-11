@@ -1,0 +1,86 @@
+{
+  "addendum_sha256": null,
+  "code_commit": "7a2faf89417b6d2a4497571b8011a1025dac9c6c",
+  "config_sha256": "6befd99e3454a3673f05793390f49bfef29161b96ebd116a3d96267d94942480",
+  "expected_wall_hours": 0.458,
+  "gpu_hours": {
+    "B-a0.1-T0.25-n0": 0.458,
+    "B-a0.1-T0.25-n1": 0.458,
+    "B-a0.1-T1-n0": 0.458,
+    "B-a0.1-T1-n1": 0.458,
+    "B-a0.3-T0.25-n0": 0.458,
+    "B-a0.3-T0.25-n1": 0.458,
+    "B-a0.3-T1-n0": 0.458,
+    "B-a0.3-T1-n1": 0.458,
+    "B-marginal": 0.458
+  },
+  "gpu_hours_total": 4.122,
+  "jobs": [
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-marginal"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.1-T1-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.1-T1-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.1-T0.25-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.1-T0.25-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.3-T1-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.3-T1-n1"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.3-T0.25-n0"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "dose-val-b",
+      "variant": "B-a0.3-T0.25-n1"
+    }
+  ],
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "queue_notes": "9 one-GPU jobs on hpg-rtx6000 (RTX PRO 6000), submitted together and spread across cai6734; each course QOS caps 8 GPUs and 250 GB shared by its whole class, so jobs may wait for free GPUs.",
+  "stage": "dose-val-b"
+}
