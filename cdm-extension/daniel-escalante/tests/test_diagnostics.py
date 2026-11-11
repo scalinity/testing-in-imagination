@@ -201,10 +201,17 @@ HYPOTHESIS = {"source": "mimic",
               "dropped": {arm: dict(H_COUNTS) for arm in ("B-uniform", "B-learned-s0", "B-oracle")}}
 
 
-def rendered(oracle_uniform=None, **kwargs):
+def dose_block(reading, slope):
+    return {"temperature": 1, "points": [{"arm": "B-oracle", "alpha": 0.0, "t5": 84.59}],
+            "levels": [{"alpha": 0.0, "t5": 84.59}, {"alpha": 0.5, "t5": 83.0}], "slope": slope,
+            "ci95": [slope - 3, slope + 3] if reading == "flat" else sorted([slope / 2, 2 * slope]),
+            "reading": reading, "levels_non_increasing": True, "resamples": 10000}
+
+
+def rendered(oracle_uniform=None, dose=None, **kwargs):
     oracle_uniform = oracle_uniform or contrast(-0.1066, [-2.9, 2.7], 0.95)
     return render.render_diagnostics(bundle(oracle_uniform, **kwargs), VAL_B, threshold=4.1537, dose_hours=4.122,
-                                     hypothesis=HYPOTHESIS)
+                                     hypothesis=HYPOTHESIS, dose=dose)
 
 
 @pytest.mark.parametrize("oracle_uniform, verdict", [
@@ -252,3 +259,24 @@ def test_sensitivity_s1_adds_urinalysis_and_radiographs_to_the_relevant_counts()
         b = bundle(contrast(-0.1066, [-2.9, 2.7], 0.95))
         b["relevance"]["UA"]["appendicitis"] = True
         render.render_diagnostics(b, VAL_B, threshold=4.1537, dose_hours=4.122, hypothesis=HYPOTHESIS)
+
+
+@pytest.mark.parametrize("oracle_uniform, reading, headline", [
+    (contrast(-0.1066, [-2.9, 2.7], 0.95), "flat", "**Planner bottleneck.**"),
+    (contrast(-0.1066, [-2.9, 2.7], 0.95), "increasing", "**Planner bottleneck.**"),
+    (contrast(-0.1066, [-2.9, 2.7], 0.95), "decreasing",
+     "**Inconclusive: the oracle contrast and the dose-response disagree.**"),
+    (contrast(5.1234, [2.1, 8.0], 0.004), "decreasing", "**Signal bottleneck.**"),
+    (contrast(5.1234, [2.1, 8.0], 0.004), "flat", "**Inconclusive: the oracle contrast and the dose-response disagree.**"),
+    (contrast(1.2345, [-1.5, 4.6], 0.4), "flat", "**Inconclusive.**"),
+])
+def test_once_the_dose_response_has_run_the_headline_follows_amendment_a6(oracle_uniform, reading, headline):
+    dose = {"source": "mimic", "primary": dose_block(reading, -6.5 if reading == "decreasing" else 4.2 if reading
+                                                     == "increasing" else -0.4),
+            "secondary": {**dose_block("flat", 0.3), "temperature": 0.25}}
+    text = rendered(oracle_uniform, dose=dose)
+    first = next(line for line in text.splitlines() if line.startswith("**"))
+    assert first.startswith(headline) and "Provisional" not in first and "has not run" not in first
+    assert "## Pending" not in text
+    section = text.split("## Corruption dose-response (D3)")[1].split("\n## ")[0]
+    assert f"{dose['primary']['slope']:+.2f}" in section and reading in section and "T = 0.25" in section

@@ -370,31 +370,69 @@ D_ARMS = (("P0", "P0 = V3, no reranking"), ("B-uniform", "B-uniform (no availabi
 D_CATEGORIES = (("lab", "Lab panels"), ("imaging", "Imaging"), ("exam", "Physical exam"))
 
 
-def _verdict(c, threshold, val_b) -> str:
-    """The verdict paragraph: amendment A4's rule (D4), headed provisional until D3 has run (A5)."""
+def _oracle_verdict(c, threshold, val_b) -> tuple[str, str]:
+    """Amendment A4's rule (D4) on the B-oracle − B-uniform contrast: (verdict, reason)."""
     where, holm, bar = f"B-oracle − B-uniform is {_interval(c)} points", _holm(c), _n(threshold)
     requests = {arm: val_b["variants"][arm]["requests"]["unavailable"] for arm in ("B-uniform", "B-oracle")}
     acts = (f" The planner does act on the signal: unavailable requests fall from {requests['B-uniform']} under "
             f"B-uniform to {requests['B-oracle']} under B-oracle.")
-    caveats = ("This verdict rests on one validation contrast, the corruption dose-response that would confirm it "
-               "has not run, and the verdict rule and its threshold were written after the validation point "
-               "estimates were known. ")
     if _significant(c) and c["delta_t5"] > 0:
-        return (f"**Provisional: signal bottleneck.** {caveats}{where}, statistically significant ({holm}): perfect "
-                "chart availability raises mean class recall through this fixed planner, so the shortfall lies in "
-                "the learned availability signal.")
+        return "signal bottleneck", (f"{where}, statistically significant ({holm}): perfect chart availability raises "
+                                     "mean class recall through this fixed planner, so the shortfall lies in the "
+                                     "learned availability signal.")
     if _significant(c):
-        return (f"**Provisional: planner bottleneck.** {caveats}{where}, statistically significant ({holm}) and "
-                f"negative, so below the {bar}-point threshold: perfect chart availability makes this fixed planner "
-                f"worse, and a better availability predictor cannot help it.{acts}")
+        return "planner bottleneck", (f"{where}, statistically significant ({holm}) and negative, so below the "
+                                      f"{bar}-point threshold: perfect chart availability makes this fixed planner "
+                                      f"worse, and a better availability predictor cannot help it.{acts}")
     if c["ci95"][1] < threshold:
-        return (f"**Provisional: planner bottleneck.** {caveats}{where}, not statistically significant ({holm}), "
-                f"and the interval's upper bound is below {bar} points, the smallest effect the test design detects "
-                "with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a "
-                f"better availability predictor cannot help it.{acts}")
-    return (f"**Provisional: inconclusive.** {caveats}{where}, not statistically significant ({holm}), but the "
-            f"interval reaches {bar} points, the smallest effect the test design detects with 80% power, so neither "
-            "a useful oracle gain nor its absence is established.")
+        return "planner bottleneck", (f"{where}, not statistically significant ({holm}), and the interval's upper "
+                                      f"bound is below {bar} points, the smallest effect the test design detects with "
+                                      "80% power: even perfect chart availability gives this fixed planner no "
+                                      f"detectable gain, so a better availability predictor cannot help it.{acts}")
+    return "inconclusive", (f"{where}, not statistically significant ({holm}), but the interval reaches {bar} points, "
+                            "the smallest effect the test design detects with 80% power, so neither a useful oracle "
+                            "gain nor its absence is established.")
+
+
+AGREES = {"planner bottleneck": ("flat", "increasing"), "signal bottleneck": ("decreasing",)}
+
+
+def _verdict(c, threshold, val_b, dose=None) -> str:
+    """The verdict paragraph: provisional until D3 has run (A5); then amendment A6's combination rule."""
+    verdict, reason = _oracle_verdict(c, threshold, val_b)
+    if dose is None:
+        return (f"**Provisional: {verdict}.** This verdict rests on one validation contrast, the corruption "
+                "dose-response that would confirm it has not run, and the verdict rule and its threshold were "
+                f"written after the validation point estimates were known. {reason}")
+    primary = dose["primary"]
+    if verdict == "inconclusive":
+        head = "Inconclusive."
+    elif primary["reading"] in AGREES[verdict]:
+        head = verdict.capitalize() + "."
+    else:
+        head = "Inconclusive: the oracle contrast and the dose-response disagree."
+    return (f"**{head}** This verdict combines one validation contrast with the validation dose-response (amendment "
+            "A6); the oracle-contrast rule and its threshold were written after the validation point estimates were "
+            f"known. {reason} The corruption dose-response (T = 1) has slope {_signed(primary['slope'])} "
+            f"[{_n(primary['ci95'][0])}, {_n(primary['ci95'][1])}] T5 points per unit α: {primary['reading']}.")
+
+
+def _dose_section(dose) -> list[str]:
+    lines = ["## Corruption dose-response (D3)\n",
+             "Amendment A4's D3, with its code fixed before any dose-val-b run (amendment A6): the OLS slope of "
+             "validation T5 on the corruption level α, one point per arm, with a 95% class-stratified percentile "
+             "bootstrap that draws patients once per resample for every arm. Decreasing if the interval lies below 0, "
+             "increasing if above, flat otherwise.\n"]
+    for key, label in (("primary", "Primary"), ("secondary", "Secondary")):
+        block = dose[key]
+        levels = ", ".join(f"α {_n(level['alpha'], 1)}: {_n(level['t5'])}" for level in block["levels"])
+        lines += [f"**{label}, T = {block['temperature']:g}.** Slope {_signed(block['slope'])} "
+                  f"[{_n(block['ci95'][0])}, {_n(block['ci95'][1])}] T5 points per unit α ({block['reading']}; "
+                  f"{block['resamples']} resamples). Mean T5 by level: {levels}; the level means "
+                  f"{'never rise' if block['levels_non_increasing'] else 'do not fall monotonically'} as α grows.\n",
+                  "| Arm | α | T5 |", "|---|---|---|",
+                  *(f"| {pt['arm']} | {_n(pt['alpha'], 1)} | {_n(pt['t5'])} |" for pt in block["points"]), ""]
+    return lines
 
 
 def _sensitivity_s1(d) -> list[str]:
@@ -436,7 +474,8 @@ def _relevant_to(by_disease) -> str:
     return "all four" if len(names) == len(DISEASES) else ", ".join(names) or "none"
 
 
-def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float, hypothesis: dict) -> str:
+def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float, hypothesis: dict,
+                       dose: dict | None = None) -> str:
     """DIAGNOSTICS.md from diagnostics.json, hypothesis_check.json and analyze-val-b's validation_b.json;
     threshold and GPU-hours come from the committed addenda A and B. No number is typed by hand."""
     from tim.diagnostics import COUNTS, DOSE_RESPONSE_ARMS
@@ -445,7 +484,7 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
     published, n = val_b["descriptive"]["B-oracle-P0"]["ci95"], val_b["variants"]["P0"]["n"]
     lines = [BANNER if d["source"] == "synthetic" else "",
              "# Phase-B validation diagnostics: planner or signal?\n",
-             _verdict(family["B-oracle-B-uniform"], threshold, val_b) + "\n",
+             _verdict(family["B-oracle-B-uniform"], threshold, val_b, dose) + "\n",
              "## Scope\n",
              f"- Exploratory and validation only: the {n} validation admissions of val-a and val-b, analyzed under "
              "amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any "
@@ -507,14 +546,16 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
               "changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not "
               "test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and "
               "counted.\n", *_check_h(hypothesis),
-              "", "## Pending\n",
+              ""]
+    lines += _dose_section(dose) if dose is not None else [
+              "## Pending\n",
               "- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight "
               "corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). "
               f"It needs {len(DOSE_RESPONSE_ARMS)} validation runs: about {dose_hours:.1f} GPU-hours at addendum B's "
               "per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its "
               "approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the "
-              "availability signal degrades is untested on validation.\n",
-              "## Limitations\n",
+              "availability signal degrades is untested on validation.\n"]
+    lines += ["## Limitations\n",
               f"- {n} validation admissions and one policy seed; between-seed variation is unassessable.",
               "- Relevance is guideline relevance of the requested action, not the value of the result it returned. "
               "The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four "
@@ -524,6 +565,6 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
               "- A null oracle contrast concerns this fixed planner only: perfect information does not make the "
               "heuristic optimal (SPEC §4.5).",
               "- Every number here is rendered from `diagnose-val-b/diagnostics.json`, "
-              "`diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json` and the committed addenda "
-              "A and B.", ""]
+              "`diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda "
+              "A and B" + (", and `analyze-dose-val-b/dose_response.json`." if dose is not None else "."), ""]
     return "\n".join(lines)

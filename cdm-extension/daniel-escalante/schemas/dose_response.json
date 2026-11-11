@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "dose_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temperature",
+        "points",
+        "levels",
+        "slope",
+        "ci95",
+        "reading",
+        "levels_non_increasing",
+        "resamples"
+      ],
+      "properties": {
+        "temperature": {
+          "type": "number"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "arm",
+              "alpha",
+              "t5"
+            ],
+            "properties": {
+              "arm": {
+                "type": "string",
+                "enum": "wm_arm"
+              },
+              "alpha": {
+                "type": "number"
+              },
+              "t5": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "alpha",
+              "t5"
+            ],
+            "properties": {
+              "alpha": {
+                "type": "number"
+              },
+              "t5": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "slope": {
+          "type": "number"
+        },
+        "ci95": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "reading": {
+          "type": "string",
+          "enum": "dose_reading"
+        },
+        "levels_non_increasing": {
+          "type": "boolean"
+        },
+        "resamples": {
+          "$ref": "count"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "primary",
+    "secondary"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": "source"
+    },
+    "primary": {
+      "$ref": "dose_block"
+    },
+    "secondary": {
+      "$ref": "dose_block"
+    }
+  }
+}

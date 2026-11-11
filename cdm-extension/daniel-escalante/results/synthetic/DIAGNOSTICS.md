@@ -3,7 +3,7 @@
 
 # Phase-B validation diagnostics: planner or signal?
 
-**Provisional: planner bottleneck.** This verdict rests on one validation contrast, the corruption dose-response that would confirm it has not run, and the verdict rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is +0.00 [0.00, 0.00] points, not statistically significant (Holm-adjusted p = 1.0000), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 13 under B-uniform to 0 under B-oracle.
+**Planner bottleneck.** This verdict combines one validation contrast with the validation dose-response (amendment A6); the oracle-contrast rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is +0.00 [0.00, 0.00] points, not statistically significant (Holm-adjusted p = 1.0000), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 13 under B-uniform to 0 under B-oracle. The corruption dose-response (T = 1) has slope -0.00 [-0.00, 0.00] T5 points per unit α: flat.
 
 ## Scope
 
@@ -99,9 +99,30 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 | B-learned-s0 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | B-oracle | 9 | 1 | 7 | 2 | 0 | 0 | 0 | 0 |
 
-## Pending
+## Corruption dose-response (D3)
 
-- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). It needs 9 validation runs: about 4.1 GPU-hours at addendum B's per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the availability signal degrades is untested on validation.
+Amendment A4's D3, with its code fixed before any dose-val-b run (amendment A6): the OLS slope of validation T5 on the corruption level α, one point per arm, with a 95% class-stratified percentile bootstrap that draws patients once per resample for every arm. Decreasing if the interval lies below 0, increasing if above, flat otherwise.
+
+**Primary, T = 1.** Slope -0.00 [-0.00, 0.00] T5 points per unit α (flat; 200 resamples). Mean T5 by level: α 0.0: 91.67, α 0.1: 91.67, α 0.3: 91.67, α 0.5: 91.67; the level means never rise as α grows.
+
+| Arm | α | T5 |
+|---|---|---|
+| B-oracle | 0.0 | 91.67 |
+| B-a0.1-T1-n0 | 0.1 | 91.67 |
+| B-a0.1-T1-n1 | 0.1 | 91.67 |
+| B-a0.3-T1-n0 | 0.3 | 91.67 |
+| B-a0.3-T1-n1 | 0.3 | 91.67 |
+| B-marginal | 0.5 | 91.67 |
+
+**Secondary, T = 0.25.** Slope -0.00 [-0.00, -0.00] T5 points per unit α (flat; 200 resamples). Mean T5 by level: α 0.0: 91.67, α 0.1: 91.67, α 0.3: 91.67; the level means never rise as α grows.
+
+| Arm | α | T5 |
+|---|---|---|
+| B-oracle | 0.0 | 91.67 |
+| B-a0.1-T0.25-n0 | 0.1 | 91.67 |
+| B-a0.1-T0.25-n1 | 0.1 | 91.67 |
+| B-a0.3-T0.25-n0 | 0.3 | 91.67 |
+| B-a0.3-T0.25-n1 | 0.3 | 91.67 |
 
 ## Limitations
 
@@ -109,4 +130,4 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 - Relevance is guideline relevance of the requested action, not the value of the result it returned. The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four diseases; sensitivity S1 (exploratory) counts them as relevant to all four.
 - Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, and says nothing about what each result showed.
 - A null oracle contrast concerns this fixed planner only: perfect information does not make the heuristic optimal (SPEC §4.5).
-- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json` and the committed addenda A and B.
+- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda A and B, and `analyze-dose-val-b/dose_response.json`.

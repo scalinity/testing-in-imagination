@@ -9,7 +9,7 @@ from tim.events import load_schema, validate
 from tim.paths import OWN
 
 PUBLISHED = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "phase-a",
-             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "diagnose-val-b", "dose-val-b", "test-b", "phase-b")
+             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "diagnose-val-b", "dose-val-b", "analyze-dose-val-b", "test-b", "phase-b")
 
 
 def run_all(environ, results):
@@ -103,5 +103,9 @@ def test_the_validation_diagnostics_are_published_and_rendered(two_runs):
     from tim.diagnostics import DOSE_RESPONSE_ARMS
     assert sorted(p.stem for p in (first / "dose-val-b" / "events").iterdir()) == sorted(DOSE_RESPONSE_ARMS)
     text = (first / "DIAGNOSTICS.md").read_text()
-    assert text.startswith("> **SYNTHETIC**") and "**Provisional:" in text and "## Pending" in text
+    dose = json.loads((first / "analyze-dose-val-b" / "dose_response.json").read_text())
+    validate(dose, load_schema("dose_response"))
+    from tim.diagnostics import DOSE_PRIMARY
+    assert [p["arm"] for p in dose["primary"]["points"]] == [arm for arm, _ in DOSE_PRIMARY]
+    assert text.startswith("> **SYNTHETIC**") and "## Corruption dose-response (D3)" in text and "## Pending" not in text
     assert f"{diagnostics['family_d']['B-oracle-B-uniform']['delta_t5']:+.2f}" in text

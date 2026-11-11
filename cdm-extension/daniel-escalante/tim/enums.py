@@ -6,7 +6,7 @@ PHASE_A_STAGES = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "add
                   "test-a", "analyze-a", "test-a2", "analyze-a2")
 PHASE_B_STAGES = ("hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b",
                   "analyze-val-b", "addendum-b", "test-b", "analyze-b")
-DIAGNOSTIC_STAGES = ("diagnose-val-b", "dose-val-b")  # exploratory, validation only (A4, A5)
+DIAGNOSTIC_STAGES = ("diagnose-val-b", "dose-val-b", "analyze-dose-val-b")  # exploratory, validation only (A4-A6)
 STAGES = (*PHASE_A_STAGES, *PHASE_B_STAGES, *DIAGNOSTIC_STAGES, "canary-probe")
 LADDER = ("official", "V0", "V0-rerun", "V0-shadow", "V1", "V2-raw", "V2", "V3-raw", "V3")
 COMPARISONS = ("V3-official", "V1-official", "V3-V1", "V2-V1", "V3-V2", "V2raw-official", "V3raw-official",
@@ -73,6 +73,7 @@ ENUMS = {
     "quantile": ("min", "q25", "median", "q75", "max"),
     "availability": ("available", "unavailable"),
     "test_category": ("lab", "imaging", "exam"),
+    "dose_reading": ("decreasing", "flat", "increasing"),
     "arm_b": ("P0", *PHASE_B_ARMS),
     "wm_arm": PHASE_B_ARMS,
     "wm_file": ("learned-s0.pkl", "learned-s1.pkl", "learned-s2.pkl", "base_rates.json"),

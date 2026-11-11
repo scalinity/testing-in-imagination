@@ -156,3 +156,46 @@ def hypothesis_check(rows, p0, relevant, source) -> dict:
             "alignment": {"P0": aligned(p0), **{arm: aligned(r) for arm, r in rows.items()}},
             "extra": {arm: _tally(zip(r, p0), relevant) for arm, r in rows.items()},
             "dropped": {arm: _tally(zip(p0, r), relevant) for arm, r in rows.items()}}
+
+
+# ---- D3: the corruption dose-response (amendment A4), fixed in code before any dose-val-b run ------
+
+DOSE_PRIMARY = (("B-oracle", 0.0), ("B-a0.1-T1-n0", 0.1), ("B-a0.1-T1-n1", 0.1), ("B-a0.3-T1-n0", 0.3),
+                ("B-a0.3-T1-n1", 0.3), ("B-marginal", 0.5))  # T = 1; B-marginal is alpha = 0.5 (SPEC 4.3)
+DOSE_SECONDARY = (("B-oracle", 0.0), ("B-a0.1-T0.25-n0", 0.1), ("B-a0.1-T0.25-n1", 0.1),
+                  ("B-a0.3-T0.25-n0", 0.3), ("B-a0.3-T0.25-n1", 0.3))  # T = 0.25
+DOSE_SEED_TAG = "tim-dose-response"  # seed = stream_seed(269, "val", DOSE_SEED_TAG)
+
+
+def dose_response(rows, points, seed, resamples=10_000) -> dict:
+    """OLS slope of each arm's T5 on alpha (one point per arm), with a 95% class-stratified percentile
+    bootstrap that draws patients once per resample and applies the draw to every arm."""
+    import numpy as np
+    from tim.analysis import TOLERANCE  # float residue below this is zero
+    arms = [arm for arm, _ in points]
+    ids = [r["patient_id"] for r in rows[arms[0]]]
+    if any([r["patient_id"] for r in rows[arm]] != ids for arm in arms):
+        raise ValueError("every arm must list the same patients in the same order")
+    labels = np.array([r["label"] for r in rows[arms[0]]])
+    correct = np.array([[r["prediction"] == r["label"] for r in rows[arm]] for arm in arms], dtype=float)
+    classes = [np.flatnonzero(labels == d) for d in DISEASES if (labels == d).any()]
+    x = np.array([alpha for _, alpha in points], dtype=float)
+    centred = x - x.mean()
+
+    def slope(t5):  # t5: arms x anything
+        return centred @ t5 / (centred @ centred)
+
+    t5 = 100 * np.mean([correct[:, members].mean(axis=1) for members in classes], axis=0)
+    rng, recall = np.random.default_rng(seed), np.zeros((len(arms), resamples))
+    for members in classes:
+        draws = members[rng.integers(0, len(members), size=(resamples, len(members)))]
+        recall += correct[:, draws].mean(axis=2)
+    low, high = (float(v) for v in np.percentile(slope(100 * recall / len(classes)), [2.5, 97.5]))
+    levels = sorted(set(x.tolist()))
+    level_t5 = [float(np.mean(t5[x == level])) for level in levels]
+    return {"points": [{"arm": arm, "alpha": float(a), "t5": float(v)} for arm, a, v in zip(arms, x, t5)],
+            "levels": [{"alpha": level, "t5": value} for level, value in zip(levels, level_t5)],
+            "slope": float(slope(t5)), "ci95": [low, high],
+            "reading": "decreasing" if high < -TOLERANCE else "increasing" if low > TOLERANCE else "flat",
+            "levels_non_increasing": all(b <= a + 1e-9 for a, b in zip(level_t5, level_t5[1:])),
+            "resamples": resamples}
