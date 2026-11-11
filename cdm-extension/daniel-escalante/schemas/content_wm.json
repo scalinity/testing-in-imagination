@@ -1,0 +1,141 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "content_sha256",
+    "prior",
+    "quality",
+    "premise"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": "source"
+    },
+    "content_sha256": {
+      "type": "string",
+      "format": "identifier"
+    },
+    "prior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "c",
+        "temperature"
+      ],
+      "properties": {
+        "c": {
+          "type": "number"
+        },
+        "temperature": {
+          "type": "number"
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tuples",
+        "items",
+        "nll",
+        "nll_marginal",
+        "skill",
+        "deciles",
+        "spearman"
+      ],
+      "properties": {
+        "tuples": {
+          "$ref": "count"
+        },
+        "items": {
+          "$ref": "count"
+        },
+        "nll": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "nll_marginal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "deciles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "predicted",
+              "realized"
+            ],
+            "properties": {
+              "predicted": {
+                "type": "number"
+              },
+              "realized": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "spearman": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    "premise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admissions_with_lab",
+        "lab_requests",
+        "minimum",
+        "passed"
+      ],
+      "properties": {
+        "admissions_with_lab": {
+          "$ref": "count"
+        },
+        "lab_requests": {
+          "$ref": "count"
+        },
+        "minimum": {
+          "$ref": "count"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

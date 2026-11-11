@@ -18,11 +18,13 @@ SMOKE_CAP_SECONDS = 0.5 * 3600
 CODE_PATHS = [str(FOLDER / p) for p in ("tim", "scripts", "configs", "schemas", "pyproject.toml", "uv.lock")] + \
     ["replication-of-original/daniel-escalante/replication", "lacdm/upstream"]
 ADDENDA = {"test-a": "addendum-a.json", "test-a2": "addendum-a.json", "test-b": "addendum-b.json"}
-LISTED = {"smoke": 2, "bench-a": 24, "bench-b": 24}
+LISTED = {"smoke": 2, "bench-a": 24, "bench-b": 24, "bench-c": 24}
 SPLIT_SIZE = {"val": 240, "test": 240}
 # Provisional GPU-hours per job from SPEC §9 until bench measurements exist.
 PROVISIONAL = {"smoke": 0.25, "bench-a": 0.075, "val-a": 0.55, "test-a": 1.7 / 3,
-               "bench-b": 0.075, "val-b": 1.7 / 3, "test-b": 7.7 / 14, "dose-val-b": 1.7 / 3}
+               "bench-b": 0.075, "val-b": 1.7 / 3, "test-b": 7.7 / 14, "dose-val-b": 1.7 / 3,
+               # Content study until bench-c: bench-b's measured 340 s per bench arm, addendum B's 0.458 per arm.
+               "bench-c": 0.094, "val-c": 0.458}
 BENCH_PROXY = {"V0": "V3", "V0-rerun": "V3", "V2": "V3", "V3": "V3", "V0-shadow": "V0-shadow"}
 
 
@@ -59,6 +61,7 @@ def estimate_hours(stage, job, root=ROOT) -> float:
     results = root / FOLDER / "results" / "credentialed"
     phase = stage[-1]
     proxy = BENCH_PROXY.get(job["variant"], "V3") if phase == "a" else (
+        ("WM-oracle" if job["variant"] == "WM-oracle" else "WM-learned") if phase == "c" else
         "B-oracle" if job["variant"] == "B-oracle" else "B-learned-s0")
     bench = results / f"bench-{phase}" / f"bench.{proxy}.json"
     smoke = results / "smoke" / "events" / "V3.jsonl"

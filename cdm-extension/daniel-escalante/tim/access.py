@@ -27,6 +27,9 @@ ACCESS = {
     "diagnose-val-b": {"val": "full"},
     "dose-val-b": {"val": "full"},
     "analyze-dose-val-b": {"val": "full"},
+    "wm-fit-c": {"train": "full", "val": "full"},
+    "bench-c": {"val": "listed"},
+    "val-c": {"val": "full"},
     **{stage: _TEST_ONLY for stage in ("test-a", "analyze-a", "test-a2", "analyze-a2", "test-b", "analyze-b")},
 }
 BENCH_PER_CLASS, SMOKE_PATIENTS = 6, 2
@@ -262,3 +265,12 @@ class Episodes:
     def finish(self) -> None:
         self.ledger.record("completed", key=self.key, total=self.total)
         self.close()
+
+
+def lab_results(dataset, split: str) -> dict:
+    """Each admission's lab results (item id -> value string), read from the stage's private copy of its
+    split that open_split wrote: the content world model's only view of lab values."""
+    import ast
+    with (dataset.data_dir / f"{split}.csv").open(newline="", encoding="utf-8") as handle:
+        return {int(r["Patient ID"]): {int(item): str(value) for item, value in ast.literal_eval(r["Laboratory Tests"]).items()}
+                for r in csv.DictReader(handle)}

@@ -13,12 +13,14 @@ from tim.paths import OWN, ROOT
 from tim.settings import Settings
 
 CANARY = "TIM-CANARY-7f3a"
-GPU_STAGES = ("smoke", "bench-a", "val-a", "test-a", "bench-b", "val-b", "test-b", "dose-val-b")
+GPU_STAGES = ("smoke", "bench-a", "val-a", "test-a", "bench-b", "val-b", "test-b", "dose-val-b", "bench-c",
+              "val-c")
 CPU_STAGES = ("validate", "analyze-val-a", "analyze-a", "hpi-audit", "wm-fit", "inventory", "leakage",
-              "analyze-val-b", "analyze-b", "diagnose-val-b", "analyze-dose-val-b")
+              "analyze-val-b", "analyze-b", "diagnose-val-b", "analyze-dose-val-b", "wm-fit-c")
 SYNTHETIC_ORDER = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "analyze-a",
                    "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b",
-                   "diagnose-val-b", "dose-val-b", "analyze-dose-val-b", "test-b", "analyze-b")
+                   "diagnose-val-b", "dose-val-b", "analyze-dose-val-b", "wm-fit-c", "bench-c", "val-c",
+                   "test-b", "analyze-b")
 WM_FILES = ("learned-s0.pkl", "learned-s1.pkl", "learned-s2.pkl", "base_rates.json")
 
 
@@ -185,6 +187,34 @@ def stage_body(stage, job, constants, protocol_hash):
             for key, temperature, points in (("primary", 1, diagnostics.DOSE_PRIMARY),
                                              ("secondary", 0.25, diagnostics.DOSE_SECONDARY))}})
 
+    def wm_fit_c(settings, bundle):
+        """SPEC_CONTENT_WM.md §1 and gates 1-2 of §5: bins, the content model and the HPI prior fit on train
+        (the prior's temperature on validation), kept private; validation quality and the premise published."""
+        import hashlib
+        import pickle
+        from tim import content, labs
+        train_set, val_set = access.open_split(settings, stage, "train"), access.open_split(settings, stage, "val")
+        train_labs, val_labs = access.lab_results(train_set, "train"), access.lab_results(val_set, "val")
+        train = [dict(train_set[i]) for i in range(len(train_set))]
+        val = [dict(val_set[i]) for i in range(len(val_set))]
+        bins = labs.fit(list(train_labs.values()), {panel: train_set.test_ids[panel] for panel in content.LABS})
+
+        def truth(record):
+            return {panel: bins.outcome(panel, record) for panel in content.LABS}
+        model = content.fit_model([(i["condition"], truth(train_labs[int(i["patient_id"])])) for i in train])
+        prior = content.fit_prior(train, val, tests)
+        folder = runner.wm_dir(settings)
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "content.pkl").write_bytes(pickle.dumps({"bins": bins, "model": model, "prior": prior}))
+        cases = [(i["patient_history"], i["condition"], truth(val_labs[int(i["patient_id"])]), int(i["patient_id"]))
+                 for i in val]
+        bundle.aggregate("content_wm", {
+            "source": settings.source,
+            "content_sha256": hashlib.sha256((folder / "content.pkl").read_bytes()).hexdigest(),
+            "prior": {"c": prior.c, "temperature": prior.temperature},
+            "quality": content.quality(prior, model, cases, "val"),
+            "premise": content.premise(_rows(settings, protocol_hash, "val-a", "V3", stage))})
+
     def analyze_b(settings, bundle):
         import pickle
         from tim import leakage
@@ -211,7 +241,7 @@ def stage_body(stage, job, constants, protocol_hash):
     return {"validate": validate, "analyze-val-a": analyze_val_a, "analyze-a": analyze_a, "hpi-audit": hpi_audit,
             "wm-fit": wm_fit, "inventory": inventory_stage, "leakage": leakage_stage,
             "analyze-val-b": analyze_val_b, "diagnose-val-b": diagnose_val_b, "analyze-dose-val-b": analyze_dose_val_b,
-            "analyze-b": analyze_b}.get(stage, gpu_job)
+            "analyze-b": analyze_b, "wm-fit-c": wm_fit_c}.get(stage, gpu_job)
 
 
 def run_command(settings, stage, job=None):

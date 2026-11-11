@@ -13,6 +13,7 @@ import traceback
 import math
 
 from tim.actions import PATTERN, Vocabulary
+from tim.enums import CONFIGURED_TESTS
 from tim.fallback import finalize
 from tim.guard import FIXED_THOUGHT, Limits, fit, trigger
 from tim.scoring import best
@@ -39,8 +40,11 @@ def load_config() -> dict:
 
 
 CONFIG = load_config()
-VARIANTS = {name: Variant(name, **flags) for name, flags in {**CONFIG["variants"], **CONFIG["arms"]}.items()}
-STAGE_SPECS = {**CONFIG["stages"], **CONFIG["stages_b"]}
+VARIANTS = {name: Variant(name, **flags)
+            for name, flags in {**CONFIG["variants"], **CONFIG["arms"], **CONFIG["arms_c"]}.items()}
+STAGE_SPECS = {**CONFIG["stages"], **CONFIG["stages_b"], **CONFIG["stages_c"]}
+LAB_NAMES = CONFIGURED_TESTS[:7]
+CONFIGURED_NAMES = {name.lower(): name for name in CONFIGURED_TESTS}  # upstream records tests in lower case
 
 
 @dataclass
@@ -96,7 +100,8 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits(), predictor=None)
                             variant.g1, variant.g2, limits)
             if found is None:
                 if self.tim_p is not None and proposal.kind == "test" and t < limits.max_steps:
-                    self._plan(trajectory, t, proposal, requested, prompt_ids)
+                    plan = self._plan_content if variant.planner["kind"] == "content" else self._plan
+                    plan(trajectory, t, proposal, requested, prompt_ids)
                 return
             thought = proposal.thought if proposal.thought is not None else FIXED_THOUGHT[found.event]
             scores = self._score(t, prompt_ids, thought, found.candidates, found.from_kind)
@@ -133,6 +138,25 @@ def guarded_class(base, variant, vocab, scorer, limits=Limits(), predictor=None)
                 return
             replace(trajectory, *fitted)
             self._event(t, event, "test", action.kind)
+
+        def _plan_content(self, trajectory, t, proposal, requested, prompt_ids):
+            """SPEC_CONTENT_WM §2.2-2.3: a lab request becomes the untried lab panel the planner chooses;
+            imaging and exam requests pass through unchanged."""
+            if proposal.action.name not in LAB_NAMES:
+                return
+            untried = [a for a in vocab.untried(requested) if a.name in LAB_NAMES]
+            provided = [CONFIGURED_NAMES.get(name.lower(), name) for name in trajectory.provided_tests]
+            choice = self.tim_p.choose([a.name for a in untried], provided, t)
+            action = next(a for a in untried if a.name == choice)
+            if action == proposal.action:
+                return
+            fitted = fit(action, proposal.thought, "eig_rerank", len(prompt_ids), self.tim_tokenizer, limits)
+            if fitted is None:
+                self.tim_state.replacement_failed += 1
+                self._event(t, "replacement_failed", "test", action.kind)
+                return
+            replace(trajectory, *fitted)
+            self._event(t, "eig_rerank", "test", action.kind)
 
         def step(self, trajectory, step, tokenizer):
             self.tim_state.turns += 1
@@ -276,11 +300,14 @@ def wm_dir(settings):
     return settings.work_dir / "private" / "wm"
 
 
-def make_predictor(settings, planner, split):
-    """p(test charted | patient) for an arm; the oracle and corruption arms see availability bits only."""
+def make_predictor(settings, planner, split, dataset=None):
+    """p(test charted | patient) for an arm; the oracle and corruption arms see availability bits only.
+    A content arm instead gets one content.PatientPlanner per patient (SPEC_CONTENT_WM §2-3)."""
     import pickle
     from tim import availability as av
     from tim.enums import CONFIGURED_TESTS as tests
+    if planner["kind"] == "content":
+        return _content_planner(settings, planner, split, dataset)
     rates = json.loads((wm_dir(settings) / "base_rates.json").read_text())
     kind = planner["kind"]
     if kind == "uniform":
@@ -297,14 +324,35 @@ def make_predictor(settings, planner, split):
                          for t, b in av.bits(item, tests).items()}
 
 
+def _content_planner(settings, planner, split, dataset):
+    """Per-patient content planners from the private wm-fit-c store and Phase B's learned availability head."""
+    import pickle
+    from tim import access, content
+    store = pickle.loads((wm_dir(settings) / "content.pkl").read_bytes())
+    availability = pickle.loads((wm_dir(settings) / "learned-s0.pkl").read_bytes())
+    records = access.lab_results(dataset, split)
+    usd = access.baseline_cfg(settings).evaluation.test_costs_usd
+    costs = {panel: float(usd[panel.lower()]) for panel in content.LABS}
+
+    def build(item):
+        patient, history = int(item["patient_id"]), item["patient_history"]
+        avail = availability.predict(history)
+        return content.PatientPlanner(
+            kind=planner["model"], model=store["model"], hpi_prior=store["prior"].predict(history),
+            label=item["condition"], alpha=float(planner.get("alpha", 0.0)),
+            truth={panel: store["bins"].outcome(panel, records.get(patient, {})) for panel in content.LABS},
+            avail={panel: avail[panel] for panel in content.LABS}, costs=costs, split=split, patient=patient)
+    return build
+
+
 def run_job(settings, stage, variant_name, bundle, protocol_hash, commit, clock):
     """One (stage, variant) job: admission, resume, guarded evaluation, public counts."""
     from tim import access
     from tim.scoring import BenchScorer
     split = STAGE_SPECS[stage]["split"]
     variant, limits = VARIANTS[variant_name], Limits(**CONFIG["limits"])
-    predictor = make_predictor(settings, variant.planner, split) if variant.planner else None
     dataset = access.open_split(settings, stage, split)
+    predictor = make_predictor(settings, variant.planner, split, dataset) if variant.planner else None
     episodes = access.Episodes(settings, protocol_hash, stage, variant_name, split, commit, len(dataset))
     done = episodes.open()
     if done:

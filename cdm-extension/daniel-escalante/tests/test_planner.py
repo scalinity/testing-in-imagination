@@ -64,7 +64,7 @@ def test_an_unchanged_choice_records_no_event(settings):
 
 
 def test_phase_b_arms_are_configured():
-    arms = {name: v for name, v in runner.VARIANTS.items() if v.planner}
+    arms = {name: v for name, v in runner.VARIANTS.items() if v.planner and v.planner["kind"] != "content"}
     assert len(arms) == 14
     corruption = [v.planner for v in arms.values() if v.planner["kind"] == "corrupt"]
     assert sorted((c["alpha"], c["temperature"], c["noise_seed"]) for c in corruption) == sorted(

@@ -1,12 +1,14 @@
 """scripts/submit_slurm.py: a dry run prints a stage's sbatch commands without an approval; a real
 submission still refuses without one, and neither path reaches sbatch unapproved."""
 import os
-from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 from tim.diagnostics import DOSE_RESPONSE_ARMS
 from tim.paths import OWN
+from tim.runner import STAGE_SPECS
 
 
 def submit(tmp_path, *args):
@@ -28,18 +30,26 @@ def submit(tmp_path, *args):
                           capture_output=True, text=True, timeout=120)
 
 
-def test_a_dry_run_prints_every_job_of_an_unapproved_gpu_stage(tmp_path):
-    result = submit(tmp_path, "--stage", "dose-val-b", "--dry-run")
+@pytest.mark.parametrize("stage, arms", [("dose-val-b", DOSE_RESPONSE_ARMS), ("val-c", STAGE_SPECS["val-c"]["jobs"])])
+def test_a_dry_run_prints_every_job_of_a_gpu_stage_without_an_approval(tmp_path, stage, arms):
+    result = submit(tmp_path, "--stage", stage, "--dry-run")
     assert result.returncode == 0, result.stderr[-2000:]
     lines = result.stdout.splitlines()
-    assert len(lines) == len(DOSE_RESPONSE_ARMS)
-    for line, arm in zip(lines, DOSE_RESPONSE_ARMS):
+    assert len(lines) == len(arms)
+    for line, arm in zip(lines, arms):
         assert line.startswith("sbatch ") and "--account=cai6734 --qos=cai6734 " in line
-        assert "--gres=gpu:rtx_pro_6000:1" in line and line.endswith(f"scripts/gpu.slurm dose-val-b --job {arm}")
+        assert "--gres=gpu:rtx_pro_6000:1" in line and line.endswith(f"scripts/gpu.slurm {stage} --job {arm}")
     assert not (tmp_path / "sbatch-called").exists()
 
 
+def test_the_cpu_fit_stage_goes_to_the_burst_qos(tmp_path):
+    result = submit(tmp_path, "--stage", "wm-fit-c", "--dry-run")
+    assert result.returncode == 0, result.stderr[-2000:]
+    assert "--account=cai6734 --qos=cai6734-b " in result.stdout and result.stdout.rstrip().endswith(
+        "scripts/cpu.slurm wm-fit-c")
+
+
 def test_a_real_submission_still_refuses_without_an_approval(tmp_path):
-    result = submit(tmp_path, "--stage", "dose-val-b")
+    result = submit(tmp_path, "--stage", "val-c")  # no approval exists for the content study
     assert result.returncode != 0 and "approval_missing" in result.stderr
     assert not (tmp_path / "sbatch-called").exists()
