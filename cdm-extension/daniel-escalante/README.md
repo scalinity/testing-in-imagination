@@ -1,6 +1,6 @@
 # cdm-extension: commit guard and chart-availability reranking
 
-A research extension of the LA-CDM replication in `replication-of-original/daniel-escalante/` (CAI 6734, University of Florida). [SPEC.md](SPEC.md) is the source of truth; [DECISIONS.md](DECISIONS.md) records the choices it leaves open; [prereg/protocol.json](prereg/protocol.json) freezes the analysis.
+A research extension of the LA-CDM replication in `replication-of-original/daniel-escalante/` (CAI 6734, University of Florida). [SPEC.md](SPEC.md) is the source of truth; [DECISIONS.md](DECISIONS.md) records the choices it leaves open; [prereg/protocol.json](prereg/protocol.json) freezes the analysis. [SPEC_CONTENT_WM.md](SPEC_CONTENT_WM.md) is the draft design and preregistration plan for the next step, a lab-result world model with an imagined-outcome planner; nothing in it has run.
 
 - **Phase A, commit guard.** Termination recovery and action validation for the trained Nemotron Nano 8B policy under the replication's frozen metric. G1 replaces an invalid action with the highest-scoring valid one, G2 commits to a diagnosis at the step or length budget, and G3 falls back to the hypothesis agent's latest valid answer when an episode ends without one. G3 reuses the hypothesis agent's answer, so Phase A is not a new diagnostic predictor.
 - **Phase B, retrospective chart-availability reranking.** Predicts whether a test is present in the chart from the history the agent sees, and reweights test requests. It does not predict result content and is not full world-model planning.
