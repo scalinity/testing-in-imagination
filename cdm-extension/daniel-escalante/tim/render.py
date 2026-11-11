@@ -538,7 +538,7 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
               "Amendment A5, defined after the counts above were seen. The guideline map stays the "
               "primary definition because it was fixed in advance; S1 counts urinalysis and radiographs as relevant "
               "to all four diseases, adding their per-test counts from the same bundle.\n", *_sensitivity_s1(d),
-              "", "## Do the added results repeat what the policy already knew?\n",
+              "", "## Do the added results repeat what the policy already knew? (exploratory)\n",
               "An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each "
               "added test that was relevant and provided, the hypothesis agent's hypothesis when the test was "
               "requested is compared with the patient's label, and with the hypothesis stored after the result came "

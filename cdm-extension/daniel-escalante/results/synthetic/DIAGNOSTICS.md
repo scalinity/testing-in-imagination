@@ -77,7 +77,7 @@ Amendment A5, defined after the counts above were seen. The guideline map stays 
 | B-learned-s0 | 0 | 0 | 9 | 3 | -3 | -2 |
 | B-oracle | 2 | 2 | 17 | 10 | -8 | -10 |
 
-## Do the added results repeat what the policy already knew?
+## Do the added results repeat what the policy already knew? (exploratory)
 
 An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each added test that was relevant and provided, the hypothesis agent's hypothesis when the test was requested is compared with the patient's label, and with the hypothesis stored after the result came back. If most added relevant results arrived while the policy already held the label and rarely changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and counted.
 

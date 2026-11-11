@@ -246,6 +246,7 @@ def test_diagnostics_report_states_scope_and_lists_the_dose_response_as_pending(
 
 def test_check_h_is_reported_as_an_untested_hypothesis_with_counts():
     section = rendered().split("## Do the added results repeat")[1].split("\n## ")[0]
+    assert section.startswith(" what the policy already knew? (exploratory)")
     assert "untested hypothesis" in section and "aggregate" in section
     assert "| B-oracle | 41 | 3 | 29 | 9 | 3 | 7 | 4 | 1 |" in section
 

@@ -75,7 +75,7 @@ Amendment A5, defined after the counts above were seen. The guideline map stays 
 | B-learned-s0 | 64 | 52 | 96 | 35 | +17 | +6 |
 | B-oracle | 106 | 97 | 155 | 31 | +66 | +37 |
 
-## Do the added results repeat what the policy already knew?
+## Do the added results repeat what the policy already knew? (exploratory)
 
 An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each added test that was relevant and provided, the hypothesis agent's hypothesis when the test was requested is compared with the patient's label, and with the hypothesis stored after the result came back. If most added relevant results arrived while the policy already held the label and rarely changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and counted.
 
@@ -107,4 +107,4 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 - Relevance is guideline relevance of the requested action, not the value of the result it returned. The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four diseases; sensitivity S1 (exploratory) counts them as relevant to all four.
 - Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, and says nothing about what each result showed.
 - A null oracle contrast concerns this fixed planner only: perfect information does not make the heuristic optimal (SPEC §4.5).
-- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json` and the committed addenda A and B.
+- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda A and B.
