@@ -75,3 +75,10 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - `WRITEUP.md` and `SLIDE.md` sit beside the phase folders under `results/credentialed/` and `results/synthetic/`. `tim.sh render` and the synthetic run write them, so the byte-identical synthetic check and check-git cover them like the phase reports.
 - Their numbers come from both phases' metrics.json. The paper's reported figures come from the replication's committed `results/paper_values.json`, read only. The comparison with the paper is descriptive: that figure comes from the authors' own run and has no interval.
 - results_table.tex and figures (SPEC §7) are not produced.
+
+## Validation diagnostics (amendment A4)
+- `diagnose-val-b` is an exploratory CPU stage with validation access only, one more row in SPEC §2's table. It reads val-a's V3 rows (P0), val-b's three arms and the release's lab mapping, and never opens test.
+- Rows name tests in lower case (the replication's cost-table keys). The diagnostics map them to the configured names before applying the relevance rule.
+- The relevance constants (Hager et al.'s required lab item IDs and scored abdominal modalities) carry the framework commit they were copied from. Each panel's item IDs come from the release mapping on the cluster; only the panel × disease booleans are published.
+- `DIAGNOSTICS.md` sits beside `WRITEUP.md` in both result kinds. It is rendered from the bundle, analyze-val-b's summaries, and the threshold and per-arm GPU budget in addenda A and B, by `tim.sh render` and the synthetic run.
+- The dose-response (amendment A4, D3) has no code: its validation arms need GPU runs that are not approved.

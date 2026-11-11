@@ -15,10 +15,10 @@ from tim.settings import Settings
 CANARY = "TIM-CANARY-7f3a"
 GPU_STAGES = ("smoke", "bench-a", "val-a", "test-a", "bench-b", "val-b", "test-b")
 CPU_STAGES = ("validate", "analyze-val-a", "analyze-a", "hpi-audit", "wm-fit", "inventory", "leakage",
-              "analyze-val-b", "analyze-b")
+              "analyze-val-b", "analyze-b", "diagnose-val-b")
 SYNTHETIC_ORDER = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "analyze-a",
                    "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b",
-                   "test-b", "analyze-b")
+                   "diagnose-val-b", "test-b", "analyze-b")
 WM_FILES = ("learned-s0.pkl", "learned-s1.pkl", "learned-s2.pkl", "base_rates.json")
 
 
@@ -161,6 +161,16 @@ def stage_body(stage, job, constants, protocol_hash):
         bundle.aggregate("validation_b", analysis.validation_b(rows, p0, access.baseline_cfg(settings), settings.source,
                                                                resamples=constants["bootstrap_resamples"]))
 
+    def diagnose_val_b(settings, bundle):
+        from tim import diagnostics
+        from tim.runner import STAGE_SPECS
+        rows = {arm: _rows(settings, protocol_hash, "val-b", arm, stage) for arm in STAGE_SPECS["val-b"]["jobs"]}
+        p0 = _rows(settings, protocol_hash, "val-a", "V3", stage)
+        relevant = diagnostics.relevance(access.open_split(settings, stage, "val").lab_test_mapping)
+        bundle.aggregate("diagnostics", diagnostics.diagnostics(
+            rows, p0, access.baseline_cfg(settings), settings.source, relevant,
+            resamples=constants["bootstrap_resamples"]))
+
     def analyze_b(settings, bundle):
         import pickle
         from tim import leakage
@@ -186,7 +196,8 @@ def stage_body(stage, job, constants, protocol_hash):
 
     return {"validate": validate, "analyze-val-a": analyze_val_a, "analyze-a": analyze_a, "hpi-audit": hpi_audit,
             "wm-fit": wm_fit, "inventory": inventory_stage, "leakage": leakage_stage,
-            "analyze-val-b": analyze_val_b, "analyze-b": analyze_b}.get(stage, gpu_job)
+            "analyze-val-b": analyze_val_b, "diagnose-val-b": diagnose_val_b,
+            "analyze-b": analyze_b}.get(stage, gpu_job)
 
 
 def run_command(settings, stage, job=None):
@@ -240,6 +251,21 @@ def render_summary(kind_dir: Path) -> list[Path]:
     return [writeup, slide]
 
 
+def render_diagnostics(kind_dir: Path) -> Path:
+    """DIAGNOSTICS.md beside the phase folders (amendment A4): the bundle, analyze-val-b's summaries, and the
+    threshold and per-arm GPU budget committed in addenda A and B."""
+    from tim import render
+    from tim.diagnostics import DOSE_RESPONSE_ARMS
+    diagnostics = json.loads((kind_dir / "diagnose-val-b" / "diagnostics.json").read_text())
+    val_b = json.loads((kind_dir / "analyze-val-b" / "validation_b.json").read_text())
+    threshold = json.loads((OWN / "prereg" / "addendum-a.json").read_text())["sensitivity"]["V1-V0"]["mde_80"]
+    budget = json.loads((OWN / "prereg" / "addendum-b.json").read_text())["test_b_budget"]["gpu_hours"]
+    path = kind_dir / "DIAGNOSTICS.md"
+    path.write_text(render.render_diagnostics(diagnostics, val_b, threshold,
+                                              sum(budget[arm] for arm in DOSE_RESPONSE_ARMS)))
+    return path
+
+
 def synthetic_all(settings):
     """Every Phase-A and Phase-B stage on a fresh fixture, published under results/synthetic/."""
     from tim import fixture
@@ -261,6 +287,7 @@ def synthetic_all(settings):
     for phase in ("phase-a", "phase-b"):
         render_phase(target / phase / "metrics.json")
     render_summary(target)
+    render_diagnostics(target)
 
 
 def check_git_command():
@@ -305,6 +332,8 @@ def main(argv=None):
         if all((results_root() / "credentialed" / phase / "metrics.json").exists() for phase in ("phase-a", "phase-b")):
             for path in render_summary(results_root() / "credentialed"):
                 print(f"rendered: {path}")
+        if (results_root() / "credentialed" / "diagnose-val-b" / "diagnostics.json").exists():
+            print(f"rendered: {render_diagnostics(results_root() / 'credentialed')}")
     elif args.command in ("addendum-a", "addendum-b"):
         from tim import protocol
         write = protocol.addendum_a if args.command == "addendum-a" else protocol.addendum_b

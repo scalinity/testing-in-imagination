@@ -40,13 +40,13 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 
 | Path | Contents |
 |---|---|
-| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
+| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `diagnostics`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
 | `configs/variants.yaml` | variants, limits and stage jobs |
 | `schemas/` | the public allowlist for every event and aggregate |
 | `prereg/` | the frozen protocol, addenda and amendment notes |
 | `approvals/` | approval requests and Daniel's committed approvals |
 | `scripts/` | `tim.sh` (capture wrapper), `run_tim.py`, `gpu.slurm`, `cpu.slurm`, `submit_slurm.py` |
-| `results/credentialed/` | published credentialed bundles, the Phase reports, and `WRITEUP.md` and `SLIDE.md` covering both phases |
+| `results/credentialed/` | published credentialed bundles, the Phase reports, `WRITEUP.md` and `SLIDE.md` covering both phases, and the exploratory validation `DIAGNOSTICS.md` |
 | `results/synthetic/` | the same structure from the synthetic fixture |
 
 ## Run log

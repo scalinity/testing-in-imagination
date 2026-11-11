@@ -1,0 +1,605 @@
+{
+  "extra_tests": {
+    "B-learned-s0": {
+      "by_category": {
+        "exam": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 2,
+          "dropped_relevant_provided": 2,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "imaging": {
+          "dropped": 6,
+          "dropped_provided": 0,
+          "dropped_relevant": 3,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "lab": {
+          "dropped": 14,
+          "dropped_provided": 10,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "by_test": {
+        "BMP": {
+          "dropped": 2,
+          "dropped_provided": 1,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CBC": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CMP": {
+          "dropped": 2,
+          "dropped_provided": 1,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CT": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "EP": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "LFP": {
+          "dropped": 2,
+          "dropped_provided": 1,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "MRI": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 1,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "PE": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 2,
+          "dropped_relevant_provided": 2,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "RFP": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "UA": {
+          "dropped": 2,
+          "dropped_provided": 1,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "US": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 2,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "XR": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "total": {
+        "dropped": 22,
+        "dropped_provided": 12,
+        "dropped_relevant": 5,
+        "dropped_relevant_provided": 2,
+        "extra": 0,
+        "extra_provided": 0,
+        "extra_relevant": 0,
+        "extra_relevant_provided": 0
+      }
+    },
+    "B-oracle": {
+      "by_category": {
+        "exam": {
+          "dropped": 6,
+          "dropped_provided": 5,
+          "dropped_relevant": 6,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "imaging": {
+          "dropped": 14,
+          "dropped_provided": 8,
+          "dropped_relevant": 8,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "lab": {
+          "dropped": 4,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 25,
+          "extra_provided": 25,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "by_test": {
+        "BMP": {
+          "dropped": 1,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 7,
+          "extra_provided": 7,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CBC": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 5,
+          "extra_provided": 5,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CMP": {
+          "dropped": 1,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 4,
+          "extra_provided": 4,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CT": {
+          "dropped": 8,
+          "dropped_provided": 8,
+          "dropped_relevant": 5,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "EP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 1,
+          "extra_provided": 1,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "LFP": {
+          "dropped": 1,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 4,
+          "extra_provided": 4,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "MRI": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 1,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "PE": {
+          "dropped": 6,
+          "dropped_provided": 5,
+          "dropped_relevant": 6,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "RFP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 2,
+          "extra_provided": 2,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "UA": {
+          "dropped": 1,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 2,
+          "extra_provided": 2,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "US": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 2,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "XR": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "total": {
+        "dropped": 24,
+        "dropped_provided": 13,
+        "dropped_relevant": 14,
+        "dropped_relevant_provided": 10,
+        "extra": 25,
+        "extra_provided": 25,
+        "extra_relevant": 0,
+        "extra_relevant_provided": 0
+      }
+    },
+    "B-uniform": {
+      "by_category": {
+        "exam": {
+          "dropped": 6,
+          "dropped_provided": 5,
+          "dropped_relevant": 6,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "imaging": {
+          "dropped": 14,
+          "dropped_provided": 8,
+          "dropped_relevant": 8,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "lab": {
+          "dropped": 4,
+          "dropped_provided": 3,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 30,
+          "extra_provided": 20,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "by_test": {
+        "BMP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 8,
+          "extra_provided": 7,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CBC": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 8,
+          "extra_provided": 5,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CMP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 4,
+          "extra_provided": 2,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "CT": {
+          "dropped": 8,
+          "dropped_provided": 8,
+          "dropped_relevant": 5,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "EP": {
+          "dropped": 2,
+          "dropped_provided": 2,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 2,
+          "extra_provided": 1,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "LFP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 2,
+          "extra_provided": 2,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "MRI": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 1,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "PE": {
+          "dropped": 6,
+          "dropped_provided": 5,
+          "dropped_relevant": 6,
+          "dropped_relevant_provided": 5,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "RFP": {
+          "dropped": 0,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 4,
+          "extra_provided": 2,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "UA": {
+          "dropped": 2,
+          "dropped_provided": 1,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 2,
+          "extra_provided": 1,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "US": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 2,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        },
+        "XR": {
+          "dropped": 2,
+          "dropped_provided": 0,
+          "dropped_relevant": 0,
+          "dropped_relevant_provided": 0,
+          "extra": 0,
+          "extra_provided": 0,
+          "extra_relevant": 0,
+          "extra_relevant_provided": 0
+        }
+      },
+      "total": {
+        "dropped": 24,
+        "dropped_provided": 16,
+        "dropped_relevant": 14,
+        "dropped_relevant_provided": 10,
+        "extra": 30,
+        "extra_provided": 20,
+        "extra_relevant": 0,
+        "extra_relevant_provided": 0
+      }
+    }
+  },
+  "family_d": {
+    "B-oracle-B-uniform": {
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "delta_t5": 0.0,
+      "discordant": 0,
+      "mcnemar_p": 1.0,
+      "method": "exact",
+      "p_holm": 1.0,
+      "p_value": 1.0,
+      "significance": "not statistically significant"
+    },
+    "B-oracle-P0": {
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "delta_t5": 0.0,
+      "discordant": 0,
+      "mcnemar_p": 1.0,
+      "method": "exact",
+      "p_holm": 1.0,
+      "p_value": 1.0,
+      "significance": "not statistically significant"
+    }
+  },
+  "relevance": {
+    "BMP": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "CBC": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "CMP": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "CT": {
+      "appendicitis": true,
+      "cholecystitis": false,
+      "diverticulitis": true,
+      "pancreatitis": true
+    },
+    "EP": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "LFP": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "MRI": {
+      "appendicitis": true,
+      "cholecystitis": true,
+      "diverticulitis": true,
+      "pancreatitis": false
+    },
+    "PE": {
+      "appendicitis": true,
+      "cholecystitis": true,
+      "diverticulitis": true,
+      "pancreatitis": true
+    },
+    "RFP": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "UA": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    },
+    "US": {
+      "appendicitis": true,
+      "cholecystitis": true,
+      "diverticulitis": true,
+      "pancreatitis": true
+    },
+    "XR": {
+      "appendicitis": false,
+      "cholecystitis": false,
+      "diverticulitis": false,
+      "pancreatitis": false
+    }
+  },
+  "source": "synthetic"
+}

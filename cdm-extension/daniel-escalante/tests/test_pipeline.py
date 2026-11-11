@@ -9,7 +9,7 @@ from tim.events import load_schema, validate
 from tim.paths import OWN
 
 PUBLISHED = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "phase-a",
-             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "test-b", "phase-b")
+             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "diagnose-val-b", "test-b", "phase-b")
 
 
 def run_all(environ, results):
@@ -86,9 +86,19 @@ def test_phase_b_publishes_the_specs_deliverables(two_runs):
 
 def test_the_writeup_and_slide_are_rendered_beside_the_phases(two_runs):
     first = two_runs[0]
-    assert sorted(p.name for p in first.iterdir() if p.is_file()) == ["SLIDE.md", "WRITEUP.md"]
+    assert sorted(p.name for p in first.iterdir() if p.is_file()) == ["DIAGNOSTICS.md", "SLIDE.md", "WRITEUP.md"]
     metrics = json.loads((first / "phase-a" / "metrics.json").read_text())
     for name in ("WRITEUP.md", "SLIDE.md"):
         text = (first / name).read_text()
         assert text.startswith("> **SYNTHETIC**")
         assert f"{metrics['primary']['delta_t5']:+.2f}" in text
+
+
+def test_the_validation_diagnostics_are_published_and_rendered(two_runs):
+    first = two_runs[0]
+    diagnostics = json.loads((first / "diagnose-val-b" / "diagnostics.json").read_text())
+    validate(diagnostics, load_schema("diagnostics"))
+    assert set(diagnostics["family_d"]) == {"B-oracle-B-uniform", "B-oracle-P0"}
+    text = (first / "DIAGNOSTICS.md").read_text()
+    assert text.startswith("> **SYNTHETIC**") and "**Verdict:" in text
+    assert f"{diagnostics['family_d']['B-oracle-B-uniform']['delta_t5']:+.2f}" in text

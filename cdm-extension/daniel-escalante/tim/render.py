@@ -360,3 +360,116 @@ def render_slide(a: dict, b: dict, paper: dict) -> str:
               "no clinical-safety inference. Every number is rendered from `phase-a/metrics.json`, "
               "`phase-b/metrics.json` and the replication's `paper_values.json`.", ""]
     return "\n".join(lines)
+
+
+# ---- DIAGNOSTICS.md (amendment A4, exploratory) -------------------------------------------------
+
+D_NAMES = {"B-oracle-B-uniform": "B-oracle − B-uniform", "B-oracle-P0": "B-oracle − P0"}
+D_ARMS = (("P0", "P0 = V3, no reranking"), ("B-uniform", "B-uniform (no availability information)"),
+          ("B-learned-s0", "B-learned-s0 (learned availability)"), ("B-oracle", "B-oracle (true chart availability)"))
+D_CATEGORIES = (("lab", "Lab panels"), ("imaging", "Imaging"), ("exam", "Physical exam"))
+
+
+def _verdict(c, threshold, val_b) -> str:
+    """The one-line verdict of amendment A4 (D4), from the B-oracle − B-uniform contrast."""
+    where, holm, bar = f"B-oracle − B-uniform is {_interval(c)} points", _holm(c), _n(threshold)
+    requests = {arm: val_b["variants"][arm]["requests"]["unavailable"] for arm in ("B-uniform", "B-oracle")}
+    acts = (f" The planner does act on the signal: unavailable requests fall from {requests['B-uniform']} under "
+            f"B-uniform to {requests['B-oracle']} under B-oracle.")
+    untested = (" The corruption dose-response was not run (it needs GPU runs), so this rests on the oracle "
+                "contrast alone.")
+    if _significant(c) and c["delta_t5"] > 0:
+        return (f"**Verdict: signal bottleneck.** {where}, statistically significant ({holm}): perfect chart "
+                "availability raises mean class recall through this fixed planner, so the shortfall lies in the "
+                f"learned availability signal.{untested}")
+    if _significant(c):
+        return (f"**Verdict: planner bottleneck.** {where}, statistically significant ({holm}) and negative, "
+                f"so below the {bar}-point threshold: perfect chart availability makes this fixed planner worse, "
+                f"and a better availability predictor cannot help it.{acts}{untested}")
+    if c["ci95"][1] < threshold:
+        return (f"**Verdict: planner bottleneck.** {where}, not statistically significant ({holm}), and the "
+                f"interval's upper bound is below {bar} points, the smallest effect the test design detects with "
+                "80% power: even perfect chart availability gives this fixed planner no detectable gain, so a "
+                f"better availability predictor cannot help it.{acts}{untested}")
+    return (f"**Verdict: inconclusive.** {where}, not statistically significant ({holm}), but the interval reaches "
+            f"{bar} points, the smallest effect the test design detects with 80% power, so neither a useful oracle "
+            f"gain nor its absence is established.{untested}")
+
+
+def _relevant_to(by_disease) -> str:
+    names = [d for d in DISEASES if by_disease[d]]
+    return "all four" if len(names) == len(DISEASES) else ", ".join(names) or "none"
+
+
+def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float) -> str:
+    """DIAGNOSTICS.md from diagnostics.json and analyze-val-b's validation_b.json; threshold and GPU-hours
+    come from the committed addenda A and B. No number is typed by hand."""
+    from tim.diagnostics import COUNTS
+    from tim.enums import TEST_CODES
+    family, variants = d["family_d"], val_b["variants"]
+    published, n = val_b["descriptive"]["B-oracle-P0"]["ci95"], val_b["variants"]["P0"]["n"]
+    lines = [BANNER if d["source"] == "synthetic" else "",
+             "# Phase-B validation diagnostics: planner or signal?\n",
+             _verdict(family["B-oracle-B-uniform"], threshold, val_b) + "\n",
+             "## Scope\n",
+             f"- Exploratory and validation only: the {n} validation admissions of val-a and val-b, analyzed under "
+             "amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any "
+             "row. No test admission was read; nothing was tuned or selected.",
+             "- analyze-val-b had already published every arm's validation T5, so these contrasts are not blind, "
+             "and the verdict rule and its threshold were written after those point estimates were visible.",
+             "- Conclusions hold for this fixed planner (SPEC §4.4) and one policy seed. These results extend a "
+             "replication attempt and are not a reproduction of the LA-CDM paper.\n",
+             "## Does perfect chart availability help this planner? (Family D)\n",
+             "| Contrast | ΔT5 [95% CI] | p | Holm p | Discordant | Result |", "|---|---|---|---|---|---|"]
+    for key, label in D_NAMES.items():
+        c = family[key]
+        lines.append(f"| {label} | {_interval(c)} | {_p(c['p_value'])} | {_p(c['p_holm'])} | {c['discordant']} | "
+                     f"{c['significance']} |")
+    match = "matches the published" if family["B-oracle-P0"]["ci95"] == published else "does not match the published"
+    lines += ["", "Two-sided paired sign-flip randomization tests, class-stratified paired bootstrap intervals, Holm "
+              f"within Family D at α = 0.05. B-oracle − P0's interval {match} analyze-val-b interval for the same "
+              f"seed ([{_n(published[0])}, {_n(published[1])}]).\n",
+              "## Does the planner act on the signal?\n",
+              "Per-arm validation summaries from analyze-val-b:\n",
+              "| Arm | T5 | Requested | Provided | Unavailable | Reranks | Planner stops |",
+              "|---|---|---|---|---|---|---|"]
+    for arm, label in D_ARMS:
+        v = variants[arm]
+        r, events = v["requests"], v.get("events", {})
+        lines.append(f"| {label} | {_n(v['metrics']['T5'])} | {r['requested']} | {r['provided']} | "
+                     f"{r['unavailable']} | {events.get('wm_rerank', 0)} | {events.get('wm_stop', 0)} |")
+    lines += ["", "## Which tests did the reranker add or drop?\n",
+              "Each arm against P0, patient by patient, each test counted once. *Extra* tests are ones the arm "
+              "requested and P0 did not; *dropped* tests the reverse. *Provided* means the result was in the "
+              "chart. *Relevant* means diagnosis-relevant to the patient's labeled disease under amendment A4's "
+              "rule: the guideline tests per pathology in Hager et al. (2024), the dataset's authors. Net relevant "
+              "results = extra relevant and provided − dropped relevant and provided. Aggregate counts only.\n",
+              "| Arm | Tests | Extra | provided | relevant | relevant, provided | Dropped | provided | relevant | "
+              "relevant, provided | Net relevant results |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for arm, _ in D_ARMS[1:]:
+        changed = d["extra_tests"][arm]
+        for key, label in (*D_CATEGORIES, (None, "All")):
+            c = changed["total"] if key is None else changed["by_category"][key]
+            net = c["extra_relevant_provided"] - c["dropped_relevant_provided"]
+            lines.append(f"| {arm} | {label} | " + " | ".join(str(c[k]) for k in COUNTS) + f" | {net:+d} |")
+    lines += ["", "By test (extra / dropped):\n",
+              "| Test | Relevant to | " + " | ".join(arm for arm, _ in D_ARMS[1:]) + " |",
+              "|---|---|" + "---|" * len(D_ARMS[1:])]
+    for code in TEST_CODES.values():
+        cells = [f"+{d['extra_tests'][arm]['by_test'][code]['extra']} / "
+                 f"−{d['extra_tests'][arm]['by_test'][code]['dropped']}" for arm, _ in D_ARMS[1:]]
+        lines.append(f"| {code} | {_relevant_to(d['relevance'][code])} | " + " | ".join(cells) + " |")
+    lines += ["", "## Corruption dose-response: not run\n",
+              "The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 "
+              "(B-oracle). Amendment A4 names the slope test (T5 on α, class-stratified bootstrap interval), but it "
+              f"needs those 9 arms on validation: about {dose_hours:.1f} GPU-hours at addendum B's per-arm budget, "
+              "an estimate rather than a measurement. It waits for an approval decision. Until then, whether recall "
+              "falls as the availability signal degrades is untested on validation.\n",
+              "## Limitations\n",
+              f"- {n} validation admissions and one policy seed; between-seed variation is unassessable.",
+              "- Relevance is guideline relevance of the requested action, not the value of the result it returned.",
+              "- A null oracle contrast concerns this fixed planner only: perfect information does not make the "
+              "heuristic optimal (SPEC §4.5).",
+              "- Every number here is rendered from `diagnose-val-b/diagnostics.json`, "
+              "`analyze-val-b/validation_b.json` and the committed addenda A and B.", ""]
+    return "\n".join(lines)
