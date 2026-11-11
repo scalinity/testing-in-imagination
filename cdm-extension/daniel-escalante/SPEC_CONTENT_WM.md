@@ -11,6 +11,7 @@ This spec takes the next step on the ICML 2027 path (SPEC.md §12.1–12.2): a l
 
 - **Phase B predicted whether a result is in the chart.** It never predicted what the result says.
 - **This spec predicts lab content,** and asks whether imagining it helps the trained policy diagnose.
+- **An open question it can address:** is the limit which test is chosen, or how the policy updates its belief once a result arrives? An exploratory count on validation (check H, `feat/phaseb-val-diagnostics`, amendment A5) prompts the question and does not answer it. The contrasts in §3 bear on it. If even WM-oracle, which chooses labs with their true results in hand, leaves recall unchanged against V3, choosing better labs is not enough, and belief updating becomes the next candidate.
 
 ### Scope
 
@@ -176,7 +177,7 @@ All arms run on top of V3 and share the availability head.
 
 **Primary contrast (test, α = 0.05, the only uncorrected test):** WM-learned − V3.
 
-**Family W (test, Holm at α = 0.05):** every other arm against the same comparator, each two-sided:
+**Family W (test, Holm at α = 0.05):** every other arm against the same comparator, each two-sided. Both misleading strengths are in the family: under Holm that is the more conservative choice, and it asks whether a bad world model hurts at two strengths.
 - WM-oracle − V3: how much this planner could gain from perfect imagined results.
 - WM-prior − V3: what imagined results give when they ignore the patient.
 - WM-mislead-α0.5 − V3 and WM-mislead-α1 − V3: whether a bad model hurts.
@@ -228,7 +229,7 @@ The rule is applied in order. The first two gates are CPU-only and come before a
 | 4. Direction | after the validation runs | WM-learned − V3 has a positive ΔT5 point estimate on validation. | **Validation null:** report the validation contrasts, intervals and per-class recall as the finding; no test run. |
 
 Why these thresholds:
-- **24 admissions (10% of 240) is a choice set here, not a measurement.** The planner can change an admission only where it acts. At the test class sizes 96 / 65 / 25 / 54 (`prereg/protocol.json`), one admission moves T5 by between 0.26 and 1.00 points (w = 100 / (4 · n_class), SPEC.md §6). Reaching the 4.15-point MDE (§3) therefore needs on the order of ten net-improved admissions, so a premise far below that leaves no room.
+- **24 admissions (10% of 240) is a choice, set in this spec on 2026-11-11 before any run of this study.** The planner can change an admission only where it acts. At the test class sizes 96 / 65 / 25 / 54 (`prereg/protocol.json`), one admission moves T5 by between 0.26 and 1.00 points (w = 100 / (4 · n_class), SPEC.md §6). Reaching the 4.15-point MDE (§3) therefore needs on the order of ten net-improved admissions, so a premise far below that leaves no room.
 - **Gates 2 and 4 are directions, not effect sizes.** Validation decides go or no-go only; it never selects an arm or setting (§4).
 
 **Go to the frozen test** only when all four gates pass, and then only after Daniel approves (§6).
