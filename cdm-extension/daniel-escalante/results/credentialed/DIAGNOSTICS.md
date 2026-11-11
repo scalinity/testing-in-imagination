@@ -1,11 +1,11 @@
 
 # Phase-B validation diagnostics: planner or signal?
 
-**Verdict: planner bottleneck.** B-oracle − B-uniform is -0.11 [-2.56, 2.38] points, not statistically significant (Holm-adjusted p = 0.9736), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 203 under B-uniform to 66 under B-oracle. The corruption dose-response was not run (it needs GPU runs), so this rests on the oracle contrast alone.
+**Provisional: planner bottleneck.** This verdict rests on one validation contrast, the corruption dose-response that would confirm it has not run, and the verdict rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is -0.11 [-2.56, 2.38] points, not statistically significant (Holm-adjusted p = 0.9736), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 203 under B-uniform to 66 under B-oracle.
 
 ## Scope
 
-- Exploratory and validation only: the 240 validation admissions of val-a and val-b, analyzed under amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any row. No test admission was read; nothing was tuned or selected.
+- Exploratory and validation only: the 240 validation admissions of val-a and val-b, analyzed under amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any row, with A5's additions committed before the re-run that computed them. No test admission was read; nothing was tuned or selected.
 - analyze-val-b had already published every arm's validation T5, so these contrasts are not blind, and the verdict rule and its threshold were written after those point estimates were visible.
 - Conclusions hold for this fixed planner (SPEC §4.4) and one policy seed. These results extend a replication attempt and are not a reproduction of the LA-CDM paper.
 
@@ -65,13 +65,46 @@ By test (extra / dropped):
 | US | all four | +3 / −21 | +3 / −55 | +2 / −83 |
 | PE | all four | +1 / −0 | +2 / −0 | +8 / −0 |
 
-## Corruption dose-response: not run
+## Sensitivity S1 (exploratory): urinalysis and radiographs counted as relevant
 
-The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). Amendment A4 names the slope test (T5 on α, class-stratified bootstrap interval), but it needs those 9 arms on validation: about 4.1 GPU-hours at addendum B's per-arm budget, an estimate rather than a measurement. It waits for an approval decision. Until then, whether recall falls as the availability signal degrades is untested on validation.
+Amendment A5, defined after the counts above were seen. The guideline map stays the primary definition because it was fixed in advance; S1 counts urinalysis and radiographs as relevant to all four diseases, adding their per-test counts from the same bundle.
+
+| Arm | Extra relevant | Extra relevant, provided | Dropped relevant | Dropped relevant, provided | Net relevant results (S1) | Net (primary) |
+|---|---|---|---|---|---|---|
+| B-uniform | 42 | 27 | 53 | 28 | -1 | -4 |
+| B-learned-s0 | 64 | 52 | 96 | 35 | +17 | +6 |
+| B-oracle | 106 | 97 | 155 | 31 | +66 | +37 |
+
+## Do the added results repeat what the policy already knew?
+
+An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each added test that was relevant and provided, the hypothesis agent's hypothesis when the test was requested is compared with the patient's label, and with the hypothesis stored after the result came back. If most added relevant results arrived while the policy already held the label and rarely changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and counted.
+
+Rows whose stored hypotheses align with their requests: B-learned-s0 239/240, B-oracle 240/240, B-uniform 240/240, P0 239/240.
+
+Added by each arm (extra tests, relevant and provided):
+
+| Arm | Tests | Unaligned | Already held the label | Held another disease | Held unknown | Hypothesis changed | Changed to the label | Changed away from the label |
+|---|---|---|---|---|---|---|---|---|
+| B-uniform | 19 | 0 | 17 | 2 | 0 | 1 | 0 | 1 |
+| B-learned-s0 | 32 | 0 | 26 | 6 | 0 | 3 | 3 | 0 |
+| B-oracle | 61 | 0 | 38 | 23 | 0 | 7 | 3 | 3 |
+
+For comparison, dropped from P0 (P0's own rows; relevant and provided):
+
+| Arm | Tests | Unaligned | Already held the label | Held another disease | Held unknown | Hypothesis changed | Changed to the label | Changed away from the label |
+|---|---|---|---|---|---|---|---|---|
+| B-uniform | 22 | 1 | 11 | 11 | 0 | 3 | 1 | 1 |
+| B-learned-s0 | 26 | 0 | 17 | 9 | 0 | 3 | 1 | 1 |
+| B-oracle | 23 | 1 | 13 | 10 | 0 | 3 | 1 | 2 |
+
+## Pending
+
+- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). It needs 9 validation runs: about 4.1 GPU-hours at addendum B's per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the availability signal degrades is untested on validation.
 
 ## Limitations
 
 - 240 validation admissions and one policy seed; between-seed variation is unassessable.
-- Relevance is guideline relevance of the requested action, not the value of the result it returned.
+- Relevance is guideline relevance of the requested action, not the value of the result it returned. The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four diseases; sensitivity S1 (exploratory) counts them as relevant to all four.
+- Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, and says nothing about what each result showed.
 - A null oracle contrast concerns this fixed planner only: perfect information does not make the heuristic optimal (SPEC §4.5).
-- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `analyze-val-b/validation_b.json` and the committed addenda A and B.
+- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json` and the committed addenda A and B.
