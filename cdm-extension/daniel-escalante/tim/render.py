@@ -371,29 +371,64 @@ D_CATEGORIES = (("lab", "Lab panels"), ("imaging", "Imaging"), ("exam", "Physica
 
 
 def _verdict(c, threshold, val_b) -> str:
-    """The one-line verdict of amendment A4 (D4), from the B-oracle − B-uniform contrast."""
+    """The verdict paragraph: amendment A4's rule (D4), headed provisional until D3 has run (A5)."""
     where, holm, bar = f"B-oracle − B-uniform is {_interval(c)} points", _holm(c), _n(threshold)
     requests = {arm: val_b["variants"][arm]["requests"]["unavailable"] for arm in ("B-uniform", "B-oracle")}
     acts = (f" The planner does act on the signal: unavailable requests fall from {requests['B-uniform']} under "
             f"B-uniform to {requests['B-oracle']} under B-oracle.")
-    untested = (" The corruption dose-response was not run (it needs GPU runs), so this rests on the oracle "
-                "contrast alone.")
+    caveats = ("This verdict rests on one validation contrast, the corruption dose-response that would confirm it "
+               "has not run, and the verdict rule and its threshold were written after the validation point "
+               "estimates were known. ")
     if _significant(c) and c["delta_t5"] > 0:
-        return (f"**Verdict: signal bottleneck.** {where}, statistically significant ({holm}): perfect chart "
-                "availability raises mean class recall through this fixed planner, so the shortfall lies in the "
-                f"learned availability signal.{untested}")
+        return (f"**Provisional: signal bottleneck.** {caveats}{where}, statistically significant ({holm}): perfect "
+                "chart availability raises mean class recall through this fixed planner, so the shortfall lies in "
+                "the learned availability signal.")
     if _significant(c):
-        return (f"**Verdict: planner bottleneck.** {where}, statistically significant ({holm}) and negative, "
-                f"so below the {bar}-point threshold: perfect chart availability makes this fixed planner worse, "
-                f"and a better availability predictor cannot help it.{acts}{untested}")
+        return (f"**Provisional: planner bottleneck.** {caveats}{where}, statistically significant ({holm}) and "
+                f"negative, so below the {bar}-point threshold: perfect chart availability makes this fixed planner "
+                f"worse, and a better availability predictor cannot help it.{acts}")
     if c["ci95"][1] < threshold:
-        return (f"**Verdict: planner bottleneck.** {where}, not statistically significant ({holm}), and the "
-                f"interval's upper bound is below {bar} points, the smallest effect the test design detects with "
-                "80% power: even perfect chart availability gives this fixed planner no detectable gain, so a "
-                f"better availability predictor cannot help it.{acts}{untested}")
-    return (f"**Verdict: inconclusive.** {where}, not statistically significant ({holm}), but the interval reaches "
-            f"{bar} points, the smallest effect the test design detects with 80% power, so neither a useful oracle "
-            f"gain nor its absence is established.{untested}")
+        return (f"**Provisional: planner bottleneck.** {caveats}{where}, not statistically significant ({holm}), "
+                f"and the interval's upper bound is below {bar} points, the smallest effect the test design detects "
+                "with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a "
+                f"better availability predictor cannot help it.{acts}")
+    return (f"**Provisional: inconclusive.** {caveats}{where}, not statistically significant ({holm}), but the "
+            f"interval reaches {bar} points, the smallest effect the test design detects with 80% power, so neither "
+            "a useful oracle gain nor its absence is established.")
+
+
+def _sensitivity_s1(d) -> list[str]:
+    """Sensitivity S1 (amendment A5): urinalysis and radiographs counted as relevant to all four diseases.
+    The primary map gives them no relevance, so their published per-test counts add directly."""
+    added = ("UA", "XR")
+    if any(any(d["relevance"][code].values()) for code in added):
+        raise ValueError("S1 assumes the primary map marks urinalysis and radiographs relevant to none")
+    lines = ["| Arm | Extra relevant | Extra relevant, provided | Dropped relevant | Dropped relevant, provided | "
+             "Net relevant results (S1) | Net (primary) |", "|---|---|---|---|---|---|---|"]
+    for arm, _ in D_ARMS[1:]:
+        changed = d["extra_tests"][arm]
+        total, by_test = changed["total"], changed["by_test"]
+        s1 = {(kind, tail): total[f"{kind}_relevant{tail}"] + sum(by_test[code][f"{kind}{tail}"] for code in added)
+              for kind in ("extra", "dropped") for tail in ("", "_provided")}
+        net_s1 = s1[("extra", "_provided")] - s1[("dropped", "_provided")]
+        net = total["extra_relevant_provided"] - total["dropped_relevant_provided"]
+        lines.append(f"| {arm} | {s1[('extra', '')]} | {s1[('extra', '_provided')]} | {s1[('dropped', '')]} | "
+                     f"{s1[('dropped', '_provided')]} | {net_s1:+d} | {net:+d} |")
+    return lines
+
+
+def _check_h(h) -> list[str]:
+    """Check H (amendment A5): added relevant results by the hypothesis the policy held when it asked."""
+    from tim.diagnostics import H_COUNTS
+    aligned = ", ".join(f"{arm} {a['aligned']}/{a['admissions']}" for arm, a in h["alignment"].items())
+    header = ["| Arm | Tests | Unaligned | Already held the label | Held another disease | Held unknown | "
+              "Hypothesis changed | Changed to the label | Changed away from the label |", "|---" * 9 + "|"]
+    lines = [f"Rows whose stored hypotheses align with their requests: {aligned}.\n",
+             "Added by each arm (extra tests, relevant and provided):\n", *header]
+    lines += [f"| {arm} | " + " | ".join(str(h["extra"][arm][k]) for k in H_COUNTS) + " |" for arm, _ in D_ARMS[1:]]
+    lines += ["", "For comparison, dropped from P0 (P0's own rows; relevant and provided):\n", *header]
+    lines += [f"| {arm} | " + " | ".join(str(h["dropped"][arm][k]) for k in H_COUNTS) + " |" for arm, _ in D_ARMS[1:]]
+    return lines
 
 
 def _relevant_to(by_disease) -> str:
@@ -401,10 +436,10 @@ def _relevant_to(by_disease) -> str:
     return "all four" if len(names) == len(DISEASES) else ", ".join(names) or "none"
 
 
-def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float) -> str:
-    """DIAGNOSTICS.md from diagnostics.json and analyze-val-b's validation_b.json; threshold and GPU-hours
-    come from the committed addenda A and B. No number is typed by hand."""
-    from tim.diagnostics import COUNTS
+def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float, hypothesis: dict) -> str:
+    """DIAGNOSTICS.md from diagnostics.json, hypothesis_check.json and analyze-val-b's validation_b.json;
+    threshold and GPU-hours come from the committed addenda A and B. No number is typed by hand."""
+    from tim.diagnostics import COUNTS, DOSE_RESPONSE_ARMS
     from tim.enums import TEST_CODES
     family, variants = d["family_d"], val_b["variants"]
     published, n = val_b["descriptive"]["B-oracle-P0"]["ci95"], val_b["variants"]["P0"]["n"]
@@ -414,7 +449,8 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
              "## Scope\n",
              f"- Exploratory and validation only: the {n} validation admissions of val-a and val-b, analyzed under "
              "amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any "
-             "row. No test admission was read; nothing was tuned or selected.",
+             "row, with A5's additions committed before the re-run that computed them. No test admission was "
+             "read; nothing was tuned or selected.",
              "- analyze-val-b had already published every arm's validation T5, so these contrasts are not blind, "
              "and the verdict rule and its threshold were written after those point estimates were visible.",
              "- Conclusions hold for this fixed planner (SPEC §4.4) and one policy seed. These results extend a "
@@ -459,17 +495,35 @@ def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float
         cells = [f"+{d['extra_tests'][arm]['by_test'][code]['extra']} / "
                  f"−{d['extra_tests'][arm]['by_test'][code]['dropped']}" for arm, _ in D_ARMS[1:]]
         lines.append(f"| {code} | {_relevant_to(d['relevance'][code])} | " + " | ".join(cells) + " |")
-    lines += ["", "## Corruption dose-response: not run\n",
-              "The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 "
-              "(B-oracle). Amendment A4 names the slope test (T5 on α, class-stratified bootstrap interval), but it "
-              f"needs those 9 arms on validation: about {dose_hours:.1f} GPU-hours at addendum B's per-arm budget, "
-              "an estimate rather than a measurement. It waits for an approval decision. Until then, whether recall "
-              "falls as the availability signal degrades is untested on validation.\n",
+    lines += ["", "## Sensitivity S1 (exploratory): urinalysis and radiographs counted as relevant\n",
+              "Amendment A5, defined after the counts above were seen. The guideline map stays the "
+              "primary definition because it was fixed in advance; S1 counts urinalysis and radiographs as relevant "
+              "to all four diseases, adding their per-test counts from the same bundle.\n", *_sensitivity_s1(d),
+              "", "## Do the added results repeat what the policy already knew?\n",
+              "An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each "
+              "added test that was relevant and provided, the hypothesis agent's hypothesis when the test was "
+              "requested is compared with the patient's label, and with the hypothesis stored after the result came "
+              "back. If most added relevant results arrived while the policy already held the label and rarely "
+              "changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not "
+              "test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and "
+              "counted.\n", *_check_h(hypothesis),
+              "", "## Pending\n",
+              "- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight "
+              "corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). "
+              f"It needs {len(DOSE_RESPONSE_ARMS)} validation runs: about {dose_hours:.1f} GPU-hours at addendum B's "
+              "per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its "
+              "approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the "
+              "availability signal degrades is untested on validation.\n",
               "## Limitations\n",
               f"- {n} validation admissions and one policy seed; between-seed variation is unassessable.",
-              "- Relevance is guideline relevance of the requested action, not the value of the result it returned.",
+              "- Relevance is guideline relevance of the requested action, not the value of the result it returned. "
+              "The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four "
+              "diseases; sensitivity S1 (exploratory) counts them as relevant to all four.",
+              "- Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, "
+              "and says nothing about what each result showed.",
               "- A null oracle contrast concerns this fixed planner only: perfect information does not make the "
               "heuristic optimal (SPEC §4.5).",
               "- Every number here is rendered from `diagnose-val-b/diagnostics.json`, "
-              "`analyze-val-b/validation_b.json` and the committed addenda A and B.", ""]
+              "`diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json` and the committed addenda "
+              "A and B.", ""]
     return "\n".join(lines)

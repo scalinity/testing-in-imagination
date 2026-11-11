@@ -94,3 +94,65 @@ def diagnostics(rows, p0, cfg, source, relevant, resamples=10_000) -> dict:
     return {"source": source, "family_d": family,
             "relevance": {TEST_CODES[t]: by_disease for t, by_disease in relevant.items()},
             "extra_tests": {arm: changes(r, p0, relevant) for arm, r in rows.items()}}
+
+
+# ---- check H (amendment A5): the hypothesis held when each added result was requested -----------
+
+H_COUNTS = ("tests", "unaligned", "before_correct", "before_other", "before_unknown", "changed",
+            "changed_to_correct", "changed_from_correct")
+
+
+def timeline(row):
+    """(test, hypothesis held when it was requested, hypothesis stored after its result) per request,
+    or None when the row's stored hypotheses cannot be aligned with its requests. Upstream stores a
+    hypothesis at the start of every step except the step after an unavailable result."""
+    requested, provided, hypotheses = row["requested_tests"], set(row["provided_tests"]), row["hypotheses"]
+    if (row.get("termination") != "diagnosis" or len(set(requested)) != len(requested)
+            or len(hypotheses) != 1 + sum(test in provided for test in requested)):
+        return None
+    steps, current = [], 0
+    for test in requested:
+        if test in provided:
+            steps.append((test, hypotheses[current], hypotheses[current + 1]))
+            current += 1
+        else:
+            steps.append((test, hypotheses[current], None))
+    return steps
+
+
+def _tally(pairs, relevant) -> dict:
+    """Check-H counts for the tests each run requested that the other did not, relevant and provided."""
+    counts = dict.fromkeys(H_COUNTS, 0)
+    for run, other in pairs:
+        label = run["label"]
+        chosen = {name for name in set(run["requested_tests"]) - set(other["requested_tests"])
+                  if name in run["provided_tests"] and relevant[NAMED[name.lower()]][label]}
+        steps = timeline(run)
+        if steps is None:
+            counts["unaligned"] += len(chosen)
+            continue
+        for test, before, after in steps:
+            if test not in chosen:
+                continue
+            counts["tests"] += 1
+            counts["before_correct" if before == label else "before_unknown" if before == "unknown"
+                   else "before_other"] += 1
+            if after != before:
+                counts["changed"] += 1
+                counts["changed_to_correct"] += after == label
+                counts["changed_from_correct"] += before == label
+    return counts
+
+
+def hypothesis_check(rows, p0, relevant, source) -> dict:
+    """Check H: every val-b arm's added relevant results, and P0's dropped ones, by hypothesis held then."""
+    for arm_rows in rows.values():
+        if [r["patient_id"] for r in arm_rows] != [r["patient_id"] for r in p0]:
+            raise ValueError("arm and P0 rows must list the same patients in the same order")
+
+    def aligned(run_rows):
+        return {"admissions": len(run_rows), "aligned": sum(timeline(r) is not None for r in run_rows)}
+    return {"source": source,
+            "alignment": {"P0": aligned(p0), **{arm: aligned(r) for arm, r in rows.items()}},
+            "extra": {arm: _tally(zip(r, p0), relevant) for arm, r in rows.items()},
+            "dropped": {arm: _tally(zip(p0, r), relevant) for arm, r in rows.items()}}

@@ -2,6 +2,8 @@
 """Submit one stage: each GPU job gets one RTX PRO 6000 and the jobs are spread across course accounts.
 
 A GPU stage is refused without a matching committed approval (smoke within its cap excepted).
+--dry-run only prints the sbatch commands, so it runs before an approval exists; its time limits then
+come from the drafted approvals/<stage>.request.json when there is one.
 All SLURM output goes to the private log directory; the terminal sees job IDs only.
 """
 import argparse
@@ -55,9 +57,12 @@ def main():
               f"--output={logs}/slurm-%j.out", f"--error={logs}/slurm-%j.err"]
     submissions = []
     if args.stage in GPU_STAGES:
-        approvals.check(settings, args.stage)
+        if not args.dry_run:
+            approvals.check(settings, args.stage)
         approved = OWN / "approvals" / f"{args.stage}.json"
-        hours = json.loads(approved.read_text())["gpu_hours"] if approved.exists() else {}
+        drafted = OWN / "approvals" / f"{args.stage}.request.json"
+        budget_file = approved if approved.exists() else drafted if args.dry_run and drafted.exists() else None
+        hours = json.loads(budget_file.read_text())["gpu_hours"] if budget_file else {}
         smoke_left = None
         if args.stage == "smoke" and not approved.exists():
             # Unapproved smoke may not outlast what remains of its 0.5 GPU-hour allowance.

@@ -1,0 +1,85 @@
+{
+  "alignment": {
+    "B-learned-s0": {
+      "admissions": 24,
+      "aligned": 21
+    },
+    "B-oracle": {
+      "admissions": 24,
+      "aligned": 21
+    },
+    "B-uniform": {
+      "admissions": 24,
+      "aligned": 21
+    },
+    "P0": {
+      "admissions": 24,
+      "aligned": 21
+    }
+  },
+  "dropped": {
+    "B-learned-s0": {
+      "before_correct": 2,
+      "before_other": 0,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 2,
+      "unaligned": 0
+    },
+    "B-oracle": {
+      "before_correct": 7,
+      "before_other": 2,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 9,
+      "unaligned": 1
+    },
+    "B-uniform": {
+      "before_correct": 7,
+      "before_other": 2,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 9,
+      "unaligned": 1
+    }
+  },
+  "extra": {
+    "B-learned-s0": {
+      "before_correct": 0,
+      "before_other": 0,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 0,
+      "unaligned": 0
+    },
+    "B-oracle": {
+      "before_correct": 0,
+      "before_other": 0,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 0,
+      "unaligned": 0
+    },
+    "B-uniform": {
+      "before_correct": 0,
+      "before_other": 0,
+      "before_unknown": 0,
+      "changed": 0,
+      "changed_from_correct": 0,
+      "changed_to_correct": 0,
+      "tests": 0,
+      "unaligned": 0
+    }
+  },
+  "source": "synthetic"
+}

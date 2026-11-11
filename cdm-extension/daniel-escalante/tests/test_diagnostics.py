@@ -112,6 +112,58 @@ def test_the_diagnostics_stage_reads_validation_only():
             mode("diagnose-val-b", split)
 
 
+# ---- check H (amendment A5) ---------------------------------------------------------------------
+
+def hrow(pid, label, requested, provided, hypotheses, termination="diagnosis"):
+    return {**row(pid, label, requested, provided), "hypotheses": hypotheses, "termination": termination}
+
+
+def test_the_timeline_skips_no_hypothesis_after_an_unavailable_result():
+    # ct is unavailable, so upstream stores no hypothesis on the next step.
+    r = hrow(1, "appendicitis", ["ct", "complete blood count", "ultrasound"], ["complete blood count", "ultrasound"],
+             ["pancreatitis", "appendicitis", "cholecystitis"])
+    assert diagnostics.timeline(r) == [("ct", "pancreatitis", None),
+                                       ("complete blood count", "pancreatitis", "appendicitis"),
+                                       ("ultrasound", "appendicitis", "cholecystitis")]
+    assert diagnostics.timeline({**r, "hypotheses": r["hypotheses"][:2]}) is None  # one hypothesis short
+    assert diagnostics.timeline({**r, "termination": "length_observation"}) is None
+
+
+def test_check_h_counts_added_and_dropped_relevant_results_by_the_hypothesis_held_then():
+    table = diagnostics.relevance(mapping())
+    p0 = [hrow(1, "appendicitis", ["radiograph", "ultrasound"], ["ultrasound"], ["appendicitis", "appendicitis"]),
+          hrow(2, "pancreatitis", ["ultrasound"], ["ultrasound"], ["pancreatitis", "pancreatitis"])]
+    arm = [hrow(1, "appendicitis", ["complete blood count", "ct"], ["complete blood count", "ct"],
+                ["pancreatitis", "appendicitis", "appendicitis"]),
+           hrow(2, "pancreatitis", ["ultrasound", "complete blood count"], ["ultrasound", "complete blood count"],
+                ["pancreatitis"], termination="length_observation")]
+    result = diagnostics.hypothesis_check({"B-oracle": arm}, p0, table, "synthetic")
+    from replication.manifest import assert_aggregate
+    validate(result, load_schema("hypothesis_check"))
+    assert_aggregate(result)  # the replication's export guard, as Bundle.aggregate applies it
+    assert result["alignment"] == {"B-oracle": {"admissions": 2, "aligned": 1}, "P0": {"admissions": 2, "aligned": 2}}
+    assert result["extra"]["B-oracle"] == {"tests": 2, "unaligned": 1, "before_correct": 1, "before_other": 1,
+                                           "before_unknown": 0, "changed": 1, "changed_to_correct": 1,
+                                           "changed_from_correct": 0}
+    assert result["dropped"]["B-oracle"] == {"tests": 1, "unaligned": 0, "before_correct": 1, "before_other": 0,
+                                             "before_unknown": 0, "changed": 0, "changed_to_correct": 0,
+                                             "changed_from_correct": 0}
+    totals = diagnostics.changes(arm, p0, table)["total"]
+    assert result["extra"]["B-oracle"]["tests"] + result["extra"]["B-oracle"]["unaligned"] == \
+        totals["extra_relevant_provided"]
+
+
+# ---- the dose-response stage (amendment A5) --------------------------------------------------------
+
+def test_the_dose_response_stage_runs_the_nine_d3_arms_on_validation_only():
+    from tim.access import mode
+    from tim.runner import STAGE_SPECS
+    assert STAGE_SPECS["dose-val-b"] == {"split": "val", "jobs": list(diagnostics.DOSE_RESPONSE_ARMS)}
+    assert len(diagnostics.DOSE_RESPONSE_ARMS) == 9 and mode("dose-val-b", "val") == "full"
+    with pytest.raises(TimError):
+        mode("dose-val-b", "test")
+
+
 # ---- DIAGNOSTICS.md ----------------------------------------------------------------------------
 
 def contrast(delta, ci, p_holm):
@@ -119,14 +171,18 @@ def contrast(delta, ci, p_holm):
             "discordant": 9, "significance": analysis.significance(p_holm, ci), "mcnemar_p": None}
 
 
-def bundle(oracle_uniform, source="mimic"):
+def bundle(oracle_uniform, source="mimic", ua_extra=0):
     counts = dict.fromkeys(diagnostics.COUNTS, 0)
-    changed = {"by_test": {code: dict(counts) for code in TEST_CODES.values()},
-               "by_category": {c: dict(counts) for c in ("lab", "imaging", "exam")}, "total": dict(counts)}
+
+    def changed():
+        by_test = {code: dict(counts) for code in TEST_CODES.values()}
+        by_test["UA"] = {**counts, "extra": ua_extra, "extra_provided": ua_extra}
+        return {"by_test": by_test, "by_category": {c: dict(counts) for c in ("lab", "imaging", "exam")},
+                "total": {**counts, "extra": ua_extra, "extra_provided": ua_extra}}
+    relevance = {code: dict.fromkeys(DISEASES, code not in ("UA", "XR")) for code in TEST_CODES.values()}
     return {"source": source,
             "family_d": {"B-oracle-B-uniform": oracle_uniform, "B-oracle-P0": contrast(1.4672, [-0.72, 3.83], 0.4)},
-            "relevance": {code: dict.fromkeys(DISEASES, True) for code in TEST_CODES.values()},
-            "extra_tests": {arm: changed for arm in ("B-uniform", "B-learned-s0", "B-oracle")}}
+            "relevance": relevance, "extra_tests": {arm: changed() for arm in ("B-uniform", "B-learned-s0", "B-oracle")}}
 
 
 def summary(t5, unavailable):
@@ -137,6 +193,18 @@ def summary(t5, unavailable):
 VAL_B = {"variants": {"P0": summary(83.12, 207), "B-uniform": summary(84.70, 203),
                       "B-learned-s0": summary(82.92, 153), "B-oracle": summary(84.59, 66)},
          "descriptive": {"B-oracle-P0": {"ci95": [-0.72, 3.83]}}}
+H_COUNTS = {"tests": 41, "unaligned": 3, "before_correct": 29, "before_other": 9, "before_unknown": 3, "changed": 7,
+            "changed_to_correct": 4, "changed_from_correct": 1}
+HYPOTHESIS = {"source": "mimic",
+              "alignment": {arm: {"admissions": 236, "aligned": 230} for arm in ("P0", "B-uniform", "B-learned-s0", "B-oracle")},
+              "extra": {arm: dict(H_COUNTS) for arm in ("B-uniform", "B-learned-s0", "B-oracle")},
+              "dropped": {arm: dict(H_COUNTS) for arm in ("B-uniform", "B-learned-s0", "B-oracle")}}
+
+
+def rendered(oracle_uniform=None, **kwargs):
+    oracle_uniform = oracle_uniform or contrast(-0.1066, [-2.9, 2.7], 0.95)
+    return render.render_diagnostics(bundle(oracle_uniform, **kwargs), VAL_B, threshold=4.1537, dose_hours=4.122,
+                                     hypothesis=HYPOTHESIS)
 
 
 @pytest.mark.parametrize("oracle_uniform, verdict", [
@@ -145,10 +213,12 @@ VAL_B = {"variants": {"P0": summary(83.12, 207), "B-uniform": summary(84.70, 203
     (contrast(-0.1066, [-2.9, 2.7], 0.95), "planner bottleneck"),
     (contrast(1.2345, [-1.5, 4.6], 0.4), "inconclusive"),
 ])
-def test_the_verdict_follows_the_preregistered_rule(oracle_uniform, verdict):
-    text = render.render_diagnostics(bundle(oracle_uniform), VAL_B, threshold=4.1537, dose_hours=4.122)
-    first = next(line for line in text.splitlines() if line.startswith("**Verdict"))
-    assert first.startswith(f"**Verdict: {verdict}.**")
+def test_the_provisional_verdict_follows_the_preregistered_rule(oracle_uniform, verdict):
+    first = next(line for line in rendered(oracle_uniform).splitlines() if line.startswith("**Provisional"))
+    assert first.startswith(f"**Provisional: {verdict}.**")
+    for caveat in ("rests on one validation contrast", "has not run",
+                   "written after the validation point estimates were known"):
+        assert caveat in first
     assert f"{oracle_uniform['delta_t5']:+.2f}" in first
     if verdict != "signal bottleneck":
         assert "4.15" in first
@@ -156,15 +226,29 @@ def test_the_verdict_follows_the_preregistered_rule(oracle_uniform, verdict):
         assert "not statistically significant" in first
 
 
-def test_diagnostics_report_states_scope_and_the_missing_dose_response():
-    text = render.render_diagnostics(bundle(contrast(-0.1066, [-2.9, 2.7], 0.95)), VAL_B, threshold=4.1537,
-                                     dose_hours=4.122)
-    assert "exploratory" in text.lower() and "validation" in text.lower()
-    assert "the 236 validation admissions" in text and "240" not in text  # n comes from the bundle
-    assert "not a reproduction" in text.lower()
-    assert "4.1 GPU-hours" in text and "estimate" in text
-    assert "matches the published" in text
+def test_diagnostics_report_states_scope_and_lists_the_dose_response_as_pending():
+    text = rendered()
+    assert "exploratory" in text.lower() and "the 236 validation admissions" in text and "240" not in text
+    assert "not a reproduction" in text.lower() and "not blind" in text and "matches the published" in text
+    pending = text[text.index("## Pending"):]
+    assert "confirmatory" in pending and "9 validation runs" in pending
+    assert "about 4.1 GPU-hours" in pending and "an estimate" in pending
     assert not text.startswith("> **SYNTHETIC**")
-    synthetic = render.render_diagnostics(bundle(contrast(-0.1066, [-2.9, 2.7], 0.95), "synthetic"), VAL_B,
-                                          threshold=4.1537, dose_hours=4.122)
-    assert synthetic.startswith("> **SYNTHETIC**")
+    assert rendered(source="synthetic").startswith("> **SYNTHETIC**")
+
+
+def test_check_h_is_reported_as_an_untested_hypothesis_with_counts():
+    section = rendered().split("## Do the added results repeat")[1].split("\n## ")[0]
+    assert "untested hypothesis" in section and "aggregate" in section
+    assert "| B-oracle | 41 | 3 | 29 | 9 | 3 | 7 | 4 | 1 |" in section
+
+
+def test_sensitivity_s1_adds_urinalysis_and_radiographs_to_the_relevant_counts():
+    text = rendered(ua_extra=5)
+    section = text.split("## Sensitivity S1")[1].split("\n## ")[0]
+    assert "exploratory" in section and "| B-oracle | 5 | 5 | 0 | 0 | +5 | +0 |" in section
+    assert "urinalysis and radiographs" in text.split("## Limitations")[1]
+    with pytest.raises(ValueError):
+        b = bundle(contrast(-0.1066, [-2.9, 2.7], 0.95))
+        b["relevance"]["UA"]["appendicitis"] = True
+        render.render_diagnostics(b, VAL_B, threshold=4.1537, dose_hours=4.122, hypothesis=HYPOTHESIS)
