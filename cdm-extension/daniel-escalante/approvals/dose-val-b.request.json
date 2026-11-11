@@ -1,6 +1,6 @@
 {
   "addendum_sha256": null,
-  "code_commit": "2e8ce7fc0b572954520b6e37b9389b59578cb997",
+  "code_commit": "654f003f9e67805d2e552fb2a7d984e2e8bb0b67",
   "config_sha256": "6befd99e3454a3673f05793390f49bfef29161b96ebd116a3d96267d94942480",
   "expected_wall_hours": 0.458,
   "gpu_hours": {
