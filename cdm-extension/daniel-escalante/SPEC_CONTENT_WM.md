@@ -27,7 +27,7 @@ This spec takes the next step on the ICML 2027 path (SPEC.md §12.1–12.2): a l
 
 ### The test split
 
-The test split is a previously examined benchmark: Phase A and Phase B both evaluated on it. This study therefore treats test as one more prospectively frozen follow-up. All development uses train and validation only (§5).
+The test split is a previously examined benchmark: Phase A and Phase B both evaluated on it. This study therefore treats test as one more prospectively frozen follow-up. All development uses train and validation only (§4, §5).
 
 ## 1. The world model p_φ(o_{t+1} | h_t, a_t)
 
@@ -57,7 +57,7 @@ Why bins rather than abnormal flags:
 
 ### 1.3 Model form: a latent-disease mixture
 
-The disease y is the latent variable, as in the synthetic environment's discrete world model (§7). Three pieces:
+The disease y is the latent variable, as in the synthetic environment's discrete world model (§8). Three pieces:
 
 - **Diagnosis prior from the HPI:** p_ψ0(y | HPI). A multinomial logistic regression on Phase B's HPI TF-IDF features, under the same frozen settings as SPEC.md §4.2. It is temperature-scaled on validation.
 - **Class-conditional content:** p_θ(o | y, a). The per-item bin frequencies given the disease, with add-one smoothing, fit on train. Items are conditionally independent given y and the panel. This is a stated simplification, and it is checked on validation (§1.5).
@@ -67,7 +67,7 @@ The predictive distribution over a panel's content is then:
 
 > p_φ(o | h_t, a) = Σ_y p(y | h_t) · p_θ(o | y, a)
 
-This form gives the information gain over the diagnosis posterior directly (§2), and it matches the synthetic environment's interface (§7).
+This form gives the information gain over the diagnosis posterior directly (§2), and it matches the synthetic environment's interface (§8).
 
 **One alternative, chosen offline by validation log-loss:** a discriminative per-item model given h_t, a multinomial logistic regression on HPI TF-IDF plus the observed bins. The choice is made on CPU from chart data, with no policy runs.
 
@@ -100,7 +100,7 @@ All of these are CPU computations on validation, published as aggregates.
 1. **Split hygiene.**
    - Every fitted object is fit on train only and its sha256 is published.
    - Validation is the only development split.
-   - Test is opened once, under the frozen protocol (§5).
+   - Test is opened once, under the frozen protocol (§6).
 2. **HPI copying.**
    - The Phase B HPI audit counted panel names in validation summaries: CBC 1, UA 1, the other lab panels 0 (`results/credentialed/hpi-audit/hpi_audit.json`). Item names such as "lipase" or "WBC" were not counted.
    - The audit adds per-item counts of validation summaries that name a panel item within 5 words of a number.
@@ -141,7 +141,13 @@ Invariants, each carried over from Phase B:
 - planner off ≡ V3;
 - an untriggered turn executes the greedy completion byte for byte.
 
-### 2.3 Commit rule
+### 2.3 Scoping decision for v1: labs only
+
+- **The decision.** The world model predicts lab panels only, so v1's planner acts only on turns where V3 would request a lab panel. Imaging and physical-exam choices stay with the policy.
+- **What it means for the result.** The policy still decides when to order a lab and when to order imaging; the planner decides only which lab panel. Any difference between a world-model arm and V3 is therefore attributable to lab selection alone.
+- **What extends it.** Acting on imaging needs a content model of imaging reports (SPEC.md §12.1), which is outside v1.
+
+### 2.4 Commit rule
 
 The commit rule is V3's guards, unchanged:
 - G1 validity;
@@ -150,11 +156,11 @@ The commit rule is V3's guards, unchanged:
 
 The primary design adds no information-based stopping rule. A stop-when-max-score-below-θ variant is a validation-only exploratory option. It is never on the test path unless a later protocol freezes it before test access.
 
-### 2.4 Premise check (CPU, before any GPU run)
+### 2.5 Premise check (CPU, before any GPU run)
 
-- **What it measures:** from val-a's V3 rows, the number of validation decision turns on which V3 requested a lab panel. Aggregate count only.
+- **What it measures:** from val-a's V3 rows, the number of validation admissions in which V3 requested at least one lab panel, and the number of such turns. Aggregate counts only.
 - **Why:** the planner can act only on those turns, so the count bounds how much it can change.
-- **When the threshold is set:** the minimum count needed to proceed is written into the protocol before the count is computed.
+- **The threshold:** at least 24 admissions, set in §5 before the count is computed.
 
 ## 3. Arms and contrasts
 
@@ -170,13 +176,13 @@ All arms run on top of V3 and share the availability head.
 
 **Primary contrast (test, α = 0.05, the only uncorrected test):** WM-learned − V3.
 
-**Family W (test, Holm at α = 0.05):**
+**Family W (test, Holm at α = 0.05):** every other arm against the same comparator, each two-sided:
 - WM-oracle − V3: how much this planner could gain from perfect imagined results.
-- WM-learned − WM-prior: patient-specific prediction beyond population informativeness.
-- WM-mislead-α1 − V3: whether a bad model hurts, tested two-sided.
+- WM-prior − V3: what imagined results give when they ignore the patient.
+- WM-mislead-α0.5 − V3 and WM-mislead-α1 − V3: whether a bad model hurts.
 
 **Descriptive only:**
-- every arm − V3;
+- WM-learned − WM-prior: patient-specific prediction beyond population informativeness;
 - the misleading-model dose-response, the slope of T5 on α over WM-learned (α = 0), α = 0.5 and α = 1, with a class-stratified bootstrap interval as in amendment A4's D3;
 - T1–T8, requests and cost, per-class recall, and planner events.
 
@@ -185,7 +191,7 @@ Statistics follow SPEC.md §6 unchanged:
 - **Test:** two-sided paired sign-flip randomization.
 - **Interval:** 95% class-stratified paired percentile bootstrap, 10,000 resamples.
 - **Wording:** "not statistically significant" whenever p ≥ 0.05 (Holm-adjusted inside Family W) or the interval includes 0.
-- **One policy seed:** between-seed variation is unassessable until §6's seeds plan runs, and every report says so.
+- **One policy seed:** between-seed variation is unassessable until §7's seeds plan runs, and every report says so.
 
 ### Minimum detectable effect
 
@@ -210,15 +216,46 @@ The planning figure is therefore an MDE of about 4–6 points. Before test acces
   Each run is logged in the README run log with its SLURM job ID. Validation decides go or no-go only. No arm or setting is selected by a validation T5 comparison, as in Phase A.
 - **Failure diagnosis:** as SPEC.md §1.2 sets out, from error codes and the synthetic fixture. A failure that appears only on real data is read on the cluster by Daniel.
 
-## 5. Frozen test protocol
+## 5. Validation decision rule (fixed before any run)
 
-Before any test access, `prereg/content-wm-protocol.json` is committed. It freezes:
-- every arm, constant, seed and contrast above;
-- the primary contrast, Family W and the wording rules;
-- the bins, the model choice and the fitted-file digests;
-- the premise minimum (§2.4);
-- the recomputed MDE;
+The rule is applied in order. The first two gates are CPU-only and come before any validation GPU run.
+
+| Gate | When | Passes if | If it fails: the null we report |
+|---|---|---|---|
+| 1. Premise | CPU, before GPU | At least 24 of the 240 validation admissions had a lab-panel request by V3 (val-a V3 rows, §2.5). | **Premise null:** report the count; the lab-only planner has too little room; no GPU run. |
+| 2. World-model quality | CPU, before GPU | Pooled validation content log-loss is below the train marginal's (skill > 0), and mean realized information gain rises across the 10 deciles of predicted gain (Spearman correlation > 0, §1.5). | **World-model null:** report the calibration results; no GPU run. |
+| 3. Integrity | after the validation runs | Every arm completes all 240 validation admissions, with no scorer error or replacement failure left unexplained. | Repair within the 4-run margin (§4); if that fails, report the failure and stop. |
+| 4. Direction | after the validation runs | WM-learned − V3 has a positive ΔT5 point estimate on validation. | **Validation null:** report the validation contrasts, intervals and per-class recall as the finding; no test run. |
+
+Why these thresholds:
+- **24 admissions (10% of 240) is a choice set here, not a measurement.** The planner can change an admission only where it acts. At the test class sizes 96 / 65 / 25 / 54 (`prereg/protocol.json`), one admission moves T5 by between 0.26 and 1.00 points (w = 100 / (4 · n_class), SPEC.md §6). Reaching the 4.15-point MDE (§3) therefore needs on the order of ten net-improved admissions, so a premise far below that leaves no room.
+- **Gates 2 and 4 are directions, not effect sizes.** Validation decides go or no-go only; it never selects an arm or setting (§4).
+
+**Go to the frozen test** only when all four gates pass, and then only after Daniel approves (§6).
+
+**On test, after a go:** if the primary contrast is not statistically significant, the report states the null with its interval, read against the recomputed MDE, alongside Family W, as SPEC.md §11 does. There is no re-tuning and no re-run.
+
+## 6. Frozen test protocol (written now; run only after validation development is complete and Daniel approves)
+
+This section is the test protocol. It is not run until all four gates of §5 have passed on validation and Daniel has approved test access.
+
+**What is fixed now, as written in this spec:**
+- the arms (§3), their shared availability head and the planner (§2), with K = 64 and the cost table;
+- the primary contrast WM-learned − V3, the only uncorrected test at α = 0.05;
+- Family W, the four contrasts of §3, Holm at α = 0.05;
+- the descriptive analyses of §3, labelled descriptive;
+- statistics and wording as SPEC.md §6: the paired sign-flip randomization test, exact up to 20 discordant admissions and otherwise 100,000 draws, seeds `stream_seed(269, "test", "tim-permutation:<comparison>")`; 95% class-stratified paired percentile bootstrap, 10,000 resamples, seed `stream_seed(269, "test", "tim-bootstrap")`;
+- the comparator: test-a's V3 rows, never re-run on test.
+
+**What is filled in at freeze, from train and validation outputs only:**
+- the model choice, temperature and smoothing (§4), and the sha256 digests of every fitted file;
+- the bin edges (train tertiles, set before validation);
+- the premise count and its pass (§5, gate 1);
+- the MDE recomputed from WM-learned − V3's validation discordance (§3);
+- bench timings and the test budget they imply;
 - the test-set status disclosure.
+
+All of the above is committed as `prereg/content-wm-protocol.json` before any test access.
 
 How test access then works:
 - **Approvals:** each GPU stage gets an approval bound to the protocol hash, as SPEC.md §2 already does.
@@ -227,7 +264,7 @@ How test access then works:
 - **Amendments:** after the freeze, only code fixes may change, each by an amendment note written before test access, as in prereg/amendments A1–A3.
 - **No test-based tuning:** nothing is re-tuned on test. Any analysis not frozen in the protocol is labelled exploratory.
 
-## 6. Compute
+## 7. Compute
 
 ### Estimate for this study (an estimate, not a measurement)
 
@@ -244,24 +281,72 @@ How test access then works:
 | CPU: tuple building, fitting, calibration, leakage audit | burst QOS | unmeasured; hours, not GPU time |
 | Optional: train-split policy rollouts for the robustness fit | 1,920 admissions | about 3.7 (8 × 0.458) |
 
-### Seeds plan: pending Daniel's approval
+### Seeds plan: pending Daniel's approval and advisor feedback
 
-- **Source:** each extra policy seed costs about 105 GPU-hours from prior runs. Training took 103.6 GPU-hours per seed (four arms × 3,840 steps, 28 h on 4 GPUs) plus about 1.8 GPU-hours of test evaluation (`replication-of-original/daniel-escalante/README.md`, GPU budget).
-- **The plan:** 3 more seeds, about 315 GPU-hours, plus about 2.3 GPU-hours per seed to run the content-WM test arms on each new policy.
-- **Smaller option:** two more seeds (about 211 GPU-hours) are the minimum for a three-seed between-seed interval.
+- **The plan:** 3 policy seeds in total, so 2 more seeds beside seed 269: about 211 GPU-hours, the minimum for a three-seed between-seed interval (`replication-of-original/daniel-escalante/README.md`, GPU budget).
+- **Source:** each extra seed costs about 105 GPU-hours from prior runs. Training took 103.6 GPU-hours per seed (four arms × 3,840 steps, 28 h on 4 GPUs) plus about 1.8 GPU-hours of test evaluation (same source).
+- **Plus:** the 5 content-WM test arms on each new policy, about 2.3 GPU-hours per seed (estimate, §7), so about 4.6 for both.
 
-### Llama-3.1-8B-Instruct backbone ablation: pending Daniel's approval
+### Llama-3.1-8B-Instruct backbone ablation: pending Daniel's approval and advisor feedback
 
 - About 110 GPU-hours: one training seed plus regenerated HPI summaries and a zero-shot baseline (same source).
 - Then the content-WM arms on that policy, about 2.3 GPU-hours per split.
 
 ### Constraints for both
 
+- **Course staff approval:** multi-GPU jobs and jobs longer than 24 hours need the course staff's approval first (same source). Training a seed ran 28 h on 4 GPUs, so both the seeds plan and the backbone ablation need it, in addition to Daniel's approval.
 - Class accounts share 8 GPUs and 250 GB.
-- Multi-GPU jobs and jobs longer than 24 hours need the course staff's approval first (same source).
 - Queue time adds to every wall-clock figure.
 
-## 7. Proposed shared planner interface (proposal only)
+### Job plan (prepared, not submitted)
+
+**Status.** Nothing in this plan has run.
+- No `content` planner kind exists in `tim` yet, so these jobs cannot run, or be dry-run through `scripts/submit_slurm.py`, until milestone 1's code adds the configuration below to `configs/variants.yaml`.
+- The submitter, accounts and job shape are the ones already in use: `dose-val-b`'s dry run on 2026-11-11 printed the same form for the Nemotron policy.
+- Nothing is submitted without Daniel's approval.
+
+Configuration to add with the implementation (Nemotron policy, run `7fcd9e5`, seed 269, unchanged):
+
+```yaml
+arms_c:  # on top of V3; planner kinds named in SPEC_CONTENT_WM.md §3
+  WM-learned:      {g1: true, g2: true, g3: true, planner: {kind: content, model: learned}}
+  WM-oracle:       {g1: true, g2: true, g3: true, planner: {kind: content, model: oracle}}
+  WM-prior:        {g1: true, g2: true, g3: true, planner: {kind: content, model: prior}}
+  WM-mislead-a0.5: {g1: true, g2: true, g3: true, planner: {kind: content, model: mislead, alpha: 0.5}}
+  WM-mislead-a1:   {g1: true, g2: true, g3: true, planner: {kind: content, model: mislead, alpha: 1}}
+stages_c:  # names end in "c" so approval estimates come from bench-c
+  bench-c: {split: val, jobs: [WM-learned, WM-oracle]}
+  val-c:   {split: val, jobs: [WM-learned, WM-oracle, WM-prior, WM-mislead-a0.5, WM-mislead-a1]}
+  test-c:  {split: test, jobs: [WM-learned, WM-oracle, WM-prior, WM-mislead-a0.5, WM-mislead-a1]}
+```
+
+| Stage | Jobs | GPU-hours per job | Source |
+|---|---|---|---|
+| bench-c | 2 | about 0.09 | bench-b measured 334.6 s and 340.0 s per arm (`results/credentialed/bench-b/`) |
+| val-c | 5 | about 0.458 | addendum B's per-arm budget, an estimate; bench-c replaces it |
+| test-c | 5 | about 0.458 | as above; runs only under §6 |
+| CPU: tuples-c, wm-fit-c, analyze-val-c, analyze-c | 1 each | none (CPU) | burst QOS |
+
+Commands, generated by the submitter:
+- **GPU stages:** `SLURM_ACCOUNTS=cai6734 scripts/submit_slurm.py --stage <stage> --dry-run` prints one line per job:
+
+  ```
+  sbatch --parsable --nodes=1 --ntasks=1 --chdir=<worktree>/cdm-extension/daniel-escalante
+    --export=ALL,TIM_WORK_DIR=<TIM_WORK_DIR>,CDM_WORK_DIR=<CDM_WORK_DIR>,HF_HOME=<HF_HOME>
+    --output=<TIM_WORK_DIR>/private-logs/slurm-%j.out --error=<TIM_WORK_DIR>/private-logs/slurm-%j.err
+    --account=cai6734 --qos=cai6734 --partition=hpg-rtx6000 --gres=gpu:rtx_pro_6000:1
+    --cpus-per-task=4 --mem=16G --time=<limit> --job-name=tim-<stage>-<job> scripts/gpu.slurm <stage> --job <job>
+  ```
+
+  The time limit is the submitter's max(60 min, 2 × GPU-hours + 30 min): 01:24:00 for a 0.458-hour job and 01:00:00 for a bench job.
+- **CPU stages:** `SLURM_CPU_ACCOUNT=cai6734 SLURM_CPU_QOS=cai6734-b scripts/submit_slurm.py --stage <stage> --dry-run` prints `... --account=cai6734 --qos=cai6734-b --cpus-per-task=4 --mem=32G --time=04:00:00 --job-name=tim-<stage> scripts/cpu.slurm <stage>`.
+
+Outputs each GPU job writes:
+- **Private:** the episode log `$TIM_WORK_DIR/private/episodes/<protocol16>_<stage>_<arm>_primary[_<commit12>].jsonl` (the commit suffix is on validation only); the admission marker and ledger entries in `$TIM_ADMISSION_DIR`; and `$TIM_WORK_DIR/private-logs/<job id>.log`.
+- **Public, after `tim publish`:** `results/credentialed/<stage>/events/<arm>.jsonl`, plus `bench.<arm>.json` for bench-c.
+- **CPU stages:** only their schema-valid aggregate JSON is public.
+
+## 8. Proposed shared planner interface (proposal only)
 
 ### What exists today
 
@@ -299,7 +384,7 @@ What changes and what stays:
 - **What sharing buys.** One selector runs in both places. The synthetic environment's complete outcomes, with availability masks independent of the diagnosis, can then carry the causal claims that MIMIC's chart-limited oracle cannot (SPEC.md §12.3).
 - **Process.** Adopting any of this is for Edwin to decide in his own code.
 
-## 8. Milestones (none started)
+## 9. Milestones (none started)
 
 1. CPU: tuple building, both model forms, calibration and leakage audit on validation, the premise count, and the synthetic-fixture end to end with canary tests.
 2. bench → approval → validation runs → addendum (MDE, digests, bench timing).
