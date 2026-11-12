@@ -2,3 +2,5 @@
 {"code": "internal", "exception_class": "ModuleNotFoundError", "type": "error"}
 {"commit": "f618acb6ca05", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "wm-fit-c", "type": "job_start"}
 {"status": "pass", "type": "job_end"}
+{"commit": "ac17dc9ba7be", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "wm-fit-c", "type": "job_start"}
+{"status": "pass", "type": "job_end"}
