@@ -40,6 +40,11 @@ def test_a_dry_run_prints_every_job_of_an_unapproved_gpu_stage(tmp_path):
 
 
 def test_a_real_submission_still_refuses_without_an_approval(tmp_path):
-    result = submit(tmp_path, "--stage", "dose-val-b")
+    # dose-val-b now has a committed approval; smoke has none and, once its 0.5 GPU-hour cap is spent, needs one.
+    import json
+    (tmp_path / "admissions").mkdir()
+    (tmp_path / "admissions" / "ledger.jsonl").write_text(json.dumps(
+        {"event": "smoke_seconds", "key": "spent", "job": "1", "seconds": 1800.0, "time": "2026-11-11T00:00:00-05:00"}) + "\n")
+    result = submit(tmp_path, "--stage", "smoke")
     assert result.returncode != 0 and "approval_missing" in result.stderr
     assert not (tmp_path / "sbatch-called").exists()
