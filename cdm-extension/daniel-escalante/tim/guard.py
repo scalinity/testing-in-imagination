@@ -6,7 +6,8 @@ from tim.actions import Action
 FIXED_THOUGHT = {"g1_replace": "I will choose the next step.",
                  "wm_rerank": "I will choose the next step.",
                  "wm_stop": "I must now give my final diagnosis.",
-                 "g2_commit": "I must now give my final diagnosis."}
+                 "g2_commit": "I must now give my final diagnosis.",
+                 "eig_rerank": "I will choose the next step."}
 INVALID = ("malformed", "unknown_action", "unknown_test", "repeated_test", "unknown_diagnosis")
 
 

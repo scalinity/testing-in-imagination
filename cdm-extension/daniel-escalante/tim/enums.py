@@ -7,7 +7,8 @@ PHASE_A_STAGES = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "add
 PHASE_B_STAGES = ("hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b",
                   "analyze-val-b", "addendum-b", "test-b", "analyze-b")
 DIAGNOSTIC_STAGES = ("diagnose-val-b", "dose-val-b", "analyze-dose-val-b")  # exploratory, validation only (A4-A6)
-STAGES = (*PHASE_A_STAGES, *PHASE_B_STAGES, *DIAGNOSTIC_STAGES, "canary-probe")
+CONTENT_STAGES = ("wm-fit-c", "bench-c", "val-c")  # SPEC_CONTENT_WM.md; test-c waits for the frozen protocol
+STAGES = (*PHASE_A_STAGES, *PHASE_B_STAGES, *DIAGNOSTIC_STAGES, *CONTENT_STAGES, "canary-probe")
 LADDER = ("official", "V0", "V0-rerun", "V0-shadow", "V1", "V2-raw", "V2", "V3-raw", "V3")
 COMPARISONS = ("V3-official", "V1-official", "V3-V1", "V2-V1", "V3-V2", "V2raw-official", "V3raw-official",
                "V3-V0rerun", "V1-V0", "V2-V0", "V3-V0", "B-learned-s0-B-uniform", "B-learned-s0-B-marginal",
@@ -19,7 +20,8 @@ SIGNIFICANCE = ("statistically significant", "not statistically significant")
 CHANGES = ("improved", "regressed", "unchanged")
 PHASE_B_ARMS = ("B-uniform", "B-marginal", "B-learned-s0", "B-learned-s1", "B-learned-s2", "B-oracle",
                 *(f"B-a{a}-T{t}-n{s}" for a in (0.1, 0.3) for t in (1, 0.25) for s in (0, 1)))
-VARIANTS = ("V0", "V0-shadow", "V1", "V2", "V3", "V0-rerun", "P0", *PHASE_B_ARMS)
+CONTENT_ARMS = ("WM-learned", "WM-oracle", "WM-prior", "WM-mislead-a0.5", "WM-mislead-a1")
+VARIANTS = ("V0", "V0-shadow", "V1", "V2", "V3", "V0-rerun", "P0", *PHASE_B_ARMS, *CONTENT_ARMS)
 CONFIGURED_TESTS = ("Complete Blood Count", "Basic Metabolic Panel", "Comprehensive Metabolic Panel",
                     "Renal Function Panel", "Liver Function Panel", "Urinalysis", "Electrolyte Panel",
                     "CT", "MRI", "Radiograph", "Ultrasound", "Physical Examination")

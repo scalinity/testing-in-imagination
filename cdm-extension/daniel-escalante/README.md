@@ -1,6 +1,6 @@
 # cdm-extension: commit guard and chart-availability reranking
 
-A research extension of the LA-CDM replication in `replication-of-original/daniel-escalante/` (CAI 6734, University of Florida). [SPEC.md](SPEC.md) is the source of truth; [DECISIONS.md](DECISIONS.md) records the choices it leaves open; [prereg/protocol.json](prereg/protocol.json) freezes the analysis.
+A research extension of the LA-CDM replication in `replication-of-original/daniel-escalante/` (CAI 6734, University of Florida). [SPEC.md](SPEC.md) is the source of truth; [DECISIONS.md](DECISIONS.md) records the choices it leaves open; [prereg/protocol.json](prereg/protocol.json) freezes the analysis. [SPEC_CONTENT_WM.md](SPEC_CONTENT_WM.md) is the draft design and preregistration plan for the next step, a lab-result world model with an imagined-outcome planner; nothing in it has run.
 
 - **Phase A, commit guard.** Termination recovery and action validation for the trained Nemotron Nano 8B policy under the replication's frozen metric. G1 replaces an invalid action with the highest-scoring valid one, G2 commits to a diagnosis at the step or length budget, and G3 falls back to the hypothesis agent's latest valid answer when an episode ends without one. G3 reuses the hypothesis agent's answer, so Phase A is not a new diagnostic predictor.
 - **Phase B, retrospective chart-availability reranking.** Predicts whether a test is present in the chart from the history the agent sees, and reweights test requests. It does not predict result content and is not full world-model planning.
@@ -40,7 +40,7 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 
 | Path | Contents |
 |---|---|
-| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `diagnostics`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
+| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `diagnostics`, `labs`, `content`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
 | `configs/variants.yaml` | variants, limits and stage jobs |
 | `schemas/` | the public allowlist for every event and aggregate |
 | `prereg/` | the frozen protocol, addenda and amendment notes |
@@ -87,3 +87,5 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-11 | diagnose-val-b re-run (amendment A5) | CPU job 50900734 (cai5731-b) at 04fa2a2 | `results/credentialed/diagnose-val-b/hypothesis_check.json`, `DIAGNOSTICS.md` | diagnostics.json byte-identical (sha256 23f3d06e…); check H: of B-oracle's 61 added relevant provided results, 38 arrived while the hypothesis already held the label and 7 changed it; verdict now headed provisional |
 | 2026-11-11 | dose-val-b (prepared, not run) | none submitted | `approvals/dose-val-b.request.json` | 9 jobs at 0.458 GPU-h each, 4.122 in total (estimate from bench-b); dry run on cai6734 printed the 9 sbatch commands; awaiting approval |
 | 2026-11-11 | diagnose-val-b re-run on cai6734-b (account check) | CPU job 50904601 (cai6734-b) | — | diagnostics.json (sha256 23f3d06e…) and hypothesis_check.json (sha256 257f2b3e…) byte-identical to the committed bundle, so moving CPU stages from cai5731-b to cai6734-b changes no result |
+| 2026-11-11 | wm-fit-c | CPU job 50912571 (cai6734-b) | — | failed at import in 16 s (ModuleNotFoundError): the new cluster worktree lacked the upstream submodule; initialized, then retried once |
+| 2026-11-11 | wm-fit-c (retry) | CPU job 50913048 (cai6734-b) at f618acb | `results/credentialed/wm-fit-c/` | gate 1 passed (68 of 240 validation admissions with a V3 lab request; floor 24); gate 2 passed (content log-loss skill 0.047, EIG-calibration Spearman 0.952); diagnosis posterior after all labs overconfident (log-loss 0.690 -> 2.485); no sign of HPI copying (log-loss 0.567 with a mention vs 0.545 without) |

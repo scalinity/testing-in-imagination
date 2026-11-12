@@ -9,7 +9,8 @@ from tim.events import load_schema, validate
 from tim.paths import OWN
 
 PUBLISHED = ("validate", "smoke", "bench-a", "val-a", "analyze-val-a", "test-a", "phase-a",
-             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "diagnose-val-b", "dose-val-b", "analyze-dose-val-b", "test-b", "phase-b")
+             "hpi-audit", "wm-fit", "inventory", "leakage", "bench-b", "val-b", "analyze-val-b", "diagnose-val-b",
+             "dose-val-b", "analyze-dose-val-b", "wm-fit-c", "bench-c", "val-c", "test-b", "phase-b")
 
 
 def run_all(environ, results):
@@ -109,3 +110,16 @@ def test_the_validation_diagnostics_are_published_and_rendered(two_runs):
     assert [p["arm"] for p in dose["primary"]["points"]] == [arm for arm, _ in DOSE_PRIMARY]
     assert text.startswith("> **SYNTHETIC**") and "## Corruption dose-response (D3)" in text and "## Pending" not in text
     assert f"{diagnostics['family_d']['B-oracle-B-uniform']['delta_t5']:+.2f}" in text
+
+
+def test_the_content_study_runs_end_to_end_on_the_fixture(two_runs):
+    from tim import runner
+    first = two_runs[0]
+    fitted = json.loads((first / "wm-fit-c" / "content_wm.json").read_text())
+    validate(fitted, load_schema("content_wm"))
+    assert fitted["premise"]["minimum"] == 24 and fitted["quality"]["tuples"] > 0
+    assert set(fitted["bin_counts"]) == {"train", "val"} and fitted["posterior"]["admissions"] == 24
+    assert fitted["leakage"]["items_mention"] + fitted["leakage"]["items_no_mention"] == fitted["quality"]["items"]
+    assert sorted(p.name for p in (first / "bench-c").iterdir() if p.is_file()) == [
+        "bench.WM-learned.json", "bench.WM-oracle.json"]
+    assert sorted(p.stem for p in (first / "val-c" / "events").iterdir()) == sorted(runner.STAGE_SPECS["val-c"]["jobs"])
