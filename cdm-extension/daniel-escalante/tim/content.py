@@ -7,6 +7,7 @@ object here is patient-derived and stays private.
 """
 from dataclasses import dataclass
 import hashlib
+import re
 
 import numpy as np
 
@@ -182,16 +183,31 @@ def _orders(split, patient, panels) -> list[list[str]]:
     return [sorted(panels, key=lambda panel: _seed("tim-order", split, patient, r, panel)) for r in range(ORDERS)]
 
 
-def quality(prior_model, model, cases, split="val", draws=DRAWS) -> dict:
-    """Gate 2 (§1.5): per-item log-loss of each charted panel's true result given the chart-derived history,
-    against the train marginal, over ORDERS random orders per admission; and EIG calibration (predicted
-    against realized gain, by decile of predicted) on the first order. cases: (history, label, truth, patient)."""
+def _reliability(pairs, bins=10) -> tuple:
+    """Top-label ECE over equal-width confidence bins, and the non-empty bins' table; pairs = (confidence, correct)."""
+    table = []
+    for b in range(bins):
+        members = [(c, ok) for c, ok in pairs if min(int(c * bins), bins - 1) == b]
+        if members:
+            table.append({"low": b / bins, "high": (b + 1) / bins, "count": len(members),
+                          "confidence": float(np.mean([c for c, _ in members])),
+                          "accuracy": float(np.mean([ok for _, ok in members]))})
+    total = sum(row["count"] for row in table)
+    ece = sum(row["count"] / total * abs(row["accuracy"] - row["confidence"]) for row in table) if total else None
+    return ece, table
+
+
+def quality(prior_model, model, cases, split="val", draws=DRAWS, eig_calibration=True) -> dict:
+    """Gate 2 and calibration (§1.5) over chart-derived histories, ORDERS random orders per admission:
+    per-item log-loss and multiclass Brier of each charted panel's true result against the train marginal,
+    top-label ECE with its reliability table, and EIG calibration (predicted against realized gain, by decile
+    of predicted) on the first order. cases: (history, label, truth, patient)."""
     import math
     from scipy.stats import spearmanr
     marginal = {key: model.prior @ table for key, table in model.probs.items()}
-    nll = nll_marginal = 0.0
+    nll = nll_marginal = brier = brier_marginal = 0.0
     items = tuples = 0
-    pairs = []
+    pairs, confidence = [], []
     for history, _, truth, patient in cases:
         start = prior_model.predict(history)
         charted = [panel for panel in LABS if truth.get(panel) is not None]
@@ -202,24 +218,105 @@ def quality(prior_model, model, cases, split="val", draws=DRAWS) -> dict:
                 nll -= math.log(float(belief @ model.lik(panel, outcome)))
                 for j, value in enumerate(outcome):
                     names = model.outcomes.get((panel, j))
-                    if names is not None:
-                        nll_marginal -= math.log(float(marginal[(panel, j)][names.index(value if value in names
-                                                                                       else OTHER)]))
-                        items += 1
+                    if names is None:
+                        continue
+                    k = names.index(value if value in names else OTHER)
+                    predicted, reference, true = belief @ model.probs[(panel, j)], marginal[(panel, j)], np.eye(len(names))[k]
+                    nll_marginal -= math.log(float(reference[k]))
+                    brier += float(((predicted - true) ** 2).sum())
+                    brier_marginal += float(((reference - true) ** 2).sum())
+                    confidence.append((float(predicted.max()), int(np.argmax(predicted)) == k))
+                    items += 1
                 tuples += 1
-                if r == 0:
+                if r == 0 and eig_calibration:
                     rng = np.random.default_rng(_seed("tim-eig-calibration", split, patient, panel))
                     pairs.append((eig(model, belief, panel, rng, draws), realized_gain(model, belief, panel, outcome)))
                 observed.append((panel, outcome))
     pairs.sort(key=lambda pair: pair[0])
-    groups = [g for g in np.array_split(np.arange(len(pairs)), min(10, len(pairs))) if len(g)]
+    groups = [g for g in np.array_split(np.arange(len(pairs)), min(10, len(pairs))) if len(g)] if pairs else []
     deciles = [{"predicted": float(np.mean([pairs[i][0] for i in g])), "realized": float(np.mean([pairs[i][1] for i in g]))}
                for g in groups]
     rho = spearmanr(range(len(deciles)), [d["realized"] for d in deciles]).correlation if len(deciles) > 1 else None
-    per_item = (nll / items, nll_marginal / items) if items else (None, None)
-    return {"tuples": tuples, "items": items, "nll": per_item[0], "nll_marginal": per_item[1],
-            "skill": None if not items else 1 - per_item[0] / per_item[1],
+    ece, reliability = _reliability(confidence)
+    mean = (lambda total: total / items) if items else (lambda total: None)
+    return {"tuples": tuples, "items": items, "nll": mean(nll), "nll_marginal": mean(nll_marginal),
+            "skill": None if not items else 1 - nll / nll_marginal,
+            "brier": mean(brier), "brier_marginal": mean(brier_marginal),
+            "brier_skill": None if not items else 1 - brier / brier_marginal,
+            "ece": ece, "reliability": reliability,
             "deciles": deciles, "spearman": None if rho is None or rho != rho else float(rho)}
+
+
+def posterior_quality(prior_model, model, cases) -> dict:
+    """The diagnosis posterior on validation (§1.5): log-loss and top-label ECE of the HPI prior alone and
+    after every charted lab panel."""
+    import math
+    nll_prior = nll_labs = 0.0
+    prior_pairs, lab_pairs = [], []
+    for history, label, truth, _ in cases:
+        start = prior_model.predict(history)
+        after = posterior(start, model, [(panel, truth[panel]) for panel in LABS if truth.get(panel) is not None])
+        k = DISEASES.index(label)
+        nll_prior -= math.log(max(float(start[k]), 1e-12))
+        nll_labs -= math.log(max(float(after[k]), 1e-12))
+        prior_pairs.append((float(start.max()), int(np.argmax(start)) == k))
+        lab_pairs.append((float(after.max()), int(np.argmax(after)) == k))
+    n = len(cases)
+    return {"admissions": n, "nll_prior": nll_prior / n if n else None, "nll_labs": nll_labs / n if n else None,
+            "ece_prior": _reliability(prior_pairs)[0], "ece_labs": _reliability(lab_pairs)[0]}
+
+
+BIN_CLASSES = ("low", "mid", "high", "token", "other", "absent")
+
+
+def bin_counts(truths) -> dict:
+    """Per lab panel (by public code): charted admissions and item outcomes by class; tokens are merged into
+    one "token" count so no value vocabulary is published."""
+    from tim.enums import TEST_CODES
+    out = {}
+    for panel in LABS:
+        counts = dict.fromkeys(("charted", *BIN_CLASSES), 0)
+        for truth in truths:
+            outcome = truth.get(panel)
+            if outcome is None:
+                continue
+            counts["charted"] += 1
+            for value in outcome:
+                counts["token" if value.startswith("t:") else value] += 1
+        out[TEST_CODES[panel]] = counts
+    return out
+
+
+_WORDS = re.compile(r"[a-z]+|\d+(?:\.\d+)?")
+
+
+def mentions(history, names) -> set:
+    """Panels with an item named in the history within 5 words of a number (§1.6, HPI copying)."""
+    words = _WORDS.findall(history.lower())
+    found = set()
+    for panel, labels in names.items():
+        for label in labels:
+            target = _WORDS.findall(label.lower())
+            for i in range(len(words) - len(target) + 1):
+                if target and words[i:i + len(target)] == target:
+                    window = words[max(0, i - 5):i] + words[i + len(target):i + len(target) + 5]
+                    if any(w[0].isdigit() for w in window):
+                        found.add(panel)
+    return found
+
+
+def hpi_copying(prior_model, model, cases, names, split="val") -> dict:
+    """Leakage audit (§1.6): validation admissions whose history names a panel item next to a number, by panel,
+    and per-item log-loss for admissions with any such mention against those without."""
+    from tim.enums import TEST_CODES
+    flagged = [mentions(history, names) for history, *_ in cases]
+    by_test = {TEST_CODES[panel]: sum(panel in found for found in flagged) for panel in LABS}
+    groups = {}
+    for key, keep in (("mention", True), ("no_mention", False)):
+        subset = [case for case, found in zip(cases, flagged) if bool(found) == keep]
+        q = quality(prior_model, model, subset, split, eig_calibration=False) if subset else {"nll": None, "items": 0}
+        groups[f"nll_{key}"], groups[f"items_{key}"] = q["nll"], q["items"]
+    return {"admissions_with_mention": sum(bool(found) for found in flagged), "by_test": by_test, **groups}
 
 
 def premise(rows, minimum=24) -> dict:

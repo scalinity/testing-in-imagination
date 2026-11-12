@@ -1,5 +1,160 @@
 {
+  "bin_counts": {
+    "train": {
+      "BMP": {
+        "absent": 0,
+        "charted": 32,
+        "high": 10,
+        "low": 12,
+        "mid": 10,
+        "other": 0,
+        "token": 0
+      },
+      "CBC": {
+        "absent": 0,
+        "charted": 32,
+        "high": 10,
+        "low": 12,
+        "mid": 10,
+        "other": 0,
+        "token": 0
+      },
+      "CMP": {
+        "absent": 0,
+        "charted": 32,
+        "high": 10,
+        "low": 11,
+        "mid": 11,
+        "other": 0,
+        "token": 0
+      },
+      "EP": {
+        "absent": 0,
+        "charted": 32,
+        "high": 6,
+        "low": 15,
+        "mid": 11,
+        "other": 0,
+        "token": 0
+      },
+      "LFP": {
+        "absent": 0,
+        "charted": 32,
+        "high": 10,
+        "low": 16,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      },
+      "RFP": {
+        "absent": 0,
+        "charted": 32,
+        "high": 10,
+        "low": 16,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      },
+      "UA": {
+        "absent": 0,
+        "charted": 32,
+        "high": 11,
+        "low": 15,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      }
+    },
+    "val": {
+      "BMP": {
+        "absent": 0,
+        "charted": 16,
+        "high": 4,
+        "low": 6,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      },
+      "CBC": {
+        "absent": 0,
+        "charted": 16,
+        "high": 4,
+        "low": 6,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      },
+      "CMP": {
+        "absent": 0,
+        "charted": 16,
+        "high": 5,
+        "low": 5,
+        "mid": 6,
+        "other": 0,
+        "token": 0
+      },
+      "EP": {
+        "absent": 0,
+        "charted": 16,
+        "high": 3,
+        "low": 8,
+        "mid": 5,
+        "other": 0,
+        "token": 0
+      },
+      "LFP": {
+        "absent": 0,
+        "charted": 16,
+        "high": 6,
+        "low": 7,
+        "mid": 3,
+        "other": 0,
+        "token": 0
+      },
+      "RFP": {
+        "absent": 0,
+        "charted": 16,
+        "high": 6,
+        "low": 7,
+        "mid": 3,
+        "other": 0,
+        "token": 0
+      },
+      "UA": {
+        "absent": 0,
+        "charted": 16,
+        "high": 6,
+        "low": 7,
+        "mid": 3,
+        "other": 0,
+        "token": 0
+      }
+    }
+  },
   "content_sha256": "9ee16015478c769126504a142055401c8d99df8117ba6c74bb81dfd10bdc6c21",
+  "leakage": {
+    "admissions_with_mention": 0,
+    "by_test": {
+      "BMP": 0,
+      "CBC": 0,
+      "CMP": 0,
+      "EP": 0,
+      "LFP": 0,
+      "RFP": 0,
+      "UA": 0
+    },
+    "items_mention": 0,
+    "items_no_mention": 896,
+    "nll_mention": null,
+    "nll_no_mention": 1.216278013368539
+  },
+  "posterior": {
+    "admissions": 24,
+    "ece_labs": 0.09377440314367935,
+    "ece_prior": 0.12512073023134396,
+    "nll_labs": 0.49707536551638803,
+    "nll_prior": 0.4749929912417626
+  },
   "premise": {
     "admissions_with_lab": 2,
     "lab_requests": 14,
@@ -11,6 +166,9 @@
     "temperature": 0.5
   },
   "quality": {
+    "brier": 0.6578174551009389,
+    "brier_marginal": 0.6680843195266271,
+    "brier_skill": 0.015367617717719773,
     "deciles": [
       {
         "predicted": -0.006883344177023558,
@@ -53,10 +211,27 @@
         "realized": 0.02488391335407084
       }
     ],
+    "ece": 0.09094378511506544,
     "items": 896,
     "nll": 1.216278013368539,
     "nll_marginal": 1.2348941835807905,
-    "skill": 0.0150751136897177,
+    "reliability": [
+      {
+        "accuracy": 0.17647058823529413,
+        "confidence": 0.2902089289518398,
+        "count": 17,
+        "high": 0.3,
+        "low": 0.2
+      },
+      {
+        "accuracy": 0.447098976109215,
+        "confidence": 0.3565960413300144,
+        "count": 879,
+        "high": 0.4,
+        "low": 0.3
+      }
+    ],
+    "skill": 0.015075113689717812,
     "spearman": -0.06666666666666665,
     "tuples": 896
   },

@@ -158,3 +158,51 @@ def test_the_hpi_prior_is_fit_on_train_and_its_temperature_on_validation():
     assert again.temperature == prior.temperature and again.predict("x").tolist() == prior.predict("x").tolist()
     assert "_stop_words_id" not in vars(content.fit_prior(hpi_items(8), hpi_items(4, offset=100),
                                                           list(CONFIGURED_TESTS)).vectorizer)  # stable pickles
+
+
+# ---- aggregates committed by wm-fit-c: per-bin counts, calibration, leakage audit -------------------
+
+def test_bin_counts_merge_tokens_and_count_charted_admissions():
+    from tim.enums import TEST_CODES
+    empty = {panel: None for panel in content.LABS}
+    truths = [{**empty, "Complete Blood Count": ("low", "t:NEG")}, {**empty, "Complete Blood Count": ("absent", "other")},
+              empty]
+    counts = content.bin_counts(truths)
+    assert set(counts) == {TEST_CODES[p] for p in content.LABS}
+    assert counts["CBC"] == {"charted": 2, "low": 1, "mid": 0, "high": 0, "token": 1, "other": 1, "absent": 1}
+    assert counts["UA"] == dict.fromkeys(("charted", "low", "mid", "high", "token", "other", "absent"), 0)
+
+
+def test_quality_reports_brier_skill_and_a_reliability_table():
+    model = content.fit_model(lab_examples())
+    result = content.quality(HistoryPrior(), model, cases(), split="val", draws=32)
+    assert result["brier"] < result["brier_marginal"] and result["brier_skill"] > 0
+    assert 0 <= result["ece"] <= 1
+    assert sum(row["count"] for row in result["reliability"]) == result["items"]
+    assert all(row["low"] <= row["confidence"] <= row["high"] for row in result["reliability"])
+
+
+def test_the_diagnosis_posterior_is_scored_before_and_after_the_charted_labs():
+    model = content.fit_model(lab_examples())
+    result = content.posterior_quality(HistoryPrior(), model, cases())
+    assert result["admissions"] == len(cases()) and result["nll_labs"] < result["nll_prior"]
+    assert 0 <= result["ece_prior"] <= 1 and 0 <= result["ece_labs"] <= 1
+
+
+def test_a_mention_is_a_panel_item_named_within_five_words_of_a_number():
+    names = {"Complete Blood Count": ["White Blood Cells"], "Urinalysis": ["Specific Gravity"]}
+    assert content.mentions("White blood cells were 14.2 on arrival", names) == {"Complete Blood Count"}
+    assert content.mentions("12 specific gravity", names) == {"Urinalysis"}
+    assert content.mentions("white blood cells were normal", names) == set()
+    assert content.mentions("white blood cells were noted and then after one two three four five days 9", names) == set()
+
+
+def test_the_leakage_audit_splits_log_loss_by_admissions_that_mention_a_value():
+    from tim.enums import TEST_CODES
+    model, cs = content.fit_model(lab_examples()), cases()
+    cs[0] = (cs[0][0] + " white blood cells 3.1", *cs[0][1:])
+    audit = content.hpi_copying(HistoryPrior(), model, cs, {"Complete Blood Count": ["White Blood Cells"]}, "val")
+    assert audit["admissions_with_mention"] == 1
+    assert audit["by_test"] == {**{TEST_CODES[p]: 0 for p in content.LABS}, "CBC": 1}
+    total = content.quality(HistoryPrior(), model, cs, split="val", eig_calibration=False)["items"]
+    assert audit["items_mention"] + audit["items_no_mention"] == total and audit["nll_mention"] is not None

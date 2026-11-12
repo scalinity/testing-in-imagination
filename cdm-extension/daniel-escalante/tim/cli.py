@@ -208,11 +208,17 @@ def stage_body(stage, job, constants, protocol_hash):
         (folder / "content.pkl").write_bytes(pickle.dumps({"bins": bins, "model": model, "prior": prior}))
         cases = [(i["patient_history"], i["condition"], truth(val_labs[int(i["patient_id"])]), int(i["patient_id"]))
                  for i in val]
+        names = {panel: sorted({train_set.id_to_name[item] for item in train_set.test_ids[panel]})
+                 for panel in content.LABS}  # the release mapping's item labels, for the HPI-copying audit
         bundle.aggregate("content_wm", {
             "source": settings.source,
             "content_sha256": hashlib.sha256((folder / "content.pkl").read_bytes()).hexdigest(),
             "prior": {"c": prior.c, "temperature": prior.temperature},
             "quality": content.quality(prior, model, cases, "val"),
+            "posterior": content.posterior_quality(prior, model, cases),
+            "bin_counts": {"train": content.bin_counts([truth(train_labs[int(i["patient_id"])]) for i in train]),
+                           "val": content.bin_counts([truth for _, _, truth, _ in cases])},
+            "leakage": content.hpi_copying(prior, model, cases, names, "val"),
             "premise": content.premise(_rows(settings, protocol_hash, "val-a", "V3", stage))})
 
     def analyze_b(settings, bundle):

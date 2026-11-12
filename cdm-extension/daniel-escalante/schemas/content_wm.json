@@ -6,7 +6,10 @@
     "content_sha256",
     "prior",
     "quality",
-    "premise"
+    "premise",
+    "posterior",
+    "bin_counts",
+    "leakage"
   ],
   "properties": {
     "source": {
@@ -43,7 +46,12 @@
         "nll_marginal",
         "skill",
         "deciles",
-        "spearman"
+        "spearman",
+        "brier",
+        "brier_marginal",
+        "brier_skill",
+        "ece",
+        "reliability"
       ],
       "properties": {
         "tuples": {
@@ -110,6 +118,77 @@
               "type": "number"
             }
           ]
+        },
+        "brier": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "brier_marginal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "brier_skill": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "ece": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "reliability": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "low",
+              "high",
+              "count",
+              "confidence",
+              "accuracy"
+            ],
+            "properties": {
+              "low": {
+                "type": "number"
+              },
+              "high": {
+                "type": "number"
+              },
+              "count": {
+                "$ref": "count"
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "accuracy": {
+                "type": "number"
+              }
+            }
+          }
         }
       }
     },
@@ -134,6 +213,156 @@
         },
         "passed": {
           "type": "boolean"
+        }
+      }
+    },
+    "posterior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admissions",
+        "nll_prior",
+        "nll_labs",
+        "ece_prior",
+        "ece_labs"
+      ],
+      "properties": {
+        "admissions": {
+          "$ref": "count"
+        },
+        "nll_prior": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "nll_labs": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "ece_prior": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "ece_labs": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    "bin_counts": {
+      "type": "object",
+      "keys": "split",
+      "values": {
+        "type": "object",
+        "keys": "test",
+        "values": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "charted",
+            "low",
+            "mid",
+            "high",
+            "token",
+            "other",
+            "absent"
+          ],
+          "properties": {
+            "charted": {
+              "$ref": "count"
+            },
+            "low": {
+              "$ref": "count"
+            },
+            "mid": {
+              "$ref": "count"
+            },
+            "high": {
+              "$ref": "count"
+            },
+            "token": {
+              "$ref": "count"
+            },
+            "other": {
+              "$ref": "count"
+            },
+            "absent": {
+              "$ref": "count"
+            }
+          }
+        }
+      }
+    },
+    "leakage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admissions_with_mention",
+        "by_test",
+        "nll_mention",
+        "nll_no_mention",
+        "items_mention",
+        "items_no_mention"
+      ],
+      "properties": {
+        "admissions_with_mention": {
+          "$ref": "count"
+        },
+        "by_test": {
+          "type": "object",
+          "keys": "test",
+          "values": {
+            "$ref": "count"
+          }
+        },
+        "nll_mention": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "nll_no_mention": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "items_mention": {
+          "$ref": "count"
+        },
+        "items_no_mention": {
+          "$ref": "count"
         }
       }
     }
