@@ -1,7 +1,7 @@
 
 # Phase-B validation diagnostics: planner or signal?
 
-**Provisional: planner bottleneck.** This verdict rests on one validation contrast, the corruption dose-response that would confirm it has not run, and the verdict rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is -0.11 [-2.56, 2.38] points, not statistically significant (Holm-adjusted p = 0.9736), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 203 under B-uniform to 66 under B-oracle.
+**Planner bottleneck (no detectable effect).** This verdict combines one validation contrast with the validation dose-response (amendment A6); the oracle-contrast rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is -0.11 [-2.56, 2.38] points, not statistically significant (Holm-adjusted p = 0.9736), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 203 under B-uniform to 66 under B-oracle. The corruption dose-response (T = 1) has slope -2.46 [-7.28, 2.26] T5 points per unit α: flat. The interval [-7.28, 2.26] cannot rule out a decline of a few T5 points over the tested range (derived arithmetic in the dose-response section).
 
 ## Scope
 
@@ -97,9 +97,32 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 | B-learned-s0 | 26 | 0 | 17 | 9 | 0 | 3 | 1 | 1 |
 | B-oracle | 23 | 1 | 13 | 10 | 0 | 3 | 1 | 2 |
 
-## Pending
+## Corruption dose-response (D3)
 
-- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). It needs 9 validation runs: about 4.1 GPU-hours at addendum B's per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the availability signal degrades is untested on validation.
+Amendment A4's D3, with its code fixed before any dose-val-b run (amendment A6): the OLS slope of validation T5 on the corruption level α, one point per arm, with a 95% class-stratified percentile bootstrap that draws patients once per resample for every arm. Decreasing if the interval lies below 0, increasing if above, flat otherwise.
+
+**Primary, T = 1.** Slope -2.46 [-7.28, 2.26] T5 points per unit α (flat; 10000 resamples). Mean T5 by level: α 0.0: 84.59, α 0.1: 85.12, α 0.3: 84.44, α 0.5: 83.65; the level means do not fall monotonically as α grows.
+
+Derived arithmetic, not a separate estimate: over the tested range α 0.0 to 0.5 (a span of 0.5), slope × span = -2.46 × 0.5 = -1.23 T5 points, and the interval × span = [-7.28 × 0.5, 2.26 × 0.5] = [-3.64, 1.13].
+
+| Arm | α | T5 |
+|---|---|---|
+| B-oracle | 0.0 | 84.59 |
+| B-a0.1-T1-n0 | 0.1 | 84.88 |
+| B-a0.1-T1-n1 | 0.1 | 85.35 |
+| B-a0.3-T1-n0 | 0.3 | 84.96 |
+| B-a0.3-T1-n1 | 0.3 | 83.93 |
+| B-marginal | 0.5 | 83.65 |
+
+**Secondary, T = 0.25.** Slope -0.68 [-10.85, 9.79] T5 points per unit α (flat; 10000 resamples). Mean T5 by level: α 0.0: 84.59, α 0.1: 86.14, α 0.3: 85.08; the level means do not fall monotonically as α grows.
+
+| Arm | α | T5 |
+|---|---|---|
+| B-oracle | 0.0 | 84.59 |
+| B-a0.1-T0.25-n0 | 0.1 | 87.05 |
+| B-a0.1-T0.25-n1 | 0.1 | 85.24 |
+| B-a0.3-T0.25-n0 | 0.3 | 85.27 |
+| B-a0.3-T0.25-n1 | 0.3 | 84.89 |
 
 ## Limitations
 
@@ -107,4 +130,4 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 - Relevance is guideline relevance of the requested action, not the value of the result it returned. The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four diseases; sensitivity S1 (exploratory) counts them as relevant to all four.
 - Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, and says nothing about what each result showed.
 - A null oracle contrast concerns this fixed planner only: perfect information does not make the heuristic optimal (SPEC §4.5).
-- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda A and B.
+- Every number here is rendered from `diagnose-val-b/diagnostics.json`, `diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda A and B, and `analyze-dose-val-b/dose_response.json`.
