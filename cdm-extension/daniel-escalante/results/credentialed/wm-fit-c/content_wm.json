@@ -1,0 +1,281 @@
+{
+  "bin_counts": {
+    "train": {
+      "BMP": {
+        "absent": 26788,
+        "charted": 1918,
+        "high": 4607,
+        "low": 5970,
+        "mid": 4801,
+        "other": 30,
+        "token": 0
+      },
+      "CBC": {
+        "absent": 23090,
+        "charted": 1918,
+        "high": 9875,
+        "low": 10888,
+        "mid": 9765,
+        "other": 86,
+        "token": 0
+      },
+      "CMP": {
+        "absent": 33246,
+        "charted": 1919,
+        "high": 6887,
+        "low": 8481,
+        "mid": 6957,
+        "other": 80,
+        "token": 0
+      },
+      "EP": {
+        "absent": 13051,
+        "charted": 1917,
+        "high": 2389,
+        "low": 3162,
+        "mid": 2463,
+        "other": 22,
+        "token": 0
+      },
+      "LFP": {
+        "absent": 10176,
+        "charted": 1759,
+        "high": 3382,
+        "low": 4123,
+        "mid": 3336,
+        "other": 91,
+        "token": 0
+      },
+      "RFP": {
+        "absent": 29622,
+        "charted": 1918,
+        "high": 4874,
+        "low": 6198,
+        "mid": 5330,
+        "other": 8,
+        "token": 0
+      },
+      "UA": {
+        "absent": 57696,
+        "charted": 1563,
+        "high": 2109,
+        "low": 3775,
+        "mid": 1703,
+        "other": 447,
+        "token": 13983
+      }
+    },
+    "val": {
+      "BMP": {
+        "absent": 3358,
+        "charted": 240,
+        "high": 542,
+        "low": 795,
+        "mid": 578,
+        "other": 7,
+        "token": 0
+      },
+      "CBC": {
+        "absent": 2833,
+        "charted": 240,
+        "high": 1235,
+        "low": 1381,
+        "mid": 1271,
+        "other": 0,
+        "token": 0
+      },
+      "CMP": {
+        "absent": 4164,
+        "charted": 240,
+        "high": 824,
+        "low": 1108,
+        "mid": 849,
+        "other": 15,
+        "token": 0
+      },
+      "EP": {
+        "absent": 1628,
+        "charted": 240,
+        "high": 289,
+        "low": 421,
+        "mid": 298,
+        "other": 4,
+        "token": 0
+      },
+      "LFP": {
+        "absent": 1329,
+        "charted": 221,
+        "high": 414,
+        "low": 477,
+        "mid": 423,
+        "other": 9,
+        "token": 0
+      },
+      "RFP": {
+        "absent": 3730,
+        "charted": 240,
+        "high": 582,
+        "low": 804,
+        "mid": 641,
+        "other": 3,
+        "token": 0
+      },
+      "UA": {
+        "absent": 7318,
+        "charted": 199,
+        "high": 289,
+        "low": 488,
+        "mid": 222,
+        "other": 53,
+        "token": 1779
+      }
+    }
+  },
+  "content_sha256": "9aa702e7d43bad1df673df4a3f0fc815819a25a4285a21b0b20a6c0fa596feb5",
+  "leakage": {
+    "admissions_with_mention": 20,
+    "by_test": {
+      "BMP": 3,
+      "CBC": 3,
+      "CMP": 3,
+      "EP": 1,
+      "LFP": 2,
+      "RFP": 4,
+      "UA": 13
+    },
+    "items_mention": 26688,
+    "items_no_mention": 294600,
+    "nll_mention": 0.5667461724454174,
+    "nll_no_mention": 0.5451302239964283
+  },
+  "posterior": {
+    "admissions": 240,
+    "ece_labs": 0.29464677458307814,
+    "ece_prior": 0.045535565631103225,
+    "nll_labs": 2.485018961786132,
+    "nll_prior": 0.6899910910318182
+  },
+  "premise": {
+    "admissions_with_lab": 68,
+    "lab_requests": 158,
+    "minimum": 24,
+    "passed": true
+  },
+  "prior": {
+    "c": 10,
+    "temperature": 0.8
+  },
+  "quality": {
+    "brier": 0.29991476064602024,
+    "brier_marginal": 0.3098933136254529,
+    "brier_skill": 0.03219996218276944,
+    "deciles": [
+      {
+        "predicted": -0.0016587807127303815,
+        "realized": 0.002391219256961017
+      },
+      {
+        "predicted": 7.18781289910735e-05,
+        "realized": 0.0001611190478958659
+      },
+      {
+        "predicted": 0.001814341280409986,
+        "realized": -0.014748343139221224
+      },
+      {
+        "predicted": 0.00896231104433754,
+        "realized": 0.00610788784047977
+      },
+      {
+        "predicted": 0.024490661060928502,
+        "realized": 0.011419782672634179
+      },
+      {
+        "predicted": 0.0513032158991961,
+        "realized": 0.03800027610054339
+      },
+      {
+        "predicted": 0.09072174296072262,
+        "realized": 0.0535628051547916
+      },
+      {
+        "predicted": 0.1462956125980399,
+        "realized": 0.13862311085470566
+      },
+      {
+        "predicted": 0.2177974242864603,
+        "realized": 0.15315064736448747
+      },
+      {
+        "predicted": 0.40609286198770667,
+        "realized": 0.30305023134616005
+      }
+    ],
+    "ece": 0.012765936337230917,
+    "items": 321288,
+    "nll": 0.5469257670363384,
+    "nll_marginal": 0.5739609060650112,
+    "reliability": [
+      {
+        "accuracy": 0.2953451043338684,
+        "confidence": 0.28035115214170997,
+        "count": 2492,
+        "high": 0.3,
+        "low": 0.2
+      },
+      {
+        "accuracy": 0.36494182486221677,
+        "confidence": 0.36188425031676663,
+        "count": 65320,
+        "high": 0.4,
+        "low": 0.3
+      },
+      {
+        "accuracy": 0.4720235201518624,
+        "confidence": 0.43929563313426584,
+        "count": 43197,
+        "high": 0.5,
+        "low": 0.4
+      },
+      {
+        "accuracy": 0.5801179651019907,
+        "confidence": 0.5409172134802309,
+        "count": 8138,
+        "high": 0.6,
+        "low": 0.5
+      },
+      {
+        "accuracy": 0.6248171980111143,
+        "confidence": 0.651463793304452,
+        "count": 13676,
+        "high": 0.7,
+        "low": 0.6
+      },
+      {
+        "accuracy": 0.7003988035892323,
+        "confidence": 0.7485884458653526,
+        "count": 8024,
+        "high": 0.8,
+        "low": 0.7
+      },
+      {
+        "accuracy": 0.8462213554363724,
+        "confidence": 0.8677242136418643,
+        "count": 10255,
+        "high": 0.9,
+        "low": 0.8
+      },
+      {
+        "accuracy": 0.9908688141210206,
+        "confidence": 0.9840522142491451,
+        "count": 170186,
+        "high": 1.0,
+        "low": 0.9
+      }
+    ],
+    "skill": 0.04710275341577086,
+    "spearman": 0.9515151515151514,
+    "tuples": 12960
+  },
+  "source": "mimic"
+}
