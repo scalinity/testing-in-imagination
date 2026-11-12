@@ -119,6 +119,7 @@ def test_the_content_study_runs_end_to_end_on_the_fixture(two_runs):
     validate(fitted, load_schema("content_wm"))
     assert fitted["premise"]["minimum"] == 24 and fitted["quality"]["tuples"] > 0
     assert set(fitted["bin_counts"]) == {"train", "val"} and fitted["posterior"]["admissions"] == 24
+    assert fitted["posterior_fix"]["chosen"] in ("none", "A", "A+B") and len(fitted["posterior_fix"]["A+B"]["fold_taus"]) == 5
     assert fitted["leakage"]["items_mention"] + fitted["leakage"]["items_no_mention"] == fitted["quality"]["items"]
     assert sorted(p.name for p in (first / "bench-c").iterdir() if p.is_file()) == [
         "bench.WM-learned.json", "bench.WM-oracle.json"]

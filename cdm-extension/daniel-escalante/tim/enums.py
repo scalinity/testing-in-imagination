@@ -75,6 +75,7 @@ ENUMS = {
     "quantile": ("min", "q25", "median", "q75", "max"),
     "availability": ("available", "unavailable"),
     "test_category": ("lab", "imaging", "exam"),
+    "posterior_fix": ("none", "A", "A+B"),
     "dose_reading": ("decreasing", "flat", "increasing"),
     "arm_b": ("P0", *PHASE_B_ARMS),
     "wm_arm": PHASE_B_ARMS,

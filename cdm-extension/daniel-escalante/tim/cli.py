@@ -191,7 +191,6 @@ def stage_body(stage, job, constants, protocol_hash):
         """SPEC_CONTENT_WM.md §1 and gates 1-2 of §5: bins, the content model and the HPI prior fit on train
         (the prior's temperature on validation), kept private; validation quality and the premise published."""
         import hashlib
-        import pickle
         from tim import content, labs
         train_set, val_set = access.open_split(settings, stage, "train"), access.open_split(settings, stage, "val")
         train_labs, val_labs = access.lab_results(train_set, "train"), access.lab_results(val_set, "val")
@@ -203,11 +202,13 @@ def stage_body(stage, job, constants, protocol_hash):
             return {panel: bins.outcome(panel, record) for panel in content.LABS}
         model = content.fit_model([(i["condition"], truth(train_labs[int(i["patient_id"])])) for i in train])
         prior = content.fit_prior(train, val, tests)
-        folder = runner.wm_dir(settings)
-        folder.mkdir(parents=True, exist_ok=True)
-        (folder / "content.pkl").write_bytes(pickle.dumps({"bins": bins, "model": model, "prior": prior}))
         cases = [(i["patient_history"], i["condition"], truth(val_labs[int(i["patient_id"])]), int(i["patient_id"]))
                  for i in val]
+        fixes = content.compare_fixes(prior, model, cases, "val")  # amendment C1, validation only
+        model = content.fixed(model, fixes)
+        folder = runner.wm_dir(settings)
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "content.pkl").write_bytes(content.store_bytes({"bins": bins, "model": model, "prior": prior}))
         names = {panel: sorted({train_set.id_to_name[item] for item in train_set.test_ids[panel]})
                  for panel in content.LABS}  # the release mapping's item labels, for the HPI-copying audit
         bundle.aggregate("content_wm", {
@@ -216,6 +217,7 @@ def stage_body(stage, job, constants, protocol_hash):
             "prior": {"c": prior.c, "temperature": prior.temperature},
             "quality": content.quality(prior, model, cases, "val"),
             "posterior": content.posterior_quality(prior, model, cases),
+            "posterior_fix": fixes,
             "bin_counts": {"train": content.bin_counts([truth(train_labs[int(i["patient_id"])]) for i in train]),
                            "val": content.bin_counts([truth for _, _, truth, _ in cases])},
             "leakage": content.hpi_copying(prior, model, cases, names, "val"),

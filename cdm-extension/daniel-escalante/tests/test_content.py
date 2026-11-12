@@ -206,3 +206,77 @@ def test_the_leakage_audit_splits_log_loss_by_admissions_that_mention_a_value():
     assert audit["by_test"] == {**{TEST_CODES[p]: 0 for p in content.LABS}, "CBC": 1}
     total = content.quality(HistoryPrior(), model, cs, split="val", eig_calibration=False)["items"]
     assert audit["items_mention"] + audit["items_no_mention"] == total and audit["nll_mention"] is not None
+
+
+# ---- amendment C1: the diagnosis posterior's calibration ---------------------------------------
+
+def test_fix_a_makes_absent_items_carry_no_evidence_and_b_tempers_the_rest():
+    model = content.fit_model([(d, {"A": ("low", "absent") if d == "appendicitis" else ("high", "low")})
+                               for d in DISEASES for _ in range(10)])
+    assert model.evidence("A", ("high", "absent")).tolist() == model.lik("A", ("high", "absent")).tolist()
+    fixed = content.with_fix(model, drop_absent=True)
+    assert fixed.evidence("A", ("high", "absent")).tolist() == model.lik("A", ("high",)).tolist()
+    assert fixed.evidence("A", ("absent", "absent")).tolist() == [1.0] * 4
+    tempered = content.with_fix(model, drop_absent=True, tau=2.0)
+    assert tempered.evidence("A", ("high",)).tolist() == pytest.approx((model.lik("A", ("high",)) ** 0.5).tolist())
+    prior = np.array([0.4, 0.2, 0.2, 0.2])
+    assert content.posterior(prior, fixed, [("A", ("absent", "absent"))]).tolist() == pytest.approx(prior.tolist())
+    assert fixed.lik("A", ("high", "absent")).tolist() == model.lik("A", ("high", "absent")).tolist()  # predictive kept
+
+
+def correlated(n_items=20, per_class=40, seed=0):
+    """Train items are independent draws; each validation case copies one draw into all its items, so the
+    independence assumption counts the same evidence n_items times (the overconfidence C1 targets)."""
+    rng = np.random.default_rng(seed)
+    p_high = {d: 0.6 if d == "appendicitis" else 0.4 for d in DISEASES}
+    train = [(d, {"Complete Blood Count": tuple("high" if rng.random() < p_high[d] else "low" for _ in range(n_items))})
+             for d in DISEASES for _ in range(per_class)]
+    cases = []
+    for k, d in enumerate(DISEASES * 15):
+        truth = {panel: None for panel in content.LABS}
+        truth["Complete Blood Count"] = ("high" if rng.random() < p_high[d] else "low",) * n_items
+        cases.append((f"history {k}", d, truth, 400 + k))
+    return content.fit_model(train), cases
+
+
+class FlatPrior:
+    def predict(self, history):
+        return np.full(4, 0.25)
+
+
+def test_the_likelihood_temperature_is_chosen_by_cross_validation_within_validation():
+    model, cases = correlated()
+    fitted = content.cv_tau(FlatPrior(), content.with_fix(model, drop_absent=True), cases, split="val")
+    assert fitted["tau"] in content.TAUS and fitted["tau"] >= 5 and len(fitted["fold_taus"]) == 5
+    assert all(t in content.TAUS for t in fitted["fold_taus"])
+    untempered = content.posterior_quality(FlatPrior(), content.with_fix(model, drop_absent=True), cases)
+    assert fitted["nll"] < untempered["nll_labs"] and 0 <= fitted["ece"] <= 1
+    assert content.cv_tau(FlatPrior(), content.with_fix(model, drop_absent=True), cases, split="val") == fitted
+
+
+@pytest.mark.parametrize("table, chosen", [
+    ({"none": (2.0, 0.3), "A": (1.5, 0.2), "A+B": (0.7, 0.05)}, "A+B"),
+    ({"none": (0.705, 0.04), "A": (0.70, 0.06), "A+B": (0.698, 0.05)}, "none"),    # all tied on log-loss: lowest ECE
+    ({"none": (0.705, 0.050), "A": (0.70, 0.052), "A+B": (0.698, 0.053)}, "none"),  # ECE tied too: simplest
+    ({"none": (2.0, 0.3), "A": (0.80, 0.10), "A+B": (0.795, 0.12)}, "A"),
+])
+def test_the_preregistered_rule_picks_the_fix(table, chosen):
+    rows = {name: {"nll": nll, "ece": ece} for name, (nll, ece) in table.items()}
+    assert content.choose_fix(rows) == chosen
+
+
+def test_compare_fixes_reports_none_a_and_a_plus_b_and_the_choice():
+    model, cases = correlated()
+    table = content.compare_fixes(FlatPrior(), model, cases, split="val")
+    assert table["none"]["nll"] == pytest.approx(content.posterior_quality(FlatPrior(), model, cases)["nll_labs"])
+    assert table["A+B"]["tau"] >= 5 and table["chosen"] == "A+B"
+    assert table["A+B"]["nll"] < table["A"]["nll"]
+
+
+def test_the_pickled_store_is_stable_after_the_prior_has_been_used():
+    import pickle
+    from tim.enums import CONFIGURED_TESTS
+    prior = content.fit_prior(hpi_items(8), hpi_items(4, offset=100), list(CONFIGURED_TESTS))
+    prior.predict("invented case with epigastric pain")  # transform() caches a memory address again
+    data = content.store_bytes({"bins": None, "model": None, "prior": prior})
+    assert "_stop_words_id" not in vars(pickle.loads(data)["prior"].vectorizer)

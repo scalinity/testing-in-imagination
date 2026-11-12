@@ -9,7 +9,8 @@
     "premise",
     "posterior",
     "bin_counts",
-    "leakage"
+    "leakage",
+    "posterior_fix"
   ],
   "properties": {
     "source": {
@@ -363,6 +364,81 @@
         },
         "items_no_mention": {
           "$ref": "count"
+        }
+      }
+    },
+    "posterior_fix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "none",
+        "A",
+        "A+B",
+        "chosen"
+      ],
+      "properties": {
+        "none": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nll",
+            "ece"
+          ],
+          "properties": {
+            "nll": {
+              "type": "number"
+            },
+            "ece": {
+              "type": "number"
+            }
+          }
+        },
+        "A": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nll",
+            "ece"
+          ],
+          "properties": {
+            "nll": {
+              "type": "number"
+            },
+            "ece": {
+              "type": "number"
+            }
+          }
+        },
+        "A+B": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nll",
+            "ece",
+            "tau",
+            "fold_taus"
+          ],
+          "properties": {
+            "nll": {
+              "type": "number"
+            },
+            "ece": {
+              "type": "number"
+            },
+            "tau": {
+              "type": "number"
+            },
+            "fold_taus": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "chosen": {
+          "type": "string",
+          "enum": "posterior_fix"
         }
       }
     }

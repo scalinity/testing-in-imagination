@@ -5,7 +5,7 @@ p(o | h, a) = sum_y p(y | h) p(o | y, a), with a panel's items independent given
 untried panel by its expected information gain over p(y | h), times availability, per dollar. Every fitted
 object here is patient-derived and stays private.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import re
 
@@ -59,20 +59,40 @@ def fit_prior(train, val, tests) -> DiagnosisPrior:
     return DiagnosisPrior(vectorizer, model, temperature, c)
 
 
+def store_bytes(store) -> bytes:
+    """Pickle the private store. Every transform() re-caches a memory address in the HPI vectorizer, so it is
+    dropped here, right before pickling, to keep identical fits byte-identical (as availability._fitted does)."""
+    import pickle
+    vars(store["prior"].vectorizer).pop("_stop_words_id", None)
+    return pickle.dumps(store)
+
+
 @dataclass(frozen=True)
 class ContentModel:
     prior: np.ndarray  # train class prior over DISEASES
     outcomes: dict     # (panel, item index) -> outcome names
     probs: dict        # (panel, item index) -> array [disease, outcome] of p(outcome | disease, panel)
+    drop_absent: bool = False  # amendment C1, fix A: absent items carry no evidence about the disease
+    tau: float = 1.0           # amendment C1, fix B: observed evidence is raised to 1 / tau
 
-    def lik(self, panel, outcome) -> np.ndarray:
-        """p(outcome | y, panel) for every disease; an unseen value counts as "other"."""
-        out = np.ones(len(DISEASES))
+    def log_lik(self, panel, outcome, evidence=False) -> np.ndarray:
+        """log p(outcome | y, panel) for every disease (an unseen value counts as "other"). As evidence for
+        a belief update it follows C1: absent items are skipped under fix A and the sum is divided by tau."""
+        out = np.zeros(len(DISEASES))
         for j, value in enumerate(outcome):
+            if evidence and self.drop_absent and value == ABSENT:
+                continue
             names = self.outcomes.get((panel, j))
             if names is not None:
-                out = out * self.probs[(panel, j)][:, names.index(value if value in names else OTHER)]
-        return out
+                out = out + np.log(self.probs[(panel, j)][:, names.index(value if value in names else OTHER)])
+        return out / self.tau if evidence else out
+
+    def lik(self, panel, outcome) -> np.ndarray:
+        """The predictive likelihood of the full outcome, absent items included (unchanged by C1)."""
+        return np.exp(self.log_lik(panel, outcome))
+
+    def evidence(self, panel, outcome) -> np.ndarray:
+        return np.exp(self.log_lik(panel, outcome, evidence=True))
 
     def sample(self, panel, y, rng) -> tuple:
         out, j = [], 0
@@ -104,12 +124,23 @@ def fit_model(examples) -> ContentModel:
     return ContentModel(prior / prior.sum(), outcomes, probs)
 
 
+def _log(p) -> np.ndarray:
+    with np.errstate(divide="ignore"):
+        return np.log(np.asarray(p, dtype=float))
+
+
 def posterior(prior, model, observed) -> np.ndarray:
-    belief = np.array(prior, dtype=float)
+    """p(y | h) from the prior and each observed panel's evidence, in log space so that many items cannot
+    underflow."""
+    log_belief = _log(prior)
     for panel, outcome in observed:
-        belief = belief * model.lik(panel, outcome)
-    total = belief.sum()
-    return belief / total if total > 0 else np.array(prior, dtype=float)
+        log_belief = log_belief + model.log_lik(panel, outcome, evidence=True)
+    belief = np.exp(log_belief - log_belief.max())
+    return belief / belief.sum()
+
+
+def with_fix(model, drop_absent=False, tau=1.0) -> ContentModel:
+    return replace(model, drop_absent=drop_absent, tau=float(tau))
 
 
 def entropy(p) -> float:
@@ -203,6 +234,7 @@ def quality(prior_model, model, cases, split="val", draws=DRAWS, eig_calibration
     top-label ECE with its reliability table, and EIG calibration (predicted against realized gain, by decile
     of predicted) on the first order. cases: (history, label, truth, patient)."""
     import math
+    from scipy.special import logsumexp
     from scipy.stats import spearmanr
     marginal = {key: model.prior @ table for key, table in model.probs.items()}
     nll = nll_marginal = brier = brier_marginal = 0.0
@@ -215,7 +247,7 @@ def quality(prior_model, model, cases, split="val", draws=DRAWS, eig_calibration
             observed = []
             for panel in order:
                 belief, outcome = posterior(start, model, observed), truth[panel]
-                nll -= math.log(float(belief @ model.lik(panel, outcome)))
+                nll -= float(logsumexp(_log(belief) + model.log_lik(panel, outcome)))
                 for j, value in enumerate(outcome):
                     names = model.outcomes.get((panel, j))
                     if names is None:
@@ -326,3 +358,74 @@ def premise(rows, minimum=24) -> dict:
     with_lab = sum(count > 0 for count in counts)
     return {"admissions_with_lab": with_lab, "lab_requests": sum(counts), "minimum": minimum,
             "passed": with_lab >= minimum}
+
+
+# ---- amendment C1: the diagnosis posterior's calibration -----------------------------------------------
+
+FIXES = ("none", "A", "A+B")  # simplest first
+TAUS = (1, 1.5, 2, 3, 5, 8, 13, 20, 30, 50)
+TAU_FOLDS = 5
+
+
+def _terms(prior_model, model, cases) -> list:
+    """Per admission: log prior, the summed log evidence of its charted panels at tau = 1, and the label."""
+    base = with_fix(model, drop_absent=model.drop_absent, tau=1.0)
+    return [(_log(prior_model.predict(history)),
+             sum((base.log_lik(panel, truth[panel], evidence=True) for panel in LABS if truth.get(panel) is not None),
+                 np.zeros(len(DISEASES))),
+             DISEASES.index(label), patient) for history, label, truth, patient in cases]
+
+
+def _scored(terms, taus) -> tuple:
+    """Mean log-loss and top-label ECE of the posteriors softmax(log prior + evidence / tau)."""
+    losses, pairs = [], []
+    for (log_prior, evidence, k, _), tau in zip(terms, taus):
+        z = log_prior + evidence / tau
+        z = z - z.max()
+        p = np.exp(z) / np.exp(z).sum()
+        losses.append(-float(np.log(max(p[k], 1e-12))))
+        pairs.append((float(p.max()), int(np.argmax(p)) == k))
+    return float(np.mean(losses)), _reliability(pairs)[0]
+
+
+def cv_tau(prior_model, model, cases, split="val", folds=TAU_FOLDS, grid=TAUS) -> dict:
+    """C1 fix B: tau chosen on the other folds and scored out of fold; the stored tau is chosen on all cases."""
+    terms = _terms(prior_model, model, cases)
+    fold = [_seed("tim-tau-fold", split, term[3]) % folds for term in terms]
+
+    def best(subset):
+        return min(grid, key=lambda t: (_scored(subset, [t] * len(subset))[0], t))
+    fold_taus, held_terms, held_taus = [], [], []
+    for k in range(folds):
+        chosen = best([t for t, f in zip(terms, fold) if f != k])
+        fold_taus.append(chosen)
+        held = [t for t, f in zip(terms, fold) if f == k]
+        held_terms += held
+        held_taus += [chosen] * len(held)
+    nll, ece = _scored(held_terms, held_taus)
+    return {"nll": nll, "ece": ece, "tau": best(terms), "fold_taus": fold_taus}
+
+
+def choose_fix(rows) -> str:
+    """C1's rule: lowest log-loss; candidates within 0.01 nats tie; among them the lowest ECE, and among ECEs
+    within 0.005 of it the simplest."""
+    best = min(rows[f]["nll"] for f in FIXES)
+    tied = [f for f in FIXES if rows[f]["nll"] - best <= 0.01 + 1e-12]
+    lowest = min(rows[f]["ece"] for f in tied)
+    return next(f for f in tied if rows[f]["ece"] - lowest <= 0.005 + 1e-12)
+
+
+def compare_fixes(prior_model, model, cases, split="val") -> dict:
+    """none, A and A+B (out of fold) on validation, and the candidate C1's rule chooses."""
+    def scored(candidate):
+        q = posterior_quality(prior_model, candidate, cases)
+        return {"nll": q["nll_labs"], "ece": q["ece_labs"]}
+    rows = {"none": scored(with_fix(model)), "A": scored(with_fix(model, drop_absent=True)),
+            "A+B": cv_tau(prior_model, with_fix(model, drop_absent=True), cases, split)}
+    return {**rows, "chosen": choose_fix(rows)}
+
+
+def fixed(model, table) -> ContentModel:
+    """The model with the chosen fix, as stored for the planner."""
+    return {"none": with_fix(model), "A": with_fix(model, drop_absent=True),
+            "A+B": with_fix(model, drop_absent=True, tau=table["A+B"]["tau"])}[table["chosen"]]
