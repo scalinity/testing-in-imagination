@@ -1,0 +1,54 @@
+{
+  "addendum_sha256": null,
+  "code_commit": "7d0cca48f505d9b4cda078ce350091bad1f2331f",
+  "config_sha256": "85dbd3ff9a0411ba61b3ed02e1dc9ef14b44d6c44289c406d26f80c24bf16f60",
+  "expected_wall_hours": 0.458,
+  "gpu_hours": {
+    "WM-learned": 0.458,
+    "WM-mislead-a0.5": 0.458,
+    "WM-mislead-a1": 0.458,
+    "WM-oracle": 0.458,
+    "WM-prior": 0.458
+  },
+  "gpu_hours_total": 2.29,
+  "jobs": [
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "val-c",
+      "variant": "WM-learned"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "val-c",
+      "variant": "WM-oracle"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "val-c",
+      "variant": "WM-prior"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "val-c",
+      "variant": "WM-mislead-a0.5"
+    },
+    {
+      "arm": "primary",
+      "patients": 240,
+      "split": "val",
+      "stage": "val-c",
+      "variant": "WM-mislead-a1"
+    }
+  ],
+  "protocol_sha256": "7fc5cda72158e08d7d725b215c14edd560a6a2539c8c5e24e8b0ae039ebe0f00",
+  "queue_notes": "5 one-GPU jobs on hpg-rtx6000 (RTX PRO 6000), submitted together and spread across cai6734; each course QOS caps 8 GPUs and 250 GB shared by its whole class, so jobs may wait for free GPUs.",
+  "stage": "val-c"
+}
