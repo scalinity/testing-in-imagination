@@ -408,13 +408,27 @@ def _verdict(c, threshold, val_b, dose=None) -> str:
     if verdict == "inconclusive":
         head = "Inconclusive."
     elif primary["reading"] in AGREES[verdict]:
-        head = verdict.capitalize() + "."
+        # A flat curve is an absence of a detectable effect, and the headline says so (amendment A7).
+        head = verdict.capitalize() + (" (no detectable effect)." if primary["reading"] == "flat" else ".")
     else:
         head = "Inconclusive: the oracle contrast and the dose-response disagree."
+    low, high = primary["ci95"]
+    caveat = (f" The interval [{_n(low)}, {_n(high)}] cannot rule out a decline of a few T5 points over the tested range "
+              "(derived arithmetic in the dose-response section)." if primary["reading"] == "flat" and low < 0 else "")
     return (f"**{head}** This verdict combines one validation contrast with the validation dose-response (amendment "
             "A6); the oracle-contrast rule and its threshold were written after the validation point estimates were "
             f"known. {reason} The corruption dose-response (T = 1) has slope {_signed(primary['slope'])} "
-            f"[{_n(primary['ci95'][0])}, {_n(primary['ci95'][1])}] T5 points per unit α: {primary['reading']}.")
+            f"[{_n(low)}, {_n(high)}] T5 points per unit α: {primary['reading']}.{caveat}")
+
+
+def _span_arithmetic(block) -> str:
+    """The slope and its interval scaled to the tested range of alpha: arithmetic on the bundle, not an estimate."""
+    alphas = [level["alpha"] for level in block["levels"]]
+    lo_alpha, hi_alpha = min(alphas), max(alphas)
+    span, slope, (low, high) = hi_alpha - lo_alpha, block["slope"], block["ci95"]
+    return (f"Derived arithmetic, not a separate estimate: over the tested range α {_n(lo_alpha, 1)} to {_n(hi_alpha, 1)} "
+            f"(a span of {span:g}), slope × span = {_n(slope)} × {span:g} = {_n(slope * span)} T5 points, and the "
+            f"interval × span = [{_n(low)} × {span:g}, {_n(high)} × {span:g}] = [{_n(low * span)}, {_n(high * span)}].")
 
 
 def _dose_section(dose) -> list[str]:
@@ -430,6 +444,7 @@ def _dose_section(dose) -> list[str]:
                   f"[{_n(block['ci95'][0])}, {_n(block['ci95'][1])}] T5 points per unit α ({block['reading']}; "
                   f"{block['resamples']} resamples). Mean T5 by level: {levels}; the level means "
                   f"{'never rise' if block['levels_non_increasing'] else 'do not fall monotonically'} as α grows.\n",
+                  *([_span_arithmetic(block) + "\n"] if key == "primary" else []),
                   "| Arm | α | T5 |", "|---|---|---|",
                   *(f"| {pt['arm']} | {_n(pt['alpha'], 1)} | {_n(pt['t5'])} |" for pt in block["points"]), ""]
     return lines

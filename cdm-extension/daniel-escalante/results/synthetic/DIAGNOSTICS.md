@@ -3,7 +3,7 @@
 
 # Phase-B validation diagnostics: planner or signal?
 
-**Planner bottleneck.** This verdict combines one validation contrast with the validation dose-response (amendment A6); the oracle-contrast rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is +0.00 [0.00, 0.00] points, not statistically significant (Holm-adjusted p = 1.0000), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 13 under B-uniform to 0 under B-oracle. The corruption dose-response (T = 1) has slope -0.00 [-0.00, 0.00] T5 points per unit α: flat.
+**Planner bottleneck (no detectable effect).** This verdict combines one validation contrast with the validation dose-response (amendment A6); the oracle-contrast rule and its threshold were written after the validation point estimates were known. B-oracle − B-uniform is +0.00 [0.00, 0.00] points, not statistically significant (Holm-adjusted p = 1.0000), and the interval's upper bound is below 4.15 points, the smallest effect the test design detects with 80% power: even perfect chart availability gives this fixed planner no detectable gain, so a better availability predictor cannot help it. The planner does act on the signal: unavailable requests fall from 13 under B-uniform to 0 under B-oracle. The corruption dose-response (T = 1) has slope -0.00 [-0.00, 0.00] T5 points per unit α: flat. The interval [-0.00, 0.00] cannot rule out a decline of a few T5 points over the tested range (derived arithmetic in the dose-response section).
 
 ## Scope
 
@@ -104,6 +104,8 @@ For comparison, dropped from P0 (P0's own rows; relevant and provided):
 Amendment A4's D3, with its code fixed before any dose-val-b run (amendment A6): the OLS slope of validation T5 on the corruption level α, one point per arm, with a 95% class-stratified percentile bootstrap that draws patients once per resample for every arm. Decreasing if the interval lies below 0, increasing if above, flat otherwise.
 
 **Primary, T = 1.** Slope -0.00 [-0.00, 0.00] T5 points per unit α (flat; 200 resamples). Mean T5 by level: α 0.0: 91.67, α 0.1: 91.67, α 0.3: 91.67, α 0.5: 91.67; the level means never rise as α grows.
+
+Derived arithmetic, not a separate estimate: over the tested range α 0.0 to 0.5 (a span of 0.5), slope × span = -0.00 × 0.5 = -0.00 T5 points, and the interval × span = [-0.00 × 0.5, 0.00 × 0.5] = [-0.00, 0.00].
 
 | Arm | α | T5 |
 |---|---|---|

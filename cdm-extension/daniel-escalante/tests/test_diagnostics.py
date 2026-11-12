@@ -263,7 +263,7 @@ def test_sensitivity_s1_adds_urinalysis_and_radiographs_to_the_relevant_counts()
 
 
 @pytest.mark.parametrize("oracle_uniform, reading, headline", [
-    (contrast(-0.1066, [-2.9, 2.7], 0.95), "flat", "**Planner bottleneck.**"),
+    (contrast(-0.1066, [-2.9, 2.7], 0.95), "flat", "**Planner bottleneck (no detectable effect).**"),
     (contrast(-0.1066, [-2.9, 2.7], 0.95), "increasing", "**Planner bottleneck.**"),
     (contrast(-0.1066, [-2.9, 2.7], 0.95), "decreasing",
      "**Inconclusive: the oracle contrast and the dose-response disagree.**"),
@@ -281,3 +281,15 @@ def test_once_the_dose_response_has_run_the_headline_follows_amendment_a6(oracle
     assert "## Pending" not in text
     section = text.split("## Corruption dose-response (D3)")[1].split("\n## ")[0]
     assert f"{dose['primary']['slope']:+.2f}" in section and reading in section and "T = 0.25" in section
+
+
+def test_a_flat_curve_states_what_its_interval_cannot_rule_out_and_shows_the_derived_arithmetic():
+    dose = {"source": "mimic", "primary": dose_block("flat", -0.4),  # interval [-3.4, 2.6]; alpha spans 0 to 0.5
+            "secondary": {**dose_block("flat", 0.3), "temperature": 0.25}}
+    text = rendered(contrast(-0.1066, [-2.9, 2.7], 0.95), dose=dose)
+    first = next(line for line in text.splitlines() if line.startswith("**"))
+    assert "[-3.40, 2.60] cannot rule out a decline of a few T5 points over the tested range" in first
+    section = text.split("## Corruption dose-response (D3)")[1].split("\n## ")[0]
+    assert ("Derived arithmetic, not a separate estimate: over the tested range α 0.0 to 0.5 (a span of 0.5), "
+            "slope × span = -0.40 × 0.5 = -0.20 T5 points, and the interval × span = [-3.40 × 0.5, 2.60 × 0.5] = "
+            "[-1.70, 1.30].") in section
