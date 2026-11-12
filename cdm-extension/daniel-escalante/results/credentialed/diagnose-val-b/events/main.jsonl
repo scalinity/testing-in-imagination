@@ -1,0 +1,6 @@
+{"commit": "c1731ee78cb3", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "diagnose-val-b", "type": "job_start"}
+{"status": "pass", "type": "job_end"}
+{"commit": "c1731ee78cb3", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "diagnose-val-b", "type": "job_start"}
+{"status": "pass", "type": "job_end"}
+{"commit": "04fa2a26b238", "protocol": "7fc5cda72158e08d", "source": "mimic", "stage": "diagnose-val-b", "type": "job_start"}
+{"status": "pass", "type": "job_end"}

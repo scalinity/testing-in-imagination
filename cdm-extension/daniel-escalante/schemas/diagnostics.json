@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "test_changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "extra",
+        "extra_provided",
+        "extra_relevant",
+        "extra_relevant_provided",
+        "dropped",
+        "dropped_provided",
+        "dropped_relevant",
+        "dropped_relevant_provided"
+      ],
+      "properties": {
+        "extra": {"$ref": "count"},
+        "extra_provided": {"$ref": "count"},
+        "extra_relevant": {"$ref": "count"},
+        "extra_relevant_provided": {"$ref": "count"},
+        "dropped": {"$ref": "count"},
+        "dropped_provided": {"$ref": "count"},
+        "dropped_relevant": {"$ref": "count"},
+        "dropped_relevant_provided": {"$ref": "count"}
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "family_d",
+    "relevance",
+    "extra_tests"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": "source"
+    },
+    "family_d": {
+      "type": "object",
+      "keys": "comparison",
+      "values": {
+        "$ref": "comparison"
+      }
+    },
+    "relevance": {
+      "type": "object",
+      "keys": "test",
+      "values": {
+        "type": "object",
+        "keys": "disease",
+        "values": {
+          "type": "boolean"
+        }
+      }
+    },
+    "extra_tests": {
+      "type": "object",
+      "keys": "arm_b",
+      "values": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "by_test",
+          "by_category",
+          "total"
+        ],
+        "properties": {
+          "by_test": {
+            "type": "object",
+            "keys": "test",
+            "values": {
+              "$ref": "test_changes"
+            }
+          },
+          "by_category": {
+            "type": "object",
+            "keys": "test_category",
+            "values": {
+              "$ref": "test_changes"
+            }
+          },
+          "total": {
+            "$ref": "test_changes"
+          }
+        }
+      }
+    }
+  }
+}

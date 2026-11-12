@@ -22,7 +22,7 @@ LISTED = {"smoke": 2, "bench-a": 24, "bench-b": 24}
 SPLIT_SIZE = {"val": 240, "test": 240}
 # Provisional GPU-hours per job from SPEC §9 until bench measurements exist.
 PROVISIONAL = {"smoke": 0.25, "bench-a": 0.075, "val-a": 0.55, "test-a": 1.7 / 3,
-               "bench-b": 0.075, "val-b": 1.7 / 3, "test-b": 7.7 / 14}
+               "bench-b": 0.075, "val-b": 1.7 / 3, "test-b": 7.7 / 14, "dose-val-b": 1.7 / 3}
 BENCH_PROXY = {"V0": "V3", "V0-rerun": "V3", "V2": "V3", "V3": "V3", "V0-shadow": "V0-shadow"}
 
 

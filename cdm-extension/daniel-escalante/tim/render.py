@@ -360,3 +360,211 @@ def render_slide(a: dict, b: dict, paper: dict) -> str:
               "no clinical-safety inference. Every number is rendered from `phase-a/metrics.json`, "
               "`phase-b/metrics.json` and the replication's `paper_values.json`.", ""]
     return "\n".join(lines)
+
+
+# ---- DIAGNOSTICS.md (amendment A4, exploratory) -------------------------------------------------
+
+D_NAMES = {"B-oracle-B-uniform": "B-oracle − B-uniform", "B-oracle-P0": "B-oracle − P0"}
+D_ARMS = (("P0", "P0 = V3, no reranking"), ("B-uniform", "B-uniform (no availability information)"),
+          ("B-learned-s0", "B-learned-s0 (learned availability)"), ("B-oracle", "B-oracle (true chart availability)"))
+D_CATEGORIES = (("lab", "Lab panels"), ("imaging", "Imaging"), ("exam", "Physical exam"))
+
+
+def _oracle_verdict(c, threshold, val_b) -> tuple[str, str]:
+    """Amendment A4's rule (D4) on the B-oracle − B-uniform contrast: (verdict, reason)."""
+    where, holm, bar = f"B-oracle − B-uniform is {_interval(c)} points", _holm(c), _n(threshold)
+    requests = {arm: val_b["variants"][arm]["requests"]["unavailable"] for arm in ("B-uniform", "B-oracle")}
+    acts = (f" The planner does act on the signal: unavailable requests fall from {requests['B-uniform']} under "
+            f"B-uniform to {requests['B-oracle']} under B-oracle.")
+    if _significant(c) and c["delta_t5"] > 0:
+        return "signal bottleneck", (f"{where}, statistically significant ({holm}): perfect chart availability raises "
+                                     "mean class recall through this fixed planner, so the shortfall lies in the "
+                                     "learned availability signal.")
+    if _significant(c):
+        return "planner bottleneck", (f"{where}, statistically significant ({holm}) and negative, so below the "
+                                      f"{bar}-point threshold: perfect chart availability makes this fixed planner "
+                                      f"worse, and a better availability predictor cannot help it.{acts}")
+    if c["ci95"][1] < threshold:
+        return "planner bottleneck", (f"{where}, not statistically significant ({holm}), and the interval's upper "
+                                      f"bound is below {bar} points, the smallest effect the test design detects with "
+                                      "80% power: even perfect chart availability gives this fixed planner no "
+                                      f"detectable gain, so a better availability predictor cannot help it.{acts}")
+    return "inconclusive", (f"{where}, not statistically significant ({holm}), but the interval reaches {bar} points, "
+                            "the smallest effect the test design detects with 80% power, so neither a useful oracle "
+                            "gain nor its absence is established.")
+
+
+AGREES = {"planner bottleneck": ("flat", "increasing"), "signal bottleneck": ("decreasing",)}
+
+
+def _verdict(c, threshold, val_b, dose=None) -> str:
+    """The verdict paragraph: provisional until D3 has run (A5); then amendment A6's combination rule."""
+    verdict, reason = _oracle_verdict(c, threshold, val_b)
+    if dose is None:
+        return (f"**Provisional: {verdict}.** This verdict rests on one validation contrast, the corruption "
+                "dose-response that would confirm it has not run, and the verdict rule and its threshold were "
+                f"written after the validation point estimates were known. {reason}")
+    primary = dose["primary"]
+    if verdict == "inconclusive":
+        head = "Inconclusive."
+    elif primary["reading"] in AGREES[verdict]:
+        head = verdict.capitalize() + "."
+    else:
+        head = "Inconclusive: the oracle contrast and the dose-response disagree."
+    return (f"**{head}** This verdict combines one validation contrast with the validation dose-response (amendment "
+            "A6); the oracle-contrast rule and its threshold were written after the validation point estimates were "
+            f"known. {reason} The corruption dose-response (T = 1) has slope {_signed(primary['slope'])} "
+            f"[{_n(primary['ci95'][0])}, {_n(primary['ci95'][1])}] T5 points per unit α: {primary['reading']}.")
+
+
+def _dose_section(dose) -> list[str]:
+    lines = ["## Corruption dose-response (D3)\n",
+             "Amendment A4's D3, with its code fixed before any dose-val-b run (amendment A6): the OLS slope of "
+             "validation T5 on the corruption level α, one point per arm, with a 95% class-stratified percentile "
+             "bootstrap that draws patients once per resample for every arm. Decreasing if the interval lies below 0, "
+             "increasing if above, flat otherwise.\n"]
+    for key, label in (("primary", "Primary"), ("secondary", "Secondary")):
+        block = dose[key]
+        levels = ", ".join(f"α {_n(level['alpha'], 1)}: {_n(level['t5'])}" for level in block["levels"])
+        lines += [f"**{label}, T = {block['temperature']:g}.** Slope {_signed(block['slope'])} "
+                  f"[{_n(block['ci95'][0])}, {_n(block['ci95'][1])}] T5 points per unit α ({block['reading']}; "
+                  f"{block['resamples']} resamples). Mean T5 by level: {levels}; the level means "
+                  f"{'never rise' if block['levels_non_increasing'] else 'do not fall monotonically'} as α grows.\n",
+                  "| Arm | α | T5 |", "|---|---|---|",
+                  *(f"| {pt['arm']} | {_n(pt['alpha'], 1)} | {_n(pt['t5'])} |" for pt in block["points"]), ""]
+    return lines
+
+
+def _sensitivity_s1(d) -> list[str]:
+    """Sensitivity S1 (amendment A5): urinalysis and radiographs counted as relevant to all four diseases.
+    The primary map gives them no relevance, so their published per-test counts add directly."""
+    added = ("UA", "XR")
+    if any(any(d["relevance"][code].values()) for code in added):
+        raise ValueError("S1 assumes the primary map marks urinalysis and radiographs relevant to none")
+    lines = ["| Arm | Extra relevant | Extra relevant, provided | Dropped relevant | Dropped relevant, provided | "
+             "Net relevant results (S1) | Net (primary) |", "|---|---|---|---|---|---|---|"]
+    for arm, _ in D_ARMS[1:]:
+        changed = d["extra_tests"][arm]
+        total, by_test = changed["total"], changed["by_test"]
+        s1 = {(kind, tail): total[f"{kind}_relevant{tail}"] + sum(by_test[code][f"{kind}{tail}"] for code in added)
+              for kind in ("extra", "dropped") for tail in ("", "_provided")}
+        net_s1 = s1[("extra", "_provided")] - s1[("dropped", "_provided")]
+        net = total["extra_relevant_provided"] - total["dropped_relevant_provided"]
+        lines.append(f"| {arm} | {s1[('extra', '')]} | {s1[('extra', '_provided')]} | {s1[('dropped', '')]} | "
+                     f"{s1[('dropped', '_provided')]} | {net_s1:+d} | {net:+d} |")
+    return lines
+
+
+def _check_h(h) -> list[str]:
+    """Check H (amendment A5): added relevant results by the hypothesis the policy held when it asked."""
+    from tim.diagnostics import H_COUNTS
+    aligned = ", ".join(f"{arm} {a['aligned']}/{a['admissions']}" for arm, a in h["alignment"].items())
+    header = ["| Arm | Tests | Unaligned | Already held the label | Held another disease | Held unknown | "
+              "Hypothesis changed | Changed to the label | Changed away from the label |", "|---" * 9 + "|"]
+    lines = [f"Rows whose stored hypotheses align with their requests: {aligned}.\n",
+             "Added by each arm (extra tests, relevant and provided):\n", *header]
+    lines += [f"| {arm} | " + " | ".join(str(h["extra"][arm][k]) for k in H_COUNTS) + " |" for arm, _ in D_ARMS[1:]]
+    lines += ["", "For comparison, dropped from P0 (P0's own rows; relevant and provided):\n", *header]
+    lines += [f"| {arm} | " + " | ".join(str(h["dropped"][arm][k]) for k in H_COUNTS) + " |" for arm, _ in D_ARMS[1:]]
+    return lines
+
+
+def _relevant_to(by_disease) -> str:
+    names = [d for d in DISEASES if by_disease[d]]
+    return "all four" if len(names) == len(DISEASES) else ", ".join(names) or "none"
+
+
+def render_diagnostics(d: dict, val_b: dict, threshold: float, dose_hours: float, hypothesis: dict,
+                       dose: dict | None = None) -> str:
+    """DIAGNOSTICS.md from diagnostics.json, hypothesis_check.json and analyze-val-b's validation_b.json;
+    threshold and GPU-hours come from the committed addenda A and B. No number is typed by hand."""
+    from tim.diagnostics import COUNTS, DOSE_RESPONSE_ARMS
+    from tim.enums import TEST_CODES
+    family, variants = d["family_d"], val_b["variants"]
+    published, n = val_b["descriptive"]["B-oracle-P0"]["ci95"], val_b["variants"]["P0"]["n"]
+    lines = [BANNER if d["source"] == "synthetic" else "",
+             "# Phase-B validation diagnostics: planner or signal?\n",
+             _verdict(family["B-oracle-B-uniform"], threshold, val_b, dose) + "\n",
+             "## Scope\n",
+             f"- Exploratory and validation only: the {n} validation admissions of val-a and val-b, analyzed under "
+             "amendment A4 (`prereg/amendments/A4-validation-diagnostics.md`), committed before this stage read any "
+             "row, with A5's additions committed before the re-run that computed them. No test admission was "
+             "read; nothing was tuned or selected.",
+             "- analyze-val-b had already published every arm's validation T5, so these contrasts are not blind, "
+             "and the verdict rule and its threshold were written after those point estimates were visible.",
+             "- Conclusions hold for this fixed planner (SPEC §4.4) and one policy seed. These results extend a "
+             "replication attempt and are not a reproduction of the LA-CDM paper.\n",
+             "## Does perfect chart availability help this planner? (Family D)\n",
+             "| Contrast | ΔT5 [95% CI] | p | Holm p | Discordant | Result |", "|---|---|---|---|---|---|"]
+    for key, label in D_NAMES.items():
+        c = family[key]
+        lines.append(f"| {label} | {_interval(c)} | {_p(c['p_value'])} | {_p(c['p_holm'])} | {c['discordant']} | "
+                     f"{c['significance']} |")
+    match = "matches the published" if family["B-oracle-P0"]["ci95"] == published else "does not match the published"
+    lines += ["", "Two-sided paired sign-flip randomization tests, class-stratified paired bootstrap intervals, Holm "
+              f"within Family D at α = 0.05. B-oracle − P0's interval {match} analyze-val-b interval for the same "
+              f"seed ([{_n(published[0])}, {_n(published[1])}]).\n",
+              "## Does the planner act on the signal?\n",
+              "Per-arm validation summaries from analyze-val-b:\n",
+              "| Arm | T5 | Requested | Provided | Unavailable | Reranks | Planner stops |",
+              "|---|---|---|---|---|---|---|"]
+    for arm, label in D_ARMS:
+        v = variants[arm]
+        r, events = v["requests"], v.get("events", {})
+        lines.append(f"| {label} | {_n(v['metrics']['T5'])} | {r['requested']} | {r['provided']} | "
+                     f"{r['unavailable']} | {events.get('wm_rerank', 0)} | {events.get('wm_stop', 0)} |")
+    lines += ["", "## Which tests did the reranker add or drop?\n",
+              "Each arm against P0, patient by patient, each test counted once. *Extra* tests are ones the arm "
+              "requested and P0 did not; *dropped* tests the reverse. *Provided* means the result was in the "
+              "chart. *Relevant* means diagnosis-relevant to the patient's labeled disease under amendment A4's "
+              "rule: the guideline tests per pathology in Hager et al. (2024), the dataset's authors. Net relevant "
+              "results = extra relevant and provided − dropped relevant and provided. Aggregate counts only.\n",
+              "| Arm | Tests | Extra | provided | relevant | relevant, provided | Dropped | provided | relevant | "
+              "relevant, provided | Net relevant results |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for arm, _ in D_ARMS[1:]:
+        changed = d["extra_tests"][arm]
+        for key, label in (*D_CATEGORIES, (None, "All")):
+            c = changed["total"] if key is None else changed["by_category"][key]
+            net = c["extra_relevant_provided"] - c["dropped_relevant_provided"]
+            lines.append(f"| {arm} | {label} | " + " | ".join(str(c[k]) for k in COUNTS) + f" | {net:+d} |")
+    lines += ["", "By test (extra / dropped):\n",
+              "| Test | Relevant to | " + " | ".join(arm for arm, _ in D_ARMS[1:]) + " |",
+              "|---|---|" + "---|" * len(D_ARMS[1:])]
+    for code in TEST_CODES.values():
+        cells = [f"+{d['extra_tests'][arm]['by_test'][code]['extra']} / "
+                 f"−{d['extra_tests'][arm]['by_test'][code]['dropped']}" for arm, _ in D_ARMS[1:]]
+        lines.append(f"| {code} | {_relevant_to(d['relevance'][code])} | " + " | ".join(cells) + " |")
+    lines += ["", "## Sensitivity S1 (exploratory): urinalysis and radiographs counted as relevant\n",
+              "Amendment A5, defined after the counts above were seen. The guideline map stays the "
+              "primary definition because it was fixed in advance; S1 counts urinalysis and radiographs as relevant "
+              "to all four diseases, adding their per-test counts from the same bundle.\n", *_sensitivity_s1(d),
+              "", "## Do the added results repeat what the policy already knew? (exploratory)\n",
+              "An untested hypothesis, checked descriptively (amendment A5, check H; aggregate counts only). For each "
+              "added test that was relevant and provided, the hypothesis agent's hypothesis when the test was "
+              "requested is compared with the patient's label, and with the hypothesis stored after the result came "
+              "back. If most added relevant results arrived while the policy already held the label and rarely "
+              "changed its hypothesis, that is consistent with the hypothesis; these counts describe it and do not "
+              "test it. Rows whose stored hypotheses cannot be aligned with their requests are excluded and "
+              "counted.\n", *_check_h(hypothesis),
+              ""]
+    lines += _dose_section(dose) if dose is not None else [
+              "## Pending\n",
+              "- **Corruption dose-response, the confirmatory check for this verdict** (amendment A4, D3). The eight "
+              "corruption arms and B-marginal were run only on test (SPEC §9); validation has only α = 0 (B-oracle). "
+              f"It needs {len(DOSE_RESPONSE_ARMS)} validation runs: about {dose_hours:.1f} GPU-hours at addendum B's "
+              "per-arm budget, an estimate rather than a measurement. Stage `dose-val-b` is configured and its "
+              "approval request drafted; nothing has been submitted. Until it runs, whether recall falls as the "
+              "availability signal degrades is untested on validation.\n"]
+    lines += ["## Limitations\n",
+              f"- {n} validation admissions and one policy seed; between-seed variation is unassessable.",
+              "- Relevance is guideline relevance of the requested action, not the value of the result it returned. "
+              "The guideline map, fixed in advance, counts urinalysis and radiographs as relevant to none of the four "
+              "diseases; sensitivity S1 (exploratory) counts them as relevant to all four.",
+              "- Check H reads the hypothesis agent's stored hypotheses, not the decision policy's internal belief, "
+              "and says nothing about what each result showed.",
+              "- A null oracle contrast concerns this fixed planner only: perfect information does not make the "
+              "heuristic optimal (SPEC §4.5).",
+              "- Every number here is rendered from `diagnose-val-b/diagnostics.json`, "
+              "`diagnose-val-b/hypothesis_check.json`, `analyze-val-b/validation_b.json`, the committed addenda "
+              "A and B" + (", and `analyze-dose-val-b/dose_response.json`." if dose is not None else "."), ""]
+    return "\n".join(lines)

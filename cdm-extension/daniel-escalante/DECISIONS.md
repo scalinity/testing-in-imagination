@@ -6,7 +6,7 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 
 - **Stages run on HiPerGator through the agent's SSH session** (SPEC §1.1). The agent reads only published bundles, SLURM job metadata and error codes; private logs, rows, HPI text, generations, inventories and world-model files are never read into the agent's conversation, which the PhysioNet DUA treats as a third-party service.
 - **One RTX PRO 6000 per GPU job** (partition hpg-rtx6000, `gpu:rtx_pro_6000:1`), whichever course account the job is billed to. Greedy bf16 decoding is not bit-stable across GPU architectures, so mixing hardware would break the V0-rerun identity (SPEC §5.6) and the shadow control (SPEC §5.5).
-- **Accounts:** `cai6734` and `cai5724` each allow 8 GPUs; a stage's jobs are spread across the accounts in `SLURM_ACCOUNTS`. `cai5720` and `cai5731` have no GPU allowance. CPU stages use a burst QOS (`SLURM_CPU_QOS`).
+- **Accounts:** from 2026-11-11 every job runs on the course account `cai6734`: GPU jobs on QOS `cai6734` (`SLURM_ACCOUNTS=cai6734`), CPU stages on the burst QOS `cai6734-b`. The GPU QOS caps 8 GPUs shared by the class, so a stage with more jobs queues the rest. Earlier stages also used `cai5724` (GPU) and `cai5731-b` (CPU), as the run log records. Every CPU analysis that was re-run on `cai5731-b` reproduced its bundle byte for byte, and the first re-run on `cai6734-b` (CPU job 50904601) reproduced `diagnose-val-b`'s bundle byte for byte, so the account does not affect results.
 
 ## Environment
 
@@ -75,3 +75,12 @@ Implementation choices that SPEC.md leaves open, and why. SPEC.md wins on any co
 - `WRITEUP.md` and `SLIDE.md` sit beside the phase folders under `results/credentialed/` and `results/synthetic/`. `tim.sh render` and the synthetic run write them, so the byte-identical synthetic check and check-git cover them like the phase reports.
 - Their numbers come from both phases' metrics.json. The paper's reported figures come from the replication's committed `results/paper_values.json`, read only. The comparison with the paper is descriptive: that figure comes from the authors' own run and has no interval.
 - results_table.tex and figures (SPEC §7) are not produced.
+
+## Validation diagnostics (amendment A4)
+- `diagnose-val-b` is an exploratory CPU stage with validation access only, one more row in SPEC §2's table. It reads val-a's V3 rows (P0), val-b's three arms and the release's lab mapping, and never opens test.
+- Rows name tests in lower case (the replication's cost-table keys). The diagnostics map them to the configured names before applying the relevance rule.
+- The relevance constants (Hager et al.'s required lab item IDs and scored abdominal modalities) carry the framework commit they were copied from. Each panel's item IDs come from the release mapping on the cluster; only the panel × disease booleans are published.
+- `DIAGNOSTICS.md` sits beside `WRITEUP.md` in both result kinds. It is rendered from the bundle, analyze-val-b's summaries, and the threshold and per-arm GPU budget in addenda A and B, by `tim.sh render` and the synthetic run.
+- Check H (amendment A5) is a second aggregate of the same stage, `hypothesis_check.json`, so `diagnostics.json` is recomputed unchanged. Its alignment follows upstream's bookkeeping: a hypothesis is stored at the start of every step except the step after an unavailable result, so an aligned row stores 1 + (provided requests) hypotheses and ended in a diagnosis turn. Per-arm counts use the key `admissions`, because the replication's export guard forbids `rows`.
+- Stage `dose-val-b` (the 9 arms of A4's D3 on validation) is configured, so its approval request and dry run can be reviewed; it has not run. Its name ends in `b` so its GPU-hour estimates come from bench-b. The D3 slope analysis has no code yet.
+- `submit_slurm.py --dry-run` skips the approval check and takes time limits from the drafted request; a real submission still requires the committed approval.

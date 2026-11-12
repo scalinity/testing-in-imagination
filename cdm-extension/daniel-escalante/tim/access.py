@@ -24,6 +24,9 @@ ACCESS = {
     "leakage": {"train": "full", "val": "full"},
     "val-b": {"val": "full"},
     "analyze-val-b": {"val": "full"},
+    "diagnose-val-b": {"val": "full"},
+    "dose-val-b": {"val": "full"},
+    "analyze-dose-val-b": {"val": "full"},
     **{stage: _TEST_ONLY for stage in ("test-a", "analyze-a", "test-a2", "analyze-a2", "test-b", "analyze-b")},
 }
 BENCH_PER_CLASS, SMOKE_PATIENTS = 6, 2

@@ -1,0 +1,26 @@
+{"source": "synthetic", "split": "val", "stage": "dose-val-b", "type": "job_start", "variant": "B-a0.3-T1-n1"}
+{"completed": 1, "total": 24, "type": "progress"}
+{"completed": 2, "total": 24, "type": "progress"}
+{"completed": 3, "total": 24, "type": "progress"}
+{"completed": 4, "total": 24, "type": "progress"}
+{"completed": 5, "total": 24, "type": "progress"}
+{"completed": 6, "total": 24, "type": "progress"}
+{"completed": 7, "total": 24, "type": "progress"}
+{"completed": 8, "total": 24, "type": "progress"}
+{"completed": 9, "total": 24, "type": "progress"}
+{"completed": 10, "total": 24, "type": "progress"}
+{"completed": 11, "total": 24, "type": "progress"}
+{"completed": 12, "total": 24, "type": "progress"}
+{"completed": 13, "total": 24, "type": "progress"}
+{"completed": 14, "total": 24, "type": "progress"}
+{"completed": 15, "total": 24, "type": "progress"}
+{"completed": 16, "total": 24, "type": "progress"}
+{"completed": 17, "total": 24, "type": "progress"}
+{"completed": 18, "total": 24, "type": "progress"}
+{"completed": 19, "total": 24, "type": "progress"}
+{"completed": 20, "total": 24, "type": "progress"}
+{"completed": 21, "total": 24, "type": "progress"}
+{"completed": 22, "total": 24, "type": "progress"}
+{"completed": 23, "total": 24, "type": "progress"}
+{"completed": 24, "total": 24, "type": "progress"}
+{"patients": 24, "seconds": 0.0, "status": "pass", "type": "job_end"}

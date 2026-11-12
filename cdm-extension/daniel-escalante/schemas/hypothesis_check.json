@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "h_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tests",
+        "unaligned",
+        "before_correct",
+        "before_other",
+        "before_unknown",
+        "changed",
+        "changed_to_correct",
+        "changed_from_correct"
+      ],
+      "properties": {
+        "tests": {
+          "$ref": "count"
+        },
+        "unaligned": {
+          "$ref": "count"
+        },
+        "before_correct": {
+          "$ref": "count"
+        },
+        "before_other": {
+          "$ref": "count"
+        },
+        "before_unknown": {
+          "$ref": "count"
+        },
+        "changed": {
+          "$ref": "count"
+        },
+        "changed_to_correct": {
+          "$ref": "count"
+        },
+        "changed_from_correct": {
+          "$ref": "count"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "alignment",
+    "extra",
+    "dropped"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": "source"
+    },
+    "alignment": {
+      "type": "object",
+      "keys": "arm_b",
+      "values": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "admissions",
+          "aligned"
+        ],
+        "properties": {
+          "admissions": {
+            "$ref": "count"
+          },
+          "aligned": {
+            "$ref": "count"
+          }
+        }
+      }
+    },
+    "extra": {
+      "type": "object",
+      "keys": "arm_b",
+      "values": {
+        "$ref": "h_counts"
+      }
+    },
+    "dropped": {
+      "type": "object",
+      "keys": "arm_b",
+      "values": {
+        "$ref": "h_counts"
+      }
+    }
+  }
+}

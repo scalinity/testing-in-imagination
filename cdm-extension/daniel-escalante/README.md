@@ -40,13 +40,13 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 
 | Path | Contents |
 |---|---|
-| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
+| `tim/` | the package: `access`, `events`, `publish`, `actions`, `scoring`, `guard`, `fallback`, `runner`, `analysis`, `diagnostics`, `render`, `approvals`, `protocol`, `fixture`, `cli` |
 | `configs/variants.yaml` | variants, limits and stage jobs |
 | `schemas/` | the public allowlist for every event and aggregate |
 | `prereg/` | the frozen protocol, addenda and amendment notes |
 | `approvals/` | approval requests and Daniel's committed approvals |
 | `scripts/` | `tim.sh` (capture wrapper), `run_tim.py`, `gpu.slurm`, `cpu.slurm`, `submit_slurm.py` |
-| `results/credentialed/` | published credentialed bundles, the Phase reports, and `WRITEUP.md` and `SLIDE.md` covering both phases |
+| `results/credentialed/` | published credentialed bundles, the Phase reports, `WRITEUP.md` and `SLIDE.md` covering both phases, and the exploratory validation `DIAGNOSTICS.md` |
 | `results/synthetic/` | the same structure from the synthetic fixture |
 
 ## Run log
@@ -82,3 +82,8 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | 2026-11-09 | analyze-b | CPU job 50535726 (cai5731-b) | `results/credentialed/phase-b/` | Family B (Holm): B-learned-s0-B-marginal +1.93 [-0.46, 4.85] not statistically significant; B-learned-s0-B-uniform -1.15 [-3.70, 1.47] not statistically significant; B-oracle-B-uniform +1.46 [-1.71, 4.98] not statistically significant |
 | 2026-11-09 | analyze-* re-run (SPEC §10.5) | CPU jobs 50537126, 50537128, 50538237, 50538238 | — | validation.json, validation_b.json, phase-a and phase-b metrics.json, wm_quality.json and leakage.json all byte-identical to the committed bundles |
 | 2026-11-10 | render (M9) | local, no data access | `results/credentialed/WRITEUP.md`, `SLIDE.md` | rendered from the committed phase-a and phase-b metrics.json and the replication's paper_values.json; both REPORT.md files re-rendered unchanged |
+| 2026-11-11 | diagnose-val-b (amendment A4, exploratory) | CPU job 50892814 (cai5731-b) | `results/credentialed/diagnose-val-b/`, `DIAGNOSTICS.md` | validation only; verdict planner bottleneck: B-oracle-B-uniform -0.11 [-2.56, 2.38], not statistically significant (Holm p 0.9736); B-oracle-P0 interval matches analyze-val-b; corruption dose-response not run (needs GPU) |
+| 2026-11-11 | diagnose-val-b re-run (SPEC §10.5) | CPU job 50893953 (cai5731-b) | — | diagnostics.json byte-identical to the committed bundle (sha256 23f3d06e…) |
+| 2026-11-11 | diagnose-val-b re-run (amendment A5) | CPU job 50900734 (cai5731-b) at 04fa2a2 | `results/credentialed/diagnose-val-b/hypothesis_check.json`, `DIAGNOSTICS.md` | diagnostics.json byte-identical (sha256 23f3d06e…); check H: of B-oracle's 61 added relevant provided results, 38 arrived while the hypothesis already held the label and 7 changed it; verdict now headed provisional |
+| 2026-11-11 | dose-val-b (prepared, not run) | none submitted | `approvals/dose-val-b.request.json` | 9 jobs at 0.458 GPU-h each, 4.122 in total (estimate from bench-b); dry run on cai6734 printed the 9 sbatch commands; awaiting approval |
+| 2026-11-11 | diagnose-val-b re-run on cai6734-b (account check) | CPU job 50904601 (cai6734-b) | — | diagnostics.json (sha256 23f3d06e…) and hypothesis_check.json (sha256 257f2b3e…) byte-identical to the committed bundle, so moving CPU stages from cai5731-b to cai6734-b changes no result |
