@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 3:15 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -105,7 +105,7 @@ Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
 |---|---|---|---|---|
 | e9-bench-granite, attempt 1 | 51202779 | cai6734 | RUNNING | 1:49 PM EST |
 | e8-train-s270, attempt 1 | 51208027 | cai6734 | PENDING (Resources) | submitted 2:46 PM EST |
-| e8-train-s271, attempt 1 | 51208029 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e8-train-s271, attempt 1 | 51208029 | cai6734 | RUNNING | about 3:12 PM EST |
 | e8-train-s272, attempt 1 | 51208030 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
 | e8-train-s273, attempt 1 | 51208032 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
 | e10-train-f0, attempt 1 | 51208033 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
@@ -115,6 +115,8 @@ Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
 | e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
+Waiting trainings are held by the class QOS's shared CPU and memory (250 GB per account); their
+request was lowered from 40 to 16 GB at about 3:12 PM EST (RESEARCH_LEDGER.md, "Operations").
 
 ## 6. GPU-hours by experiment
 

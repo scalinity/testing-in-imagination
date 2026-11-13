@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 2:50 PM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 3:15 PM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -143,7 +143,7 @@ retry.
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 | e9-bench-granite | 1 | 51202779 | cai6734 | 1:49 PM | RUNNING | | | |
 | e8-train-s270 | 1 | 51208027 | cai6734 | not yet | PENDING (Resources) | | | |
-| e8-train-s271 | 1 | 51208029 | cai6734 | not yet | PENDING (Priority) | | | |
+| e8-train-s271 | 1 | 51208029 | cai6734 | about 3:12 PM | RUNNING | | | |
 | e8-train-s272 | 1 | 51208030 | cai6734 | not yet | PENDING (Priority) | | | |
 | e8-train-s273 | 1 | 51208032 | cai6734 | not yet | PENDING (Priority) | | | |
 | e10-train-f0 | 1 | 51208033 | cai6734 | not yet | PENDING (Priority) | | | |
@@ -558,3 +558,28 @@ What the result shows:
    dependence on the outcome frequencies, which is what E2's W4 will vary; the regime map reports
    that beside each relative call, with the slopes. Distortions that depend on the history remain
    out of the coordinate's reach.
+
+### Operations, November 13, 2026, afternoon: training memory and the SSH route
+
+Training memory. At 3:01 PM EST six of the nine E8 and E10 trainings waited on the class QOS's
+shared limits (QOSGrpCpuLimit, then QOSGrpMemLimit): each asked for 40 GB, and both class pools were
+near 250 GB with classmates' jobs (cai6734 216 GB, cai5724 236 GB in use). Every Nemotron job so far
+peaked at 6.4 to 7.0 GB of host memory (sacct MaxRSS of the five bench attempts and the validation
+rollout; sstat of the three running trainings). The watcher chooses an account by GPU count only, so
+it does not see these shared CPU and memory limits. Asked whether to lower the request, the study
+lead chose "Lower to 16 GB (Recommended)". Done at about 3:12 PM EST: under the watcher's own lock
+(state/lock), the saved memory of the nine training stages went from 40 to 16 GB (state/stages/,
+read back), so later parts resubmit at 16 GB; the five trainings still waiting were lowered to
+16384 MB with scontrol update. The three running trainings and e8-train-s271, which started at
+about 3:12 PM, keep their 40 GB for their first part. Manifests do not bind memory, so no stage is
+refused for it. An out-of-memory exit (code 40) is retried at 1.5 times the memory. The committed
+graph_training_m2.json now says 16 GB for these stages; the installed copy keeps 40 until the next
+deploy, which changes nothing for stages whose state already exists.
+
+SSH route. The shared connection over the Tailscale route (relayed through DERP Miami; login7's
+netcheck reports UDP blocked) dropped at about 2:50 PM EST after 41 minutes; the keeper did not
+close it and the login7 daemon ran without a restart from 11:03 AM. Asked which route to use, the
+study lead answered: "Switch to public if tailscale drops soon; i think this past drop was only
+because I changed my upstream dns server". The route stays on Tailscale; if it drops again without
+such a change on the Mac, the hpg.rc.ufl.edu entry and the keeper's TII_HPG_HOST move to the public
+route.
