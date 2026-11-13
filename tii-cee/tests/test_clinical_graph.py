@@ -1,4 +1,4 @@
-"""The training track's graphs (graph_training_m1.json, then graph_training_m2.json), checked against
+"""The training track's graphs (graph_training_m1.json, m2, then m3), checked against
 the pipeline's own loader and against what each clinical stage reads."""
 import importlib
 import json
@@ -13,6 +13,7 @@ from tiicee.pipeline.paths import Paths
 
 FRAGMENT = ROOT / "tii-cee" / "tiicee" / "clinical" / "graph_training_m1.json"
 SECOND = FRAGMENT.with_name("graph_training_m2.json")
+THIRD = FRAGMENT.with_name("graph_training_m3.json")
 ROLES = {  # the roles and seeds each stage takes from its manifest
     "clinical_data": (set(), set()), "clinical_folds": (set(), set()),
     "clinical_bench": ({"data"}, {"training"}), "clinical_train": ({"data"}, {"training"}),
@@ -32,8 +33,14 @@ def graph():
     return load(FRAGMENT)
 
 
-@pytest.fixture(scope="module", params=[FRAGMENT, SECOND], ids=["m1", "m2"])
+@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD], ids=["m1", "m2", "m3"])
 def either(request):
+    return load(request.param)
+
+
+@pytest.fixture(scope="module", params=[SECOND, THIRD], ids=["m2", "m3"])
+def trained(request):
+    """Each graph that holds trainings."""
     return load(request.param)
 
 
@@ -115,8 +122,8 @@ def test_the_second_graph_keeps_the_first_unchanged_and_adds_the_trainings():
     assert second["stage_modules"] == first["stage_modules"]
 
 
-def test_every_training_waits_on_g_resume_and_the_gate_reads_the_bench_report():
-    graph = load(SECOND)
+def test_every_training_waits_on_g_resume_and_the_gate_reads_the_bench_report(trained):
+    graph = trained
     (gate,) = graph.gates
     assert gate == {"id": "G_resume", "rule": "resume_gate.py", "inputs": ["bench-nemotron"],
                     "reads": ["export/approved/bench-nemotron.json"]}
@@ -156,11 +163,46 @@ def test_each_e10_fold_policy_trains_off_its_fold_and_rolls_out_only_on_it():
         assert train["experiment"] == rollout["experiment"] == train["allowance_key"] == rollout["allowance_key"] == "E10"
 
 
-def test_the_second_graph_stays_within_each_experiments_estimate():
-    graph = load(SECOND)
+def test_each_training_graph_stays_within_each_experiments_estimate(trained):
+    graph = trained
     spent = {}
     for stage in graph.stages:
         spent[stage["allowance_key"]] = spent.get(stage["allowance_key"], 0) + stage["estimate_gpu_hours"]
         if stage["command"][0] == "clinical_train":
             assert stage["resources"]["time_hours"] == 24 and stage["env"] == backbone.TRAINING_ENVIRONMENT
     assert all(total <= graph.allowances[key]["estimate_gpu_hours"] for key, total in spent.items())
+
+
+# ---- graph_training_m3.json: E9's Granite trainings after its bench ----
+
+E9_SEEDS = (269, 270, 271)  # EXPERIMENT_CARDS/E9.md
+
+
+def test_the_third_graph_keeps_the_second_unchanged_and_adds_e9():
+    second, third = json.loads(SECOND.read_text()), json.loads(THIRD.read_text())
+    assert third["stages"][:len(second["stages"])] == second["stages"]
+    assert third["gates"] == second["gates"] and third["stage_modules"] == second["stage_modules"]
+    added = [stage["id"] for stage in third["stages"][len(second["stages"]):]]
+    assert added == [name for seed in E9_SEEDS for name in (f"e9-train-s{seed}", f"e9-rollout-s{seed}")]
+
+
+def test_e9_trains_granite_after_its_bench_and_rolls_out_as_e8_does():
+    graph = load(THIRD)
+    data, overlay = "$TII/private/stages/e8-data/out", graph.by_id["e9-bench-granite"]["bind"]["backbone_overlay"]
+    for seed in E9_SEEDS:
+        train, rollout = graph.by_id[f"e9-train-s{seed}"], graph.by_id[f"e9-rollout-s{seed}"]
+        assert train["command"] == ["clinical_train", "--backbone", "granite"]
+        assert rollout["command"] == ["clinical_rollout", "--backbone", "granite"]
+        assert "e9-bench-granite" in train["depends_on"] and train["gate"] == "G_resume"
+        assert train["bind"] == {"data": data, "backbone_overlay": overlay} and train["seeds"] == {"training": seed}
+        assert rollout["seeds"] == {"policy": seed}
+        e8 = graph.by_id["e8-rollout-s270"]["bind"]  # the same split files as E8's rollouts
+        assert rollout["bind"] == {**{role: e8[role] for role in ("split", "lab_test_mapping", "train_csv")},
+                                   "adapter": f"$TII/private/stages/e9-train-s{seed}/out/model/adapter",
+                                   "backbone_overlay": overlay}
+        assert train["experiment"] == rollout["experiment"] == train["allowance_key"] == rollout["allowance_key"] == "E9"
+        assert train["resources"] == graph.by_id["e8-train-s270"]["resources"]
+        assert rollout["resources"] == graph.by_id["e8-rollout-s270"]["resources"]
+        # E8's figures times 1.1: the Granite bench took 2.31 GPU-hours against 2.1 estimated at Nemotron's speed
+        for stage, e8 in ((train, "e8-train-s270"), (rollout, "e8-rollout-s270")):
+            assert stage["estimate_gpu_hours"] == round(graph.by_id[e8]["estimate_gpu_hours"] * 1.1, 1), stage["id"]

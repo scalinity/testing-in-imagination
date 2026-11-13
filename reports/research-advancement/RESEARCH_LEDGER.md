@@ -113,9 +113,9 @@ df467ea, all unchanged since the review.
 | E5 | PLANNED | Frozen at G3 | Waits on G3 |
 | E6 | PLANNED | Frozen at G4 | Waits on G4 |
 | E7 | PLANNED | EXPERIMENT_CARDS/E7.md | Waits on G2a and dataset licenses |
-| E8 | IN PROGRESS | EXPERIMENT_CARDS/E8.md | Data copy (stage e8-data) completed November 13, 2026, 6:49 AM EST; gate G_resume MET at 2:13 PM EST (GATE_DECISIONS/G_resume.md); training stages are added by a redeploy |
-| E9 | IN PROGRESS | EXPERIMENT_CARDS/E9.md | Preflight built (G1 training part met); G_resume MET; the Granite bench (e9-bench-granite) is running since 1:49 PM EST; training waits on it |
-| E10 | IN PROGRESS | EXPERIMENT_CARDS/E10.md | Folds (stage e10-folds) completed November 13, 2026, 6:49 AM EST: 432, 1,555 and 173 admissions, no leaks; G_resume MET; training stages are added by a redeploy |
+| E8 | IN PROGRESS | EXPERIMENT_CARDS/E8.md | Data copy (stage e8-data) completed November 13, 2026, 6:49 AM EST; gate G_resume MET at 2:13 PM EST (GATE_DECISIONS/G_resume.md); seeds 270 to 273 training since 2:47 to 3:28 PM EST (graph_training_m2.json), each rolled out on validation after |
+| E9 | IN PROGRESS | EXPERIMENT_CARDS/E9.md | Preflight built (G1 training part met); G_resume MET; the Granite bench completed 4:35 PM EST, outcome ok, no recipe repair (section 6, E9 bench); seeds 269 to 271 added by graph_training_m3.json |
+| E10 | IN PROGRESS | EXPERIMENT_CARDS/E10.md | Folds (stage e10-folds) completed November 13, 2026, 6:49 AM EST: 432, 1,555 and 173 admissions, no leaks; G_resume MET; folds 3 and 4 training since 2:46 PM EST, 0 and 1 since 4:39 PM EST, fold 2 waiting on the class CPU limit |
 | E11 | SKIPPED (accepted gap: not run, decided by Daniel November 13, 2026) | None | No other credentialed cohort exists or will be acquired; the paper states the missing independent cohort as a limitation (BLOCKED.md, Accepted gaps, BLOCKED-002). Nothing waits on it |
 
 ## 5. Job ledger
@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 4:10 PM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 5:20 PM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -143,13 +143,14 @@ retry.
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 | e9-bench-granite | 1 | 51202779 | cai6734 | 1:49 PM | FAILED (planned continuation) | 10 | 5,013 s | 1.393 |
 | e9-bench-granite | 2 | 51211050 | cai5724 | 3:16 PM | FAILED (planned continuation) | 10 | 1,171 s | 0.325 |
-| e9-bench-granite | 3 | 51213951 | cai5724 | 3:47 PM | RUNNING | | | |
-| e8-train-s270 | 1 | 51208027 | cai6734 | not yet | PENDING (Resources) | | | |
-| e8-train-s271 | 1 | 51208029 | cai6734 | about 3:12 PM | RUNNING | | | |
+| e9-bench-granite | 3 | 51213951 | cai5724 | 3:47 PM | FAILED (planned continuation) | 10 | 1,963 s | 0.545 |
+| e9-bench-granite | 4 | 51219945 | cai5724 | 4:32 PM | COMPLETED | 0 | 155 s | 0.043 |
+| e8-train-s270 | 1 | 51208027 | cai6734 | 2:47 PM | RUNNING | | | |
+| e8-train-s271 | 1 | 51208029 | cai6734 | 3:04 PM | RUNNING | | | |
 | e8-train-s272 | 1 | 51208030 | cai6734 | 3:13 PM | RUNNING | | | |
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | RUNNING | | | |
-| e10-train-f0 | 1 | 51208033 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
-| e10-train-f1 | 1 | 51208034 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
+| e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | RUNNING | | | |
+| e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | RUNNING | | | |
 | e10-train-f2 | 1 | 51208035 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
@@ -585,3 +586,34 @@ study lead answered: "Switch to public if tailscale drops soon; i think this pas
 because I changed my upstream dns server". The route stays on Tailscale; if it drops again without
 such a change on the Mac, the hpg.rc.ufl.edu entry and the keeper's TII_HPG_HOST move to the public
 route.
+
+### E9 bench, November 13, 2026: result, and E9's trainings
+
+Input: export/approved/e9-bench-granite.json, written 4:34 PM EST, SHA-256
+ad3128389f13107a8bd8f34c5000797abc4fefcf6392555597f2f76e59734752. Four jobs (51202779, 51211050,
+51213951, 51219945), 2.31 GPU-hours of E9's allowance, within the bench cap of 3 and above the 2.1
+estimated for it at Nemotron's speed.
+
+- Training: outcome ok. 220 optimizer steps on 110 admissions over two epochs, through all three
+  loss phases; paused at step 110 (the epoch boundary) and step 150 (the simulated Slurm warning),
+  resumed both times, and followed the drawn plan throughout; every admission visited twice, as
+  the recipe has. Peak GPU memory 78.89 GB allocated, 82.39 GB reserved, of 94.97.
+- Evaluation of 12 validation admissions: outcome ok. 48 decisions, all formatted, none truncated;
+  31 hypotheses, all valid, each with a valid confidence; all 12 ended with a diagnosis.
+- Adaptation checks (EXPERIMENT_CARDS/E9.md, items 1 to 4): the bench ran, and backbone.compose
+  refuses a configuration that does not name the pinned Granite revision; the system message is sent and is Granite's default without its date
+  line, with no date string in the prompt, and neither the clock nor the thinking switch changes
+  it; "Observation:" stops 40 of 40 times and is stripped after a newline; the assistant turn and
+  the label end with EOS, pad is EOS, and all 8 natural endings ended with EOS; no weight
+  synchronization fault (one would have been the bench's outcome, not a crash).
+- Host memory: 7.1 to 7.7 GB peak per job (sacct MaxRSS).
+
+Decision: no recipe repair (the card allows at most two, for template or memory faults; none was
+found), and E9's trainings proceed. graph_training_m3.json keeps graph_training_m2.json's stages
+unchanged and adds e9-train-s269, s270 and s271, each followed by its validation rollout: E8's
+stages with --backbone granite and the backbone overlay bound, after e9-bench-granite and gate
+G_resume. Estimate 28.2 GPU-hours a training (E8's measured 25.6 times 1.1, the bench's 2.31
+GPU-hours over its 2.1 estimate) and 0.5 a rollout; E9 in all about 88 GPU-hours with the bench,
+under the card's 120 and the allowance of 300. Resources as E8's (16 GB host memory). While an
+E10 training waits on cai6734's shared CPU limit, the watcher puts new GPU jobs on cai5724 first.
+
