@@ -9,7 +9,8 @@ Shared readings:
   rules, S_rand and S_ig. The other variants are evaluated the same way and reported, not decided on.
 - "Improves with the paired 95% interval excluding 0" means the bootstrap interval of the mean
   per-seed difference lies entirely on the improving side.
-- A rule whose tables lack one of the configured seeds is not evaluated.
+- A rule whose tables lack one of the configured seeds, one of the two acquisition rules, or any other
+  cell it reads is not evaluated: it returns status "incomplete" and verdict None, never a partial verdict.
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ import numpy as np
 
 from tiicee.experiments.e1 import intervals as stats_api
 from tiicee.experiments.e1 import part_a
+from tiicee.experiments.e1.reduced import SELECTORS
 from tiicee.experiments.e1.config import DRIFT_FAMILIES, SCALE_FAMILIES, SCALE_REPAIR_FAMILIES, STRESS_SET, Config
 
 DECLARED_ORDER = ("selection", "reading", "commitment")
@@ -47,17 +49,25 @@ def _keep(rows, **equal):
 
 
 def _final(rows):
-    """The rows of the final horizon."""
+    """The rows of the final horizon (none for no rows)."""
+    if not rows:
+        return []
     last = max(r["horizon"] for r in rows)
     return [r for r in rows if r["horizon"] == last]
 
 
 def _by_seed(rows, value="log_loss") -> dict:
-    """seed -> mean of a column over the rows given (the acquisition rules, and whatever else was not filtered)."""
+    """seed -> mean of a column over the two acquisition rules. A seed is left out unless it has exactly one row
+    for each acquisition rule, so a missing rule makes the seed missing (and the rule incomplete), never a mean
+    over the one that is there."""
     grouped = defaultdict(list)
     for r in rows:
-        grouped[r["seed"]].append(r[value])
-    return {seed: float(np.mean(values)) for seed, values in grouped.items()}
+        grouped[r["seed"]].append(r)
+    out = {}
+    for seed, found in grouped.items():
+        if sorted(r["selector"] for r in found) == sorted(SELECTORS):
+            out[seed] = float(np.mean([r[value] for r in found]))
+    return out
 
 
 def _difference(a: dict, b: dict, cfg: Config):
@@ -122,9 +132,12 @@ class Evaluator:
         variant = variant or self.cfg.primary_variant
         rows = _keep(b_horizon, variant=variant, reader="r0", world_model="W0")
         raw = {(r["seed"], r["selector"], r["horizon"]): r["log_loss"] for r in rows if r["arm"] == "raw"}
-        changes = [abs(r["log_loss"] - raw[(r["seed"], r["selector"], r["horizon"])]) for r in rows if r["arm"] != "raw"]
-        if not changes or {r["seed"] for r in rows} < set(self.cfg.seeds):
+        tracks = {(r["seed"], r["selector"], r["horizon"], r["arm"]) for r in rows if r["arm"] != "raw"}
+        complete = ({(seed, selector) for seed, selector, _ in raw} == {(s, x) for s in self.cfg.seeds for x in SELECTORS}
+                    and tracks == {(*k, arm) for k in raw for arm in ("stateless", "stateful")})
+        if not complete:
             return {"status": "incomplete", "verdict": None}
+        changes = [abs(r["log_loss"] - raw[(r["seed"], r["selector"], r["horizon"])]) for r in rows if r["arm"] != "raw"]
         return {"status": "evaluated", "verdict": max(changes) <= self.cfg.no_harm, "largest_change": max(changes), "limit": self.cfg.no_harm}
 
     def negative_controls(self, b_horizon, track, variant=None) -> dict:
@@ -146,15 +159,17 @@ class Evaluator:
         """Card: gate valid if allowed applications have positive mean gain for every family.
         Reading: for each R4 family and each world model, the exact expected gain averaged over every decision
         point the gate allows (all seeds, both acquisition rules) is positive. A cell where the gate allows
-        nothing is reported and does not fail the rule."""
+        nothing is reported and does not fail the rule; if it allows nothing in every cell the rule is vacuous and
+        its verdict is None. Every (family, world model) cell must hold every seed and both acquisition rules."""
         variant = variant or self.cfg.primary_variant
         rows = _keep(b_points, variant=variant)
-        if {r["seed"] for r in rows} < set(self.cfg.seeds):
-            return {"status": "incomplete", "verdict": None}
-        cells, valid = {}, True
+        full = {(s, x) for s in self.cfg.seeds for x in SELECTORS}
+        cells, valid, any_allowed = {}, True, False
         for family in self.families:
-            for world in sorted({r["world_model"] for r in rows}):
+            for world in self.cfg.world_models:
                 here = _keep(rows, reader=family, world_model=world)
+                if {(r["seed"], r["selector"]) for r in here} != full or not sum(r["n_points"] for r in here):
+                    return {"status": "incomplete", "verdict": None}
                 allowed = sum(r["gate_allowed"] * r["n_points"] for r in here)
                 gain = sum((r["gate_gain"] or 0.0) * r["gate_allowed"] * r["n_points"] for r in here)
                 total = sum(r["n_points"] for r in here)
@@ -164,6 +179,9 @@ class Evaluator:
                         "harmful_share_ungated": sum(r["ungated_harmful"] * r["n_points"] for r in here) / total}
                 cells[f"{family}|{world}"] = cell
                 valid &= cell["mean_gain_allowed"] is None or cell["mean_gain_allowed"] > 0
+                any_allowed |= allowed > 0
+        if not any_allowed:
+            return {"status": "evaluated", "verdict": None, "vacuous": True, "cells": cells}
         return {"status": "evaluated", "verdict": valid, "cells": cells}
 
     def sandbox_cross_check(self, b_sandbox) -> dict:
@@ -177,8 +195,8 @@ class Evaluator:
         cells = {}
         for (variant, reader), reference in SANDBOX.items():
             rows = _keep(b_sandbox, variant=variant, reader=reader)
-            if not rows:
-                continue
+            if sorted(r["seed"] for r in rows) != sorted(self.cfg.seeds):
+                return {"status": "incomplete", "verdict": None}
             entry = {}
             for column, reported in zip(("mc_log_loss_raw", "mc_log_loss_stateful", "mc_accuracy_raw", "mc_accuracy_stateful"), reference):
                 values = np.array([r[column] for r in rows])
@@ -295,8 +313,10 @@ class Evaluator:
         three components fails the comparison."""
         lam = self.cfg.lam if lam is None else lam
         rows = _keep(a_values, variant=variant or self.cfg.primary_variant, lam=lam)
-        if {r["seed"] for r in rows} < set(self.cfg.seeds) or not rows:
-            return {"status": "incomplete", "verdict": None}
+        for family in self.families:
+            for agent in ("raw", "repaired"):
+                if sorted(r["seed"] for r in _keep(rows, reader=family, agent=agent)) != sorted(self.cfg.seeds):
+                    return {"status": "incomplete", "verdict": None}
         agents, unstable = {}, []
         keys = [part_a.key(c) for c in part_a.COMBINATIONS] + ["v_star"]
         for reader, agent in sorted({(r["reader"], r["agent"]) for r in rows}):

@@ -449,3 +449,66 @@ def test_default_intervals_come_from_the_statistics_module():
     assert found["stateful_minus_stateless"]["estimate"] == pytest.approx(expected["estimate"])
     assert [found["stateful_minus_stateless"]["lo"], found["stateful_minus_stateless"]["hi"]] == pytest.approx(expected["ci"])
     assert found["verdict"] == "stateful"
+
+
+# ------------------------------------------------------------------- incomplete tables (review F001)
+INCOMPLETE = {"status": "incomplete", "verdict": None}
+
+
+def test_a_seed_with_one_acquisition_rule_is_missing_not_averaged():
+    # seed 1 keeps only S_ig rows: before, its value was the S_ig value alone; now the seed counts as missing
+    rows = [r for r in b_table(textbook) if not (r["seed"] == 1 and r["selector"] == "rand")]
+    ev = evaluator()
+    assert ev.track_selection(rows) == INCOMPLETE
+    assert ev.repair_present(rows, "stateful") == INCOMPLETE
+    assert ev.negative_controls(rows, "stateful") == INCOMPLETE
+
+
+def test_a_missing_variant_is_incomplete_not_an_error():
+    assert evaluator().track_selection(b_table(textbook), variant="no_correlation") == INCOMPLETE
+
+
+def test_no_harm_refuses_unpaired_rows_instead_of_raising():
+    rows = b_table(textbook)
+    no_raw = [r for r in rows if not (r["reader"] == "r0" and r["arm"] == "raw" and r["seed"] == 0 and r["selector"] == "ig")]
+    assert evaluator().no_harm(no_raw) == INCOMPLETE
+    no_stateful = [r for r in rows if not (r["reader"] == "r0" and r["arm"] == "stateful" and r["seed"] == 2)]
+    assert evaluator().no_harm(no_stateful) == INCOMPLETE
+    one_selector = [r for r in rows if not (r["reader"] == "r0" and r["selector"] == "rand")]
+    assert evaluator().no_harm(one_selector) == INCOMPLETE
+
+
+def test_gate_valid_needs_every_family_world_model_seed_and_acquisition_rule():
+    good = points_table(lambda seed, reader, world: 0.02, lambda reader, world: 0.5)
+    ev = evaluator()
+    assert ev.gate_valid(good)["verdict"] is True
+    assert ev.gate_valid([r for r in good if not (r["reader"] == "over" and r["world_model"] == "W1")]) == INCOMPLETE
+    assert ev.gate_valid([r for r in good if r["reader"] != "under"]) == INCOMPLETE
+    assert ev.gate_valid([r for r in good if not (r["seed"] == 0 and r["selector"] == "rand" and r["reader"] == "fixed")]) == INCOMPLETE
+
+
+def test_a_gate_that_never_opens_is_vacuous_not_valid():
+    found = evaluator().gate_valid(points_table(lambda seed, reader, world: 0.02, lambda reader, world: 0.0))
+    assert found["status"] == "evaluated" and found["verdict"] is None and found["vacuous"] is True
+
+
+def test_sandbox_cross_check_needs_every_cell():
+    rows = []
+    for (variant, reader), (raw, projected, raw_acc, projected_acc) in rules.SANDBOX.items():
+        for seed in SEEDS:
+            rows.append({"seed": seed, "variant": variant, "reader": reader, "n_patients": 2000, "horizon": 8,
+                         "mc_log_loss_raw": raw, "mc_log_loss_stateful": projected, "mc_accuracy_raw": raw_acc,
+                         "mc_accuracy_stateful": projected_acc})
+    ev = evaluator()
+    assert ev.sandbox_cross_check(rows)["status"] == "evaluated"
+    assert ev.sandbox_cross_check([r for r in rows if r["reader"] != "over"]) == INCOMPLETE
+    assert ev.sandbox_cross_check([r for r in rows if not (r["reader"] == "fixed" and r["seed"] == 2)]) == INCOMPLETE
+
+
+def test_attribution_needs_every_family_and_both_agents():
+    rows = [{"seed": seed, "variant": "base", "lam": CFG.lam, "reader": family, "agent": agent}
+            for seed in SEEDS for family in R4 for agent in ("raw", "repaired")]
+    missing = [r for r in rows if not (r["reader"] == "under" and r["agent"] == "repaired")]
+    assert evaluator().attribution(missing) == INCOMPLETE
+    short = [r for r in rows if not (r["reader"] == "over" and r["seed"] == 1)]
+    assert evaluator().attribution(short) == INCOMPLETE
