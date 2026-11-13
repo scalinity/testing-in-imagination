@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 3:15 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 4:10 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -103,14 +103,14 @@ Updated November 13, 2026, about 3:15 PM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| e9-bench-granite, attempt 1 | 51202779 | cai6734 | RUNNING | 1:49 PM EST |
+| e9-bench-granite, attempt 3 | 51213951 | cai5724 | RUNNING | 3:47 PM EST |
 | e8-train-s270, attempt 1 | 51208027 | cai6734 | PENDING (Resources) | submitted 2:46 PM EST |
 | e8-train-s271, attempt 1 | 51208029 | cai6734 | RUNNING | about 3:12 PM EST |
-| e8-train-s272, attempt 1 | 51208030 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
-| e8-train-s273, attempt 1 | 51208032 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
-| e10-train-f0, attempt 1 | 51208033 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
-| e10-train-f1, attempt 1 | 51208034 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
-| e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e8-train-s272, attempt 1 | 51208030 | cai6734 | RUNNING | 3:13 PM EST |
+| e8-train-s273, attempt 1 | 51208032 | cai6734 | RUNNING | 3:28 PM EST |
+| e10-train-f0, attempt 1 | 51208033 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
+| e10-train-f1, attempt 1 | 51208034 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
+| e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
 | e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
 | e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
 
