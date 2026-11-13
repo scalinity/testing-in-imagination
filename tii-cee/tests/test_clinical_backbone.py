@@ -11,7 +11,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from test_clinical_support import context, cpu_stack, fake_train, prepared, unset_gpu_environment
+from test_clinical_support import context, cpu_stack, fake_train, prepared, training_environment, until_done
 from tiicee.clinical import ROOT, backbone, folds, train, use_prior_studies
 from tiicee.clinical.backbone import BACKBONES
 
@@ -20,8 +20,8 @@ from replication import gpu, shim  # noqa: E402  (import with the standard libra
 
 
 @pytest.fixture(autouse=True)
-def gpu_environment(monkeypatch):
-    unset_gpu_environment(monkeypatch)
+def job_environment(monkeypatch):
+    training_environment(monkeypatch)
 
 
 CARDS = ROOT / "reports" / "research-advancement" / "EXPERIMENT_CARDS"
@@ -215,9 +215,10 @@ def test_granite_training_runs_inside_the_adaptation_and_leaves_no_trace(tmp_pat
     with pytest.raises(ValueError, match="backbone_overlay"):
         train.run(context(tmp_path, "misbound", ["--backbone", "granite"], {**roles, "backbone_overlay": data_ctx.out_dir}, {"training": 269}))
     roles["backbone_overlay"] = GRANITE.overlay
-    ctx = context(tmp_path, "E9_train_269", ["--backbone", "granite"], roles, {"training": 269})
     monkeypatch.setattr(gpu, "train", fake_train(during))  # its gpu._configuration call accepts Granite here
-    train.run(ctx)
+    ctx, processes = until_done(
+        lambda: context(tmp_path, "E9_train_269", ["--backbone", "granite"], roles, {"training": 269}), train.run)
+    assert processes == 2  # one part per epoch
     assert (seen["model"], seen["system"]) == (GRANITE.model, FIXED)
     assert seen["prompt"][0] == {"role": "system", "content": FIXED} and len(seen["prompt"]) == 2
     assert "detailed thinking off" not in str(seen["prompt"])

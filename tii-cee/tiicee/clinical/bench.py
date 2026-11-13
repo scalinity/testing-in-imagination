@@ -1,46 +1,62 @@
-"""Bench of a backbone under the frozen recipe: a short training run, then a few validation
-episodes (EXPERIMENT_CARDS/E9.md, "Bench and repairs").
+"""Bench of a backbone under the frozen recipe, and of training in parts (EXPERIMENT_CARDS/E9.md,
+"Bench and repairs"; RESEARCH_LEDGER.md, D-CLIN-RESUME).
 
-Stage: clinical_bench --backbone nemotron|granite [--train-admissions 110] [--val-admissions 12] [--pause-at 150]
-Manifest: role "data" (as clinical_train) and seed "training".
+Stage: clinical_bench --backbone nemotron|granite [--train-admissions 110] [--val-admissions 12]
+                      [--pause-at 150] [--no-reference]
+Manifest: role "data" (as clinical_train) and seed "training". Job environment: the training
+environment (backbone.TRAINING_ENVIRONMENT). The bench also evaluates, which runs with tim's cuBLAS
+setting, so the stage puts that one variable in place itself for each of its processes, before
+torch is loaded; train.fit and rollout.roll then verify the environment as they do in the real
+stages.
 
 The bench calls the same code as the real stages (train.fit, rollout.roll) on the first
-admissions of train.csv and val.csv. The defaults give 220 optimizer steps, enough to pass through
-all three loss phases (100 da, 100 ha_sft, then ha_conf_cal) and two 100-step checkpoints.
+admissions of train.csv and val.csv, with one seed throughout. The defaults give 220 optimizer
+steps, enough to pass through all three loss phases (100 da, 100 ha_sft, then ha_conf_cal) and two
+100-step checkpoints.
 
-It runs as three processes, each ending with the continue code until the last:
-  1. trains until --pause-at, where it behaves as if Slurm's warning had arrived: forced
-     checkpoint, exit. The default step lies inside the second epoch, the case every real training
-     meets when its 24 hours run out (0 disables the pause);
-  2. resumes through gpu.train's own path, finishes training, and exits because the evaluation
-     engine cannot share a process with the training engine;
-  3. rolls the bench adapter out and writes the report.
-A weight-synchronization fault or a CUDA out-of-memory fault is the bench's result, recorded and
-reported, not a crash; any other error fails the stage.
+It runs as five processes, each ending with the continue code until the last, because no two
+engines can share a process:
+  1. the reference: the whole training, uninterrupted, with the trainer's sampler left exactly as
+     TRL builds it and only observed (left out with --no-reference). A killed attempt starts over;
+  2. the same training in parts, as clinical_train runs it: the first epoch, ending at the planned
+     boundary after its validation pass;
+  3. the second epoch as far as --pause-at, where the stage behaves as if Slurm's warning had
+     arrived: forced checkpoint, exit (0 disables this pause);
+  4. the rest of the training;
+  5. the rollout of the bench adapter, and the report.
+A weight-synchronization fault, a CUDA out-of-memory fault or a departure from the training plan
+is the bench's result, recorded and reported, not a crash; any other error fails the stage.
 
 Report (bench.json, also approved for export; counts and flags only):
-  training     outcome, optimizer steps, where it paused, how often each admission was trained on
-               across the resume (visits_as_recipe: exactly num_train_epochs times each), and peak
-               GPU memory as torch's allocator saw it in the part that finished training
-  format       decisions matching upstream's Thought / Action / Action Input pattern, valid
-               hypotheses and confidences, how episodes ended
-  observation_stop, eos, template   the facts of backbone.tokenizer_facts, with what the generated
-               token ids showed: trailing "Observation:" ids stripped, completions ending in EOS
+  reference, training   outcome, optimizer steps, follows_plan, visits per admission, where the
+                        training paused, peak GPU memory as torch's allocator saw it in the
+                        process that finished
+  sequences_identical   the training in parts trained on the same admission at every optimizer
+                        step as the uninterrupted reference
+  visits_identical      and on every admission the same number of times
+  evaluation.format     decisions matching upstream's Thought / Action / Action Input pattern,
+                        valid hypotheses and confidences, how episodes ended
+  evaluation.observation_stop, .eos, .template   the facts of backbone.tokenizer_facts, with what
+                        the generated token ids showed
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shutil
 from collections import Counter
 
-from tiicee.clinical import admissions, bound, remember, use_prior_studies
-from tiicee.clinical.backbone import BACKBONES, chosen
+from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
+from tiicee.clinical.backbone import BACKBONES, ROLLOUT_ENVIRONMENT, TRAINING_ENVIRONMENT, chosen
+from tiicee.clinical.plan import Departed
 from tiicee.clinical.rollout import roll
 from tiicee.clinical.train import Paused, fit, hooks, inspect_data, visits
 from tiicee.pipeline.stages import StageInterrupted, register
 
 MAPPING = "lab_test_mapping.csv"
+PRIVATE = ("sequence_sha256", "visits_sha256")  # digests over admission identifiers stay in the stage
 
 
 def cut(data_dir, out, train, val) -> None:
@@ -63,11 +79,31 @@ def gpu_memory() -> dict:
 def fault(error):
     """The outcome name of a fault the bench reports as its result; None for anything else."""
     text = str(error)
+    if isinstance(error, Departed):
+        return "departed_from_plan"
     if text.startswith("Policy-to-vLLM weight transfer failed") or text.startswith("Adapter merge left"):
         return "weight_sync_failed"  # replication/gpu.py, _move_model_to_vllm and _load_merged_adapter
     if type(error).__name__ == "OutOfMemoryError":
         return "out_of_memory"
     return None
+
+
+def trained(backbone, seed, data, directory, on_step, saved=lambda step: None, reference=False) -> dict:
+    """One part of a bench training, as the record the bench keeps of it. Paused passes through."""
+    for name, value in TRAINING_ENVIRONMENT.items():
+        if value is None:
+            os.environ.pop(name, None)
+    try:
+        _, _, schedule = fit(backbone, seed, data, directory, on_step, saved, reference)
+    except RuntimeError as error:
+        if fault(error) is None:
+            raise
+        return {"outcome": fault(error), **gpu_memory()}
+    counts = sorted(Counter(schedule.sequence).items())
+    return {"outcome": "ok", "optimizer_steps": len(schedule.sequence), "follows_plan": True,
+            **visits(schedule.sequence, inspect_data(data)["trained_ids"], schedule.plan["epochs"]), **gpu_memory(),
+            "sequence_sha256": sha256(json.dumps(schedule.sequence).encode()),
+            "visits_sha256": sha256(json.dumps(counts).encode())}
 
 
 def adherence(results, facts) -> dict:
@@ -116,33 +152,38 @@ def run(ctx):
     parser.add_argument("--train-admissions", type=int, default=110)
     parser.add_argument("--val-admissions", type=int, default=12)
     parser.add_argument("--pause-at", type=int, default=150)
+    parser.add_argument("--no-reference", action="store_true")
     options = parser.parse_args(ctx.args)
     backbone, seed = chosen(ctx, options.backbone), ctx.manifest["seeds"]["training"]
     data, small, model = bound(ctx, "data"), ctx.dir / "data", ctx.out_dir / "model"
     inspect_data(data)
     cut(data, small, options.train_admissions, options.val_admissions)
-
     state = ctx.load_checkpoint() or {}
+
+    if not options.no_reference and "reference" not in state:
+        def watched(step, total):  # the reference reports progress and is never asked to stop
+            ctx.progress(int(step), int(total), "step")
+            return False
+
+        shutil.rmtree(ctx.dir / "reference", ignore_errors=True)  # uninterrupted: a killed attempt is not resumed
+        remember(ctx, reference=trained(backbone, seed, small, ctx.dir / "reference", watched, reference=True))
+        shutil.rmtree(ctx.dir / "reference", ignore_errors=True)  # only its record is kept
+        raise StageInterrupted()
+
     training, paused_at = state.get("training"), state.get("paused_at", [])
     if training is None:
         try:
-            cfg, _, steps, sequence = fit(backbone, seed, small, model, *hooks(ctx, options.pause_at))
-            trained_ids, epochs = inspect_data(small)["trained_ids"], int(cfg.training.num_train_epochs)
-            training = {"outcome": "ok", "optimizer_steps": steps, "paused_at": paused_at, **gpu_memory(),
-                        **visits(sequence, steps, trained_ids, epochs)}
+            training = {**trained(backbone, seed, small, model, *hooks(ctx, options.pause_at)), "paused_at": paused_at}
         except Paused as paused:
             remember(ctx, paused_at=paused_at + [paused.step])
             raise StageInterrupted() from None
-        except RuntimeError as error:
-            if fault(error) is None:
-                raise
-            training = {"outcome": fault(error), "paused_at": paused_at, **gpu_memory()}
         remember(ctx, training=training)
         if training["outcome"] == "ok":
             raise StageInterrupted()  # the evaluation engine needs a process of its own
 
     evaluation = None
     if training["outcome"] == "ok":
+        os.environ.update(ROLLOUT_ENVIRONMENT)
         try:
             rolled = roll(ctx, backbone, seed, small / "val.csv", small / MAPPING, model / "adapter",
                           small / "train.csv")
@@ -151,7 +192,20 @@ def run(ctx):
             if fault(error) is None:
                 raise
             evaluation = {"outcome": fault(error)}
+
+    reference = state.get("reference")
+
+    def same(key):
+        if reference is None:
+            return None
+        return reference["outcome"] == training["outcome"] == "ok" and reference[key] == training[key]
+
+    def public(record):
+        return None if record is None else {key: value for key, value in record.items() if key not in PRIVATE}
+
     report = {"backbone": backbone.key, "seed": seed, "train_admissions": options.train_admissions,
-              "val_admissions": options.val_admissions, "training": training, "evaluation": evaluation}
+              "val_admissions": options.val_admissions, "reference": public(reference), "training": public(training),
+              "sequences_identical": same("sequence_sha256"), "visits_identical": same("visits_sha256"),
+              "evaluation": evaluation}
     (ctx.out_dir / "bench.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     ctx.approve(ctx.stage_id + ".json", {"stage": ctx.stage_id, **report})

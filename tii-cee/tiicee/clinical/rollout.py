@@ -4,7 +4,8 @@ launch check 7.4a).
 Stage: clinical_rollout --backbone nemotron|granite
 Manifest: roles "split" (the split file to roll out on; never test.csv), "lab_test_mapping",
 "adapter" (the policy's adapter directory), "train_csv" (the file the policy was trained on) and
-seed "policy" (the policy's training seed).
+seed "policy" (the policy's training seed). Job environment: tim's evaluation setting, verified at
+start (backbone.ROLLOUT_ENVIRONMENT).
 
 The work is replication.gpu.evaluate, unchanged: its engine, adapter merge and greedy sampling.
 One attribute of that module is replaced while it runs, gpu._evaluate_with_model, as tim does
@@ -27,18 +28,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 from unittest.mock import patch
 
 from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
-from tiicee.clinical.backbone import (ALLOCATOR, BACKBONES, chosen, compose, recipe_record, require_frozen_code,
-                                       runtime, tokenizer_facts)
+from tiicee.clinical.backbone import (BACKBONES, ROLLOUT_ENVIRONMENT, chosen, compose, recipe_record,
+                                       require_environment, require_frozen_code, runtime, tokenizer_facts)
 from tiicee.clinical.v1 import v1_rows
 from tiicee.pipeline.stages import StageInterrupted, register
 from tiicee.pipeline.util import tree_digest
 
-CUBLAS = ("CUBLAS_WORKSPACE_CONFIG", ":4096:8")  # cdm-extension/daniel-escalante/DECISIONS.md, every GPU job
 SPLIT = "val"  # the name gpu.evaluate knows the rolled-out file by
 
 
@@ -142,6 +141,7 @@ def evaluator(completed, backbone, seed):
 
 def roll(ctx, backbone, seed, split, mapping, adapter, trained_on) -> dict:
     """Roll the policy out on every admission of `split` not yet complete, then write the outputs."""
+    require_environment(ROLLOUT_ENVIRONMENT)
     if Path(split).name == "test.csv":
         raise ValueError("the test split is never rolled out here")
     data = Path(split).read_bytes()
@@ -154,9 +154,6 @@ def roll(ctx, backbone, seed, split, mapping, adapter, trained_on) -> dict:
         raise ValueError("the policy was trained on an admission of this split")
 
     if not all(ctx.is_done(a.fingerprint) for a in members):
-        if os.environ.setdefault(*CUBLAS) != CUBLAS[1]:
-            raise RuntimeError("CUBLAS_WORKSPACE_CONFIG differs from the project's setting")
-        os.environ.setdefault(*ALLOCATOR)
         use_prior_studies()
         from replication import gpu
         from replication.config import stream_seed

@@ -25,9 +25,12 @@ from unittest.mock import patch
 from tiicee.clinical import CONFIGS, REPLICATION, ROOT, TIM, bound, sha256, use_prior_studies
 
 ARM = "primary"  # the recipe of EXPERIMENT_CARDS/E8.md; no other arm is trained here
-# The default the replication's and tim's launchers export for every GPU stage (replication
-# scripts/stage.sh, tim scripts/gpu.slurm). The pipeline's job script does not, so GPU stages set it.
-ALLOCATOR = ("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+# The job environment each kind of stage runs in (RESEARCH_LEDGER.md, D-CLIN item 6); None means
+# the variable must be absent. Training runs as the replication's launcher ran the primary policy's
+# (replication scripts/stage.sh: the allocator option, no cuBLAS setting); rollouts run as tim ran
+# every evaluation (tim scripts/gpu.slurm, DECISIONS.md "Guard mechanics").
+TRAINING_ENVIRONMENT = {"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "CUBLAS_WORKSPACE_CONFIG": None}
+ROLLOUT_ENVIRONMENT = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,13 @@ def runtime(backbone, cfg):
     with patch.object(shim, "APPROVED_MODEL", backbone.model), patch.object(shim, "SYSTEM_MESSAGE", system), \
             patch.object(PreTrainedTokenizerBase, "apply_chat_template", apply_chat_template):
         yield
+
+
+def require_environment(required) -> None:
+    """Refuse to run in a job environment other than the one decided for this kind of stage."""
+    wrong = sorted(name for name, value in required.items() if os.environ.get(name) != value)
+    if wrong:
+        raise RuntimeError("the job environment is not this stage's: " + ", ".join(wrong))
 
 
 def chosen(ctx, key):

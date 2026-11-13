@@ -15,6 +15,8 @@ Stages (tiicee.pipeline.stages registry; list these modules under "stage_modules
 
 A stage takes every input file or directory from a role its manifest binds, so what it consumes
 is what the pipeline hashed before the stage began (SPEC_RESEARCH_ADVANCEMENT.md section 8.3).
+GPU stages verify the job environment decided for their kind and refuse any other (backbone.py);
+a training follows a plan of admissions fixed before its first step (plan.py).
 """
 from __future__ import annotations
 
