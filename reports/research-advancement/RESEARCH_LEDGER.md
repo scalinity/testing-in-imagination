@@ -126,3 +126,40 @@ exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this 
 | Stage | Attempt | Job ID | Account | State | Exit | Elapsed | GPU-hours |
 |---|---|---|---|---|---|---|---|
 | (none yet) | | | | | | | |
+
+## 6. Recorded design decisions
+
+### D-TWIN, November 13, 2026: the counterfactual twin (tii-cee/tiicee/twin)
+
+Built over a byte-exact snapshot of Edwin Salcedo's synthetic study (df467ea; snapshot digest
+sha256:4d8ca818fd23b88624b9bd3eba53ec21d61f2af45d05f4fa1568f3386589ac6a). Conformance: the exact
+true_information reproduces all twelve published info_gain_nats of results/synthetic/sanity.json to
+1e-12; the parameters equal cee_check.py's (largest difference 1.1e-16). 154 tests; 41 of 41
+injected faults caught in a mutation check.
+
+1. W1, the legacy count model, has no evidence identity (registry: identity is W2's property); the
+   interface docstring now says so.
+2. "No phenotype correlation": each test reads its own phenotype draw, so single-test likelihoods
+   equal the base variant's and tests are independent given the class (setting p_atypical = 0 would
+   also change the marginals). The independence reader then equals R0 exactly.
+3. Informative missingness (held out): availability of item i in class y is
+   a_i + min(a_i, 1 − a_i) × (hit[i, y] − prior-weighted mean hit), marginal availability
+   unchanged; refused unless allow_held_out=True.
+4. Duplicated panel: the liver function panel repeated as a second test of the same item and cost.
+   Stronger correlation: p_atypical 0.20, the sandbox's stress value.
+5. The reduced twin keeps the study's cost normalization ($10,190 for twelve tests), so its six
+   costs sum to 0.336 of the normalized scale.
+6. Budget is the number of requests, unavailable ones included; each test once; commit forced at the
+   budget; step limit as in the study (14 actions).
+7. R0 reading an imagined outcome the true model rules out returns its belief unchanged (needed for
+   R0 with W1 on the duplicated panel); an impossible real history raises.
+8. R4 drift applies at every read, UNAVAILABLE included, so the UNAVAILABLE probe detects drift and
+   not scale error.
+9. Controlled errors keep P(UNAVAILABLE) at its true value; the matched pair is built by bisection
+   to equal KL from the truth (0.020000 for both), "ignored" meaning the reader's imagined mean is
+   unchanged and "responsive" its top response axis.
+10. W2 is fitted by EM on a latent phenotype model with the twin's structure, all numbers unknown,
+    from the fitting stream; deterministic given (model, seed, n_train, smoothing), which the
+    manifest records with the snapshot digest and the code commit.
+Reference: Bayes-optimal value on the reduced base twin at lambda 1 rises from 0.3988 with no test to
+0.6819 with six; 0.8224 at lambda 0. These are VERIFIED_CODE reference values, not results.

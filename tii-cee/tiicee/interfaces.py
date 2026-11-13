@@ -41,7 +41,12 @@ class Predictive:
 
 
 class WorldModel(Protocol):
-    """P_hat(o | h, a). Enforces evidence identity: never contradicts an identical measurement in h."""
+    """P_hat(o | h, a).
+
+    W2 and W3 enforce evidence identity (section 5.9): they never contradict an identical
+    measurement already in h, so re-exposure gets a point-mass predictive. W1, the legacy
+    class-conditional count model, does not, and is kept that way as a registered comparator.
+    """
 
     def outcomes(self, history: Any, test: Hashable, k: Optional[int], rng: Optional[np.random.Generator]) -> Predictive:
         """k=None means exact enumeration; otherwise k draws from rng."""
