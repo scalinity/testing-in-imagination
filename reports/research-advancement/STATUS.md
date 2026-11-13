@@ -1,17 +1,33 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 3:20 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 5:00 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
-- Milestone: M0 IN PROGRESS. M1 to M5 NOT STARTED.
-- Experiments: all PLANNED except E11, BLOCKED (BLOCKED-002). No job has been submitted.
+- Milestone: M0 IN PROGRESS. M1 IN PROGRESS. M2 IN PROGRESS. M3 to M5 NOT STARTED.
+- M0: gate G0 met except the live part of launch check 7.4c (GATE_DECISIONS/G0.md). The watcher
+  was installed on HiPerGator at 4:42 AM with the three-stage no-op graph from code export 462600e;
+  its first cycle (4:46 AM, compute node) passed the authorization check, called sacct and squeue,
+  and submitted a stage through sbatch, so scrontab jobs can call the scheduler. Completion, the
+  gate record and the watcher's self-disable are expected by about 5:30 AM.
+- M1: the twin repairs (REVIEW-002, -006, -011) are verified (GATE_DECISIONS/G1-twin.md); the
+  section 8.3 preflight and manifests are built (tii-cee/tiicee/pipeline); the training-track
+  adapters, the resume guarantee (D-CLIN-RESUME) and gate G_resume are committed. REVIEW-001 (for
+  E3) and REVIEW-008 (for E5) are not started.
+- M2: E0 COMPLETED, PASS (runs 1 and 2). E1 runners are being pre-registered; no E1 result exists.
+- Experiments: E0 COMPLETED; E11 BLOCKED (BLOCKED-002); all others PLANNED. Only the no-op test
+  stages have been submitted.
 - Scientific outcome: NOT EVALUATED for every experiment.
-- Open BLOCKED items: BLOCKED-002 (no independent cohort for E11; only E11 waits). BLOCKED-001 is
-  closed.
-- Next executable actions: finish the M0 documents and launch checks; build and test the CEE
-  library (E0), the twin, and the pipeline; install the watcher after a no-op graph passes end to
-  end; then E0, the M1 repairs, and the training track.
+- Open BLOCKED items: BLOCKED-002 (no independent cohort for E11). BLOCKED-001 is closed.
+- Interruption: from about 4:47 AM the AI worker sessions fail with "Please run /login · API Error:
+  403 Attention Required! | Cloudflare"; the lead session is unaffected. The E1 pre-registration
+  and the pipeline's flake confirmation wait on it. The HiPerGator watcher needs no AI calls and
+  is unaffected.
+- Next executable actions: confirm the no-op graph's completion and close G0; deploy the current
+  commit and install the training-track graph (tii-cee/tiicee/clinical/graph_training_m1.json):
+  data copy, folds, the Nemotron and Granite benches, the primary policy's prompt-logged validation
+  rollout and launch check 7.4a's acceptance; E8 to E10 trainings behind gate G_resume; E1 after
+  its pre-registration is committed.
 
 ## 2. Authorization
 
