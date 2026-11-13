@@ -23,7 +23,7 @@ never regenerated outside E6.
 
 DATA_USE_CHECK.md: F1 passes, F2 passes. Pima is excluded from E7 for an unverifiable license.
 
-## c. UF Research Computing policy: PARTLY ANSWERED, finished by the live no-op cycle
+## c. UF Research Computing policy: ANSWERED (live no-op graph passed 5:45 AM EST; GATE_DECISIONS/G0-addendum-7.4c.md)
 
 Re-read November 13, 2026 (saved copies under sources/):
 - scrontab page (docs.rc.ufl.edu/scheduler/scrontab): #SCRON lines act as #SBATCH; jobs must request
