@@ -57,6 +57,8 @@ pub struct BlockedItem {
     pub title: String,
     pub opened: String,
     pub open: bool,
+    /// An accepted gap: recorded, waits on nobody, never shown as a request.
+    pub accepted: bool,
     pub status: String,
     pub waits: String,
     pub why: String,
@@ -204,6 +206,8 @@ fn bullets(lines: &[&str]) -> Vec<String> {
 pub fn parse_blocked(text: &str) -> Vec<BlockedItem> {
     let lines: Vec<&str> = text.lines().collect();
     let starts: Vec<usize> = lines.iter().enumerate().filter(|(_, l)| l.starts_with("## BLOCKED-")).map(|(i, _)| i).collect();
+    // Items under a top-level "# Accepted gaps" heading are accepted gaps, not open requests.
+    let accepted_from = lines.iter().position(|l| l.trim().eq_ignore_ascii_case("# Accepted gaps"));
     let mut items = Vec::new();
     for (n, &start) in starts.iter().enumerate() {
         let end = starts.get(n + 1).copied().unwrap_or(lines.len());
@@ -213,7 +217,8 @@ pub fn parse_blocked(text: &str) -> Vec<BlockedItem> {
             Some(i) => (rest[..i].trim(), rest[i + 8..].trim_end_matches(')').trim()),
             None => (rest.trim(), ""),
         };
-        let mut item = BlockedItem { id: id.trim().to_string(), title: title.to_string(), opened: opened.to_string(), open: true, ..Default::default() };
+        let in_accepted = accepted_from.map_or(false, |a| start > a);
+        let mut item = BlockedItem { id: id.trim().to_string(), title: title.to_string(), opened: opened.to_string(), open: !in_accepted, accepted: in_accepted, ..Default::default() };
         for bullet in bullets(&lines[start + 1..end]) {
             let (key, value) = bullet.split_once(':').unwrap_or(("", &bullet));
             let value = value.trim().to_string();
@@ -223,7 +228,9 @@ pub fn parse_blocked(text: &str) -> Vec<BlockedItem> {
                 k if k.starts_with("Request") => item.request = value,
                 "Meanwhile" => item.meanwhile = value,
                 "Status" => {
-                    item.open = !value.to_ascii_uppercase().starts_with("CLOSED");
+                    let upper = value.to_ascii_uppercase();
+                    item.accepted = item.accepted || upper.starts_with("ACCEPTED");
+                    item.open = !(upper.starts_with("CLOSED") || item.accepted);
                     item.status = value;
                 }
                 _ => {}
@@ -509,6 +516,19 @@ mod tests {
         assert!(items[0].request.contains("I authorize it."));
         assert!(items[1].open);
         assert_eq!(items[1].waits, "E11 only.");
+    }
+
+    #[test]
+    fn accepted_gaps_are_neither_open_nor_requests() {
+        let text = "# BLOCKED\n\n## BLOCKED-003: something open (opened November 13, 2026)\n\n- Status: OPEN.\n\n# Accepted gaps\n\nLimits.\n\n## BLOCKED-002: no cohort for E11 (opened November 13, 2026)\n\n- What waits: E11 only.\n- Status: ACCEPTED GAP, closed November 13, 2026. Accepted by Daniel.\n";
+        let items = parse_blocked(text);
+        assert_eq!(items.len(), 2);
+        assert!(items[0].open && !items[0].accepted);
+        assert!(!items[1].open && items[1].accepted);
+        assert!(items[1].status.starts_with("ACCEPTED GAP"));
+        // An accepted status alone, outside the section, is enough.
+        let alone = parse_blocked("## BLOCKED-009: x (opened today)\n\n- Status: ACCEPTED GAP, closed today.\n");
+        assert!(!alone[0].open && alone[0].accepted);
     }
 
     #[test]

@@ -23,6 +23,11 @@ resolution here with the date; it is never deleted.
   session; both statements are recorded verbatim in SIGNATURE.md and bound to the addendum's
   SHA-256. GPU work may use 16 GPUs at once, 8 on each of `cai6734` and `cai5724`.
 
+# Accepted gaps
+
+Limits Daniel has accepted for the study. Nothing waits on them and they are not requests; each is
+stated in the paper as a limitation.
+
 ## BLOCKED-002: no independent credentialed cohort for E11 (opened November 13, 2026)
 
 - What waits: E11 only (audit and replay on an independent clinical cohort, specification 12).
@@ -36,4 +41,7 @@ resolution here with the date; it is never deleted.
 - Meanwhile: E7 (four public complete-record datasets) and the E2 reader panel are the study's
   evidence beyond its own agent and environment, as specification 12 states; they are breadth, not
   clinical validation.
-- Status: OPEN.
+- Status: ACCEPTED GAP, closed November 13, 2026. Accepted by Daniel on November 13, 2026: he holds
+  no access to another credentialed diagnostic cohort and will not acquire one. E11 does not run;
+  the paper states the missing independent cohort as a limitation, as specification 12 describes.
+  Nothing waits on this item.

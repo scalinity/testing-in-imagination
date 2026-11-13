@@ -147,6 +147,8 @@ export interface BlockedItem {
   title: string;
   opened: string;
   open: boolean;
+  /** An accepted gap: recorded, waits on nobody, never shown as a request. */
+  accepted: boolean;
   status: string;
   waits: string;
   why: string;

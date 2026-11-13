@@ -16,6 +16,7 @@ const LOOK: Record<string, Look> = {
   BLOCKED: "wait",
   INTERRUPTED: "retry",
   "SKIPPED BY GATE": "skip",
+  SKIPPED: "skip",
   "NOT STARTED": "planned",
   "IN PROGRESS": "running",
 };

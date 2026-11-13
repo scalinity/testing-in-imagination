@@ -4,7 +4,7 @@
   // each column carries day ticks so that the different scales are visible.
   import Age from "../lib/Age.svelte";
   import Glyph from "../lib/Glyph.svelte";
-  import { budgets, experimentStatus, gateMet, gateState, stageCounts, belongsTo } from "../lib/derive";
+  import { acceptedGaps, budgets, experimentStatus, gateMet, gateState, stageCounts, belongsTo } from "../lib/derive";
   import { clusterSource, fileSource } from "../lib/sources";
   import { glyphFor, look, meaning, word, type Look } from "../lib/status";
   import { store } from "../lib/store.svelte";
@@ -216,6 +216,7 @@
   const fits = (text: string, px: number) => text.length * 5.7 <= px;
   const E1_PARTS = ["E1-A", "E1-B", "E1-C", "E1-D"];
   const legend = ["PLANNED", "QUEUED", "RUNNING", "COMPLETED", "BLOCKED", "FAILED", "SKIPPED BY GATE"];
+  const gaps = $derived(acceptedGaps(docs));
 </script>
 
 <section class="board" class:compact={store.compact}>
@@ -227,6 +228,18 @@
       {/each}
       <li><svg width="12" height="12" viewBox="-7 -7 14 14"><path class="gate-swatch" d="M0,-5.5L5.5,0L0,5.5L-5.5,0Z" /></svg>{store.compact ? "gate" : "gate, filled once decided"}</li>
     </ul>
+    {#if gaps.length}
+      <span
+        class="gaps"
+        tabindex="0"
+        use:tip={() => ({
+          title: gaps.length === 1 ? "Accepted gap" : `${gaps.length} accepted gaps`,
+          body: "Limits Daniel accepted for the study. Nothing waits on them; each is stated in the paper as a limitation.",
+          rows: gaps.map((g): [string, string] => [g.id, `${g.title}. ${g.status}`]),
+          source: fileSource(docs?.blocked_file, "Accepted gaps"),
+        })}>{gaps.length === 1 ? "1 accepted gap" : `${gaps.length} accepted gaps`}</span
+      >
+    {/if}
     {#if missingRows.length}
       <span
         class="warn"
@@ -428,6 +441,14 @@
   .warn {
     color: var(--wait-text);
     font-size: var(--fs-1);
+  }
+  .gaps {
+    color: var(--ink-3);
+    font-size: var(--fs-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
   .canvas {
     min-width: 0;

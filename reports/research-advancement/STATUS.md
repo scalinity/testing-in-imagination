@@ -14,10 +14,11 @@ Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
 - M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
   (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
   charts get projection only, stateful track). G2a waits for E1-C.
-- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E11 BLOCKED (BLOCKED-002); all others
-  PLANNED. Only the no-op test stages have been submitted to the cluster.
+- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E11 SKIPPED (accepted gap, not run); all
+  others PLANNED. Only the no-op test stages have been submitted to the cluster.
 - Scientific outcome: NOT EVALUATED for every experiment.
-- Open BLOCKED items: BLOCKED-002 (no independent cohort for E11). BLOCKED-001 is closed.
+- Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
+  (accepted by Daniel November 13, 2026). BLOCKED-001 is closed.
 - Interruption: from about 4:47 AM the AI worker sessions fail with "Please run /login · API Error:
   403 Attention Required! | Cloudflare"; the lead session is unaffected. The E1 pre-registration
   and the pipeline's flake confirmation wait on it. The HiPerGator watcher needs no AI calls and
@@ -81,7 +82,7 @@ Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
 | D6 | E6 is the one additional, disclosed use of the 240 test admissions | Confirmed (stricter) |
 | D7 | Reader panel of nine ungated US-origin models; second backbone granite-3.3-8b-instruct | Confirmed |
 | D8 | Public datasets downloadable from official sources | Confirmed; CKD, HCV, DDXPlus are CC BY 4.0; Pima excluded, license unverifiable (E7 amendment A1) |
-| D9 | No other credentialed cohort; E11 blocked | Confirmed; BLOCKED-002 |
+| D9 | No other credentialed cohort; E11 blocked | Confirmed; accepted as a gap by Daniel November 13, 2026: E11 skipped, not run (BLOCKED-002) |
 | D10 | No push | Confirmed |
 | D11 | PhysioNet Credentialed Health Data Use Agreement 1.5.0 | Confirmed; DATA_USE_CHECK.md: F1 and F2 pass |
 | D12 | ICML 2027 target | The 2027 call is published (7.4g); its rules replace the assumed 2026 ones |

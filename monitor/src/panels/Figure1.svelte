@@ -42,13 +42,13 @@
   const markers = $derived(((regime?.markers ?? []) as any[]).filter((m) => (num(m.tau_b) ?? 0) > 0 && num(m.kl_inc) != null));
   const harmful = $derived(((regime?.harmful_region ?? []) as any[]).filter((p) => (num(p.tau_b) ?? 0) > 0 && num(p.kl_inc) != null));
   const ax = $derived.by(() => {
-    const taus = [...markers.flatMap((m) => [m.tau_b, num(m.tau_b_lo) ?? m.tau_b, num(m.tau_b_hi) ?? m.tau_b]), ...harmful.map((p) => p.tau_b), 1];
+    const taus = [...markers.flatMap((m) => [m.tau_b, num(m.tau_b_lo) ?? m.tau_b, num(m.tau_b_hi) ?? m.tau_b]), 1];
     return scaleLog()
       .domain([Math.min(Math.min(...taus) / 1.25, 0.5), Math.max(Math.max(...taus) * 1.25, 2)])
       .range([A.l, AW - A.r]);
   });
   const ay = $derived.by(() => {
-    const ys = [...markers.flatMap((m) => [m.kl_inc, num(m.kl_inc_hi) ?? m.kl_inc]), ...harmful.map((p) => p.kl_inc), 0.01];
+    const ys = [...markers.flatMap((m) => [m.kl_inc, num(m.kl_inc_hi) ?? m.kl_inc]), 0.01];
     return scaleLinear()
       .domain([0, Math.max(...ys) * 1.12])
       .range([AH - A.b, A.t])
@@ -179,11 +179,14 @@
         <text class="letter" x="2" y="12">A</text>
         <text class="pname" x="16" y="12">The regime map</text>
         {#if harmful.length > 2}
-          <polygon
-            class="harmful"
-            points={harmful.map((p) => `${ax(p.tau_b)},${ay(p.kl_inc)}`).join(" ")}
-            use:tip={{ title: "Where projection alone is harmful", body: "From E1's exact twin results: readers in this region get worse when only the projection is applied, because their problem is the size of their reactions, not drift.", terms: terms("projection", "ceeScale"), source: fileSource(file("regime_map.json")) }}
-          />
+          <text
+            class="withdrawn"
+            x={AW - A.r - 2}
+            y={A.t + 10}
+            text-anchor="end"
+            tabindex="0"
+            use:tip={{ title: "Harmful region withdrawn; scale axis under revision", body: "An independent re-derivation of E1 showed the shaded polygon enclosed readers that projection does not harm, so it is not drawn. It also showed that tau_B averaged along a trajectory puts over- and under-reactive readers on the wrong side of 1; the axis will use tau_B at the first decision point once that is validated in the twin. The markers here still use the averaged value.", terms: terms("projection", "ceeScale"), source: "RESEARCH_LEDGER.md, D-REGIME" }}>region withdrawn</text
+          >
         {/if}
         {#each ay.ticks(4) as t}
           <line class="grid" x1={A.l} x2={AW - A.r} y1={ay(t)} y2={ay(t)} />
@@ -396,6 +399,10 @@
   .diagonal {
     stroke: var(--ink-3);
     stroke-dasharray: 3 3;
+  }
+  .withdrawn {
+    font-size: 9.5px;
+    fill: var(--ink-3);
   }
   .harmful {
     fill: color-mix(in srgb, var(--ink-3) 22%, transparent);

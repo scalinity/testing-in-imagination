@@ -1,9 +1,9 @@
 // Turns the raw sources into what the panels draw. Pure functions: no state, no fetching.
 
-import type { ClusterStatus, Docs, GateRecord, Remote, RunlogLine, StageStatus } from "./types";
+import type { BlockedItem, ClusterStatus, Docs, GateRecord, Remote, RunlogLine, StageStatus } from "./types";
 import { parseTime } from "./time";
 
-const KNOWN_STATUS = ["SKIPPED BY GATE", "NOT STARTED", "IN PROGRESS", "COMPLETED", "COMPLETE", "PLANNED", "QUEUED", "RUNNING", "INTERRUPTED", "FAILED", "REFUSED", "BLOCKED"];
+const KNOWN_STATUS = ["SKIPPED BY GATE", "SKIPPED", "NOT STARTED", "IN PROGRESS", "COMPLETED", "COMPLETE", "PLANNED", "QUEUED", "RUNNING", "INTERRUPTED", "FAILED", "REFUSED", "BLOCKED"];
 
 /** Splits "COMPLETED (VERIFIED_CODE, PASS)" into the status word and what follows it. */
 export function canonical(raw: string | undefined): { status: string; rest: string } {
@@ -56,7 +56,7 @@ export function experimentStatus(id: string, remote: Remote | null, docs: Docs |
 
 /** One status for several parts: anything live or wrong wins over planned and done. */
 export function combine(statuses: string[]): string {
-  const order = ["FAILED", "REFUSED", "BLOCKED", "RUNNING", "INTERRUPTED", "QUEUED", "PLANNED", "SKIPPED BY GATE", "COMPLETED"];
+  const order = ["FAILED", "REFUSED", "BLOCKED", "RUNNING", "INTERRUPTED", "QUEUED", "PLANNED", "SKIPPED BY GATE", "SKIPPED", "COMPLETED"];
   const present = statuses.filter(Boolean);
   if (!present.length) return "UNKNOWN";
   if (present.every((s) => s === present[0])) return present[0];
@@ -381,6 +381,11 @@ export function openBlocked(remote: Remote | null, docs: Docs | null): OpenBlock
     }
   }
   return [...out.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** Accepted gaps from BLOCKED.md: recorded limits that wait on nobody. */
+export function acceptedGaps(docs: Docs | null): BlockedItem[] {
+  return (docs?.blocked ?? []).filter((b) => b.accepted);
 }
 
 /** Stage counts for one experiment from status.json: done, live, total. */

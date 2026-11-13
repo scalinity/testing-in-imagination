@@ -116,7 +116,7 @@ df467ea, all unchanged since the review.
 | E8 | PLANNED | EXPERIMENT_CARDS/E8.md | Waits on the preflight of spec 8.3 |
 | E9 | PLANNED | EXPERIMENT_CARDS/E9.md | Waits on the preflight of spec 8.3 |
 | E10 | PLANNED | EXPERIMENT_CARDS/E10.md | Waits on the preflight of spec 8.3 |
-| E11 | BLOCKED | None | No other credentialed cohort is listed (BLOCKED-002) |
+| E11 | SKIPPED (accepted gap: not run, decided by Daniel November 13, 2026) | None | No other credentialed cohort exists or will be acquired; the paper states the missing independent cohort as a limitation (BLOCKED.md, Accepted gaps, BLOCKED-002). Nothing waits on it |
 
 ## 5. Job ledger
 

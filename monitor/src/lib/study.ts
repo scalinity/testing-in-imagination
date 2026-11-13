@@ -304,6 +304,7 @@ export const STATUS_WORD: Record<string, string> = {
   BLOCKED: "blocked",
   INTERRUPTED: "interrupted",
   "SKIPPED BY GATE": "skipped by gate",
+  SKIPPED: "skipped",
 };
 
 export const STATUS_MEANING: Record<string, string> = {
@@ -316,4 +317,5 @@ export const STATUS_MEANING: Record<string, string> = {
   BLOCKED: "Waits on something only Daniel can resolve.",
   INTERRUPTED: "Stopped part-way; it resumes from its checkpoint.",
   "SKIPPED BY GATE": "A gate's pre-registered path skipped it. Reported with the record that skipped it (spec 14.2).",
+  SKIPPED: "Not run, by a recorded decision; nothing waits on it.",
 };
