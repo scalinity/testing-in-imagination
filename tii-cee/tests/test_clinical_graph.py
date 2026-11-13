@@ -1,4 +1,4 @@
-"""The training track's graphs (graph_training_m1.json, m2, then m3), checked against
+"""The training track's graphs (graph_training_m1.json, m2, m3, then m4), checked against
 the pipeline's own loader and against what each clinical stage reads."""
 import importlib
 import json
@@ -14,11 +14,13 @@ from tiicee.pipeline.paths import Paths
 FRAGMENT = ROOT / "tii-cee" / "tiicee" / "clinical" / "graph_training_m1.json"
 SECOND = FRAGMENT.with_name("graph_training_m2.json")
 THIRD = FRAGMENT.with_name("graph_training_m3.json")
+FOURTH = FRAGMENT.with_name("graph_training_m4.json")
 ROLES = {  # the roles and seeds each stage takes from its manifest
     "clinical_data": (set(), set()), "clinical_folds": (set(), set()),
     "clinical_bench": ({"data"}, {"training"}), "clinical_train": ({"data"}, {"training"}),
     "clinical_rollout": ({"split", "lab_test_mapping", "adapter", "train_csv"}, {"policy"}),
     "clinical_acceptance": ({"stored", "regenerated"}, set()),
+    "clinical_cohort_x": ({"folds"} | {f"{kind}_f{k}" for kind in ("policy", "rollout") for k in range(5)}, set()),
 }
 ENVIRONMENT = {"clinical_bench": backbone.TRAINING_ENVIRONMENT, "clinical_train": backbone.TRAINING_ENVIRONMENT,
                "clinical_rollout": backbone.ROLLOUT_ENVIRONMENT}
@@ -33,12 +35,12 @@ def graph():
     return load(FRAGMENT)
 
 
-@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD], ids=["m1", "m2", "m3"])
+@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD, FOURTH], ids=["m1", "m2", "m3", "m4"])
 def either(request):
     return load(request.param)
 
 
-@pytest.fixture(scope="module", params=[SECOND, THIRD], ids=["m2", "m3"])
+@pytest.fixture(scope="module", params=[SECOND, THIRD, FOURTH], ids=["m2", "m3", "m4"])
 def trained(request):
     """Each graph that holds trainings."""
     return load(request.param)
@@ -207,3 +209,24 @@ def test_e9_trains_granite_after_its_bench_and_rolls_out_as_e8_does():
         # E8's figures times 1.1: the Granite bench took 2.31 GPU-hours against 2.1 estimated at Nemotron's speed
         for stage, e8 in ((train, "e8-train-s270"), (rollout, "e8-rollout-s270")):
             assert stage["estimate_gpu_hours"] == round(graph.by_id[e8]["estimate_gpu_hours"] * 1.1, 1), stage["id"]
+
+
+# ---- graph_training_m4.json: E10's cohort-X integrity check ----
+
+
+def test_the_fourth_graph_keeps_the_third_unchanged_and_adds_the_cohort_x_check():
+    third, fourth = json.loads(THIRD.read_text()), json.loads(FOURTH.read_text())
+    assert fourth["stages"][:len(third["stages"])] == third["stages"] and fourth["gates"] == third["gates"]
+    assert [stage["id"] for stage in fourth["stages"][len(third["stages"]):]] == ["e10-cohort-x"]
+    assert fourth["stage_modules"] == third["stage_modules"] + ["tiicee.clinical.cohort_x"]
+
+
+def test_the_cohort_x_check_reads_every_fold_policy_and_rollout_after_they_end():
+    stage = load(FOURTH).by_id["e10-cohort-x"]
+    out = "$TII/private/stages/{}/out".format
+    assert stage["bind"] == {"folds": out("e10-folds"),
+                             **{f"policy_f{k}": out(f"e10-train-f{k}") for k in FOLDS},
+                             **{f"rollout_f{k}": out(f"e10-rollout-f{k}") for k in FOLDS}}
+    assert set(stage["depends_on"]) == {"e10-folds"} | {f"e10-{kind}-f{k}" for kind in ("train", "rollout") for k in FOLDS}
+    assert stage["resources"]["gpus"] == 0 and stage["estimate_gpu_hours"] == 0
+    assert (stage["experiment"], stage["allowance_key"]) == ("E10", "E10") and stage["gate"] is None

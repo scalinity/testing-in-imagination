@@ -1,0 +1,1189 @@
+{
+  "study": "TII-CEE-1",
+  "milestone": "M1",
+  "notes": [
+    "The training track's fourth graph: graph_training_m3.json's stages unchanged, and E10's cohort-X integrity check (e10-cohort-x) after the five fold trainings and rollouts. Installed as $TII/pipeline/graph.json (tiicee/pipeline/graph.py). The loader ignores the keys 'notes' and 'note'.",
+    "Gate G_resume (gates/resume_gate.py) reads the Nemotron bench's approved report; every training stage waits on it, and a rollout is skipped with its training.",
+    "E9's trainings follow the Granite bench (e9-bench-granite), whose approved report of November 13, 2026 read outcome ok with no recipe repair (RESEARCH_LEDGER.md).",
+    "Every Granite stage binds the backbone overlay as role backbone_overlay (tiicee/clinical/backbone.py, chosen), so the file naming the backbone, its revision and the fixed system message is hashed with the stage's inputs. E9 trains and rolls out on E8's data: same split files, same 240 validation admissions.",
+    "Every training binds its data directory: e8-data/out for E8 (train.csv, val.csv, lab_test_mapping.csv), a fold directory of e10-folds/out for E10 (also heldout.csv, which the training checks is disjoint and never trains on). No test.csv anywhere.",
+    "A part ends at the planned epoch boundary or at Slurm's warning, and the next part resumes (tiicee/clinical/train.py). GPU estimates follow EXPERIMENT_CARDS/E8.md and E10.md; resources follow graph_training_m1.json's bench and rollout stages.",
+    "Not here yet: the per-policy probe conformance of specification 10.1.",
+    "Training stages ask for 16 GB of host memory: every Nemotron bench, rollout and training job of November 13, 2026 peaked at 6.4 to 7.0 GB (sacct MaxRSS, sstat), and the class QOS's shared 250 GB was what held them. An out-of-memory exit is retried at 1.5 times the memory. The Granite bench's four jobs peaked at 7.1 to 7.7 GB. E9's Granite trainings ask for 14 GB, about 1.8 times that peak.",
+    "Training stages ask for 2 CPUs: each running E8 and E10 training averaged 1.0 CPU (sstat AveCPU against elapsed time, November 13, 2026, 5:20 PM EST), and the class QOS's shared 32 CPUs per account held the trainings that waited. Rollouts keep 4."
+  ],
+  "stage_modules": [
+    "tiicee.clinical.folds",
+    "tiicee.clinical.train",
+    "tiicee.clinical.rollout",
+    "tiicee.clinical.bench",
+    "tiicee.clinical.acceptance",
+    "tiicee.clinical.cohort_x"
+  ],
+  "stages": [
+    {
+      "id": "e8-data",
+      "note": "E8 and E9 data: train.csv, val.csv and lab_test_mapping.csv copied unchanged from $CDM_WORK_DIR/prepared/. test.csv is never opened.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_data"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-folds",
+      "note": "E10 folds: five fold directories over the 2,160 training-plus-validation admissions, seed 20261113 (fixed in tiicee/clinical/folds.py).",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_folds"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "bench-nemotron",
+      "note": "Resume mechanics on the real stack (D-CLIN-RESUME): one seed trained uninterrupted and in parts, then rolled out. Defaults: 60 training and 8 validation admissions, pause at step 90, with the reference. Five jobs.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_bench",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 40,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 2.4,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-bench-granite",
+      "note": "E9's bench of the second backbone. Defaults: 110 training and 12 validation admissions, pause at step 150, no reference. Four jobs. It waits for bench-nemotron so the resume mechanics are known first; that is an ordering, not a condition on its result.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_bench",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 40,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "bench-nemotron"
+      ],
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 2.1,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "p-rollout-val",
+      "note": "Launch check 7.4a, first half: the primary policy's unguarded validation rollout regenerated once with every prompt logged. Same checkpoint and seed as tim's val-a V0.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 1
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0.5,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "/blue/cai6734/daniel.escalante/private/cdm-work/mimic-v1.1-hpg-bw-7fcd9e5/models/parity/269/primary/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "launch-check-7-4a",
+      "note": "Launch check 7.4a, second half: the regenerated rollout is accepted only if its final answers match tim's stored val-a V0 outcomes on at least 99% of admissions. Counts only.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_acceptance"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [
+        "p-rollout-val"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "stored": "/blue/cai6734/daniel.escalante/private/tim-work/private/episodes/7fc5cda72158e08d_val-a_V0_primary_0b3edac732b9.jsonl",
+          "regenerated": "$TII/private/stages/p-rollout-val/out/rows.jsonl"
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-train-s270",
+      "note": "E8: the primary recipe at seed 270 on the 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 25.6 GPU-hours, E8's measured training.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 25.6,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 270
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-rollout-s270",
+      "note": "E8: seed 270's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.458 GPU-hours per 240 rollouts (EXPERIMENT_CARDS/E10.md).",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e8-train-s270"
+      ],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0.46,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e8-train-s270/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 270
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-train-s271",
+      "note": "E8: the primary recipe at seed 271 on the 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 25.6 GPU-hours, E8's measured training.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 25.6,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 271
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-rollout-s271",
+      "note": "E8: seed 271's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.458 GPU-hours per 240 rollouts (EXPERIMENT_CARDS/E10.md).",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e8-train-s271"
+      ],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0.46,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e8-train-s271/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 271
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-train-s272",
+      "note": "E8: the primary recipe at seed 272 on the 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 25.6 GPU-hours, E8's measured training.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 25.6,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 272
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-rollout-s272",
+      "note": "E8: seed 272's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.458 GPU-hours per 240 rollouts (EXPERIMENT_CARDS/E10.md).",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e8-train-s272"
+      ],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0.46,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e8-train-s272/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 272
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-train-s273",
+      "note": "E8: the primary recipe at seed 273 on the 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 25.6 GPU-hours, E8's measured training.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 25.6,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 273
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e8-rollout-s273",
+      "note": "E8: seed 273's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.458 GPU-hours per 240 rollouts (EXPERIMENT_CARDS/E10.md).",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e8-train-s273"
+      ],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0.46,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e8-train-s273/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 273
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-train-f0",
+      "note": "E10: fold policy 0, the primary recipe at seed 269 on the other four folds (about 1,555 trained, 173 monitored); fold 0 held out. 25.6 GPU-hours scaled by data volume.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e10-folds"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 20.7,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e10-folds/out/fold-0"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-rollout-f0",
+      "note": "E10: fold policy 0's unguarded rollout on its own held-out fold (432 admissions), every prompt logged, with V1. 0.458 GPU-hours per 240 rollouts.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f0"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0.82,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e10-folds/out/fold-0/heldout.csv",
+          "lab_test_mapping": "$TII/private/stages/e10-folds/out/fold-0/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e10-folds/out/fold-0/train.csv",
+          "adapter": "$TII/private/stages/e10-train-f0/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-train-f1",
+      "note": "E10: fold policy 1, the primary recipe at seed 269 on the other four folds (about 1,555 trained, 173 monitored); fold 1 held out. 25.6 GPU-hours scaled by data volume.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e10-folds"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 20.7,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e10-folds/out/fold-1"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-rollout-f1",
+      "note": "E10: fold policy 1's unguarded rollout on its own held-out fold (432 admissions), every prompt logged, with V1. 0.458 GPU-hours per 240 rollouts.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f1"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0.82,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e10-folds/out/fold-1/heldout.csv",
+          "lab_test_mapping": "$TII/private/stages/e10-folds/out/fold-1/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e10-folds/out/fold-1/train.csv",
+          "adapter": "$TII/private/stages/e10-train-f1/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-train-f2",
+      "note": "E10: fold policy 2, the primary recipe at seed 269 on the other four folds (about 1,555 trained, 173 monitored); fold 2 held out. 25.6 GPU-hours scaled by data volume.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e10-folds"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 20.7,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e10-folds/out/fold-2"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-rollout-f2",
+      "note": "E10: fold policy 2's unguarded rollout on its own held-out fold (432 admissions), every prompt logged, with V1. 0.458 GPU-hours per 240 rollouts.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f2"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0.82,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e10-folds/out/fold-2/heldout.csv",
+          "lab_test_mapping": "$TII/private/stages/e10-folds/out/fold-2/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e10-folds/out/fold-2/train.csv",
+          "adapter": "$TII/private/stages/e10-train-f2/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-train-f3",
+      "note": "E10: fold policy 3, the primary recipe at seed 269 on the other four folds (about 1,555 trained, 173 monitored); fold 3 held out. 25.6 GPU-hours scaled by data volume.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e10-folds"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 20.7,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e10-folds/out/fold-3"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-rollout-f3",
+      "note": "E10: fold policy 3's unguarded rollout on its own held-out fold (432 admissions), every prompt logged, with V1. 0.458 GPU-hours per 240 rollouts.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f3"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0.82,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e10-folds/out/fold-3/heldout.csv",
+          "lab_test_mapping": "$TII/private/stages/e10-folds/out/fold-3/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e10-folds/out/fold-3/train.csv",
+          "adapter": "$TII/private/stages/e10-train-f3/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-train-f4",
+      "note": "E10: fold policy 4, the primary recipe at seed 269 on the other four folds (about 1,555 trained, 173 monitored); fold 4 held out. 25.6 GPU-hours scaled by data volume.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 16,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e10-folds"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 20.7,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e10-folds/out/fold-4"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-rollout-f4",
+      "note": "E10: fold policy 4's unguarded rollout on its own held-out fold (432 admissions), every prompt logged, with V1. 0.458 GPU-hours per 240 rollouts.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f4"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0.82,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e10-folds/out/fold-4/heldout.csv",
+          "lab_test_mapping": "$TII/private/stages/e10-folds/out/fold-4/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e10-folds/out/fold-4/train.csv",
+          "adapter": "$TII/private/stages/e10-train-f4/out/model/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-train-s269",
+      "note": "E9: the primary recipe on Granite (the overlay bound) at seed 269 on E8's 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 28.2 GPU-hours: E8's measured 25.6 times 1.1, the Granite bench's 2.31 GPU-hours over the 2.1 estimated for it at Nemotron's speed.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 14,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-bench-granite"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 28.2,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-rollout-s269",
+      "note": "E9: seed 269's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.5 GPU-hours, E8's 0.46 times 1.1.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-train-s269"
+      ],
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 0.5,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e9-train-s269/out/model/adapter",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-train-s270",
+      "note": "E9: the primary recipe on Granite (the overlay bound) at seed 270 on E8's 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 28.2 GPU-hours: E8's measured 25.6 times 1.1, the Granite bench's 2.31 GPU-hours over the 2.1 estimated for it at Nemotron's speed.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 14,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-bench-granite"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 28.2,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "training": 270
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-rollout-s270",
+      "note": "E9: seed 270's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.5 GPU-hours, E8's 0.46 times 1.1.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-train-s270"
+      ],
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 0.5,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e9-train-s270/out/model/adapter",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "policy": 270
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-train-s271",
+      "note": "E9: the primary recipe on Granite (the overlay bound) at seed 271 on E8's 1,920 training admissions, 240 monitored; 3,840 optimizer steps in parts of at most 24 hours. 28.2 GPU-hours: E8's measured 25.6 times 1.1, the Granite bench's 2.31 GPU-hours over the 2.1 estimated for it at Nemotron's speed.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_train",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 2,
+        "mem_gb": 14,
+        "time_hours": 24
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-bench-granite"
+      ],
+      "gate": "G_resume",
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 28.2,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "training": 271
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-rollout-s271",
+      "note": "E9: seed 271's unguarded validation rollout (V0, every prompt logged) and its V1. 240 admissions; 0.5 GPU-hours, E8's 0.46 times 1.1.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "e9-train-s271"
+      ],
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 0.5,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "$TII/private/stages/e9-train-s271/out/model/adapter",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "policy": 271
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-cohort-x",
+      "note": "E10's decision rule over what ran (tiicee/clinical/cohort_x.py): every cohort-X admission is scored by exactly one fold policy, which neither trained on it nor monitored it, checked by fingerprint against the fold files, each policy's recorded data digests and each rollout's split, adapter and prompt log. A failed check reports outcome killed with its codes; counts, flags and codes are approved for export.",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_cohort_x"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.5
+      },
+      "depends_on": [
+        "e10-folds",
+        "e10-train-f0",
+        "e10-train-f1",
+        "e10-train-f2",
+        "e10-train-f3",
+        "e10-train-f4",
+        "e10-rollout-f0",
+        "e10-rollout-f1",
+        "e10-rollout-f2",
+        "e10-rollout-f3",
+        "e10-rollout-f4"
+      ],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "folds": "$TII/private/stages/e10-folds/out",
+          "policy_f0": "$TII/private/stages/e10-train-f0/out",
+          "rollout_f0": "$TII/private/stages/e10-rollout-f0/out",
+          "policy_f1": "$TII/private/stages/e10-train-f1/out",
+          "rollout_f1": "$TII/private/stages/e10-rollout-f1/out",
+          "policy_f2": "$TII/private/stages/e10-train-f2/out",
+          "rollout_f2": "$TII/private/stages/e10-rollout-f2/out",
+          "policy_f3": "$TII/private/stages/e10-train-f3/out",
+          "rollout_f3": "$TII/private/stages/e10-rollout-f3/out",
+          "policy_f4": "$TII/private/stages/e10-train-f4/out",
+          "rollout_f4": "$TII/private/stages/e10-rollout-f4/out"
+        },
+        "pairing_unit": "admission"
+      }
+    }
+  ],
+  "gates": [
+    {
+      "id": "G_resume",
+      "rule": "resume_gate.py",
+      "inputs": [
+        "bench-nemotron"
+      ],
+      "reads": [
+        "export/approved/bench-nemotron.json"
+      ]
+    }
+  ]
+}
