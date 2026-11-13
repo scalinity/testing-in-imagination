@@ -172,7 +172,7 @@ def test_each_training_graph_stays_within_each_experiments_estimate(trained):
         spent[stage["allowance_key"]] = spent.get(stage["allowance_key"], 0) + stage["estimate_gpu_hours"]
         if stage["command"][0] == "clinical_train":
             assert stage["resources"]["time_hours"] == 24 and stage["env"] == backbone.TRAINING_ENVIRONMENT
-            assert stage["resources"]["cpus"] == 2  # each training averaged one CPU
+            assert stage["resources"]["cpus"] == 4  # the one training started with 2 stalled before its first step
     assert all(total <= graph.allowances[key]["estimate_gpu_hours"] for key, total in spent.items())
 
 

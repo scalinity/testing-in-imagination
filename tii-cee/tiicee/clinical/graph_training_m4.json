@@ -10,7 +10,7 @@
     "A part ends at the planned epoch boundary or at Slurm's warning, and the next part resumes (tiicee/clinical/train.py). GPU estimates follow EXPERIMENT_CARDS/E8.md and E10.md; resources follow graph_training_m1.json's bench and rollout stages.",
     "Not here yet: the per-policy probe conformance of specification 10.1.",
     "Training stages ask for 16 GB of host memory: every Nemotron bench, rollout and training job of November 13, 2026 peaked at 6.4 to 7.0 GB (sacct MaxRSS, sstat), and the class QOS's shared 250 GB was what held them. An out-of-memory exit is retried at 1.5 times the memory. The Granite bench's four jobs peaked at 7.1 to 7.7 GB. E9's Granite trainings ask for 14 GB, about 1.8 times that peak.",
-    "Training stages ask for 2 CPUs: each running E8 and E10 training averaged 1.0 CPU (sstat AveCPU against elapsed time, November 13, 2026, 5:20 PM EST), and the class QOS's shared 32 CPUs per account held the trainings that waited. Rollouts keep 4."
+    "Training stages ask for 4 CPUs. Each training averages about one CPU (sstat AveCPU against elapsed time), but the only training started with 2, e10-train-f2 on November 13, 2026 at 5:26 PM EST, had not finished a backward pass after 50 minutes, its GPU busy and its main thread waiting on a device-to-host copy, while the trainings started with 4 had; it was cancelled and the request went back to 4 (RESEARCH_LEDGER.md, Operations, evening)."
   ],
   "stage_modules": [
     "tiicee.clinical.folds",
@@ -217,7 +217,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -293,7 +293,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -369,7 +369,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -445,7 +445,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -521,7 +521,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -597,7 +597,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -673,7 +673,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -749,7 +749,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -825,7 +825,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 16,
         "time_hours": 24
       },
@@ -901,7 +901,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 14,
         "time_hours": 24
       },
@@ -980,7 +980,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 14,
         "time_hours": 24
       },
@@ -1059,7 +1059,7 @@
       ],
       "resources": {
         "gpus": 1,
-        "cpus": 2,
+        "cpus": 4,
         "mem_gb": 14,
         "time_hours": 24
       },
