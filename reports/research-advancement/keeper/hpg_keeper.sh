@@ -58,17 +58,24 @@ via_master() {
 
 relay_events() {
     [ -n "$REMOTE_EVENTS" ] || return 0
-    local seen tmp n when kind text
+    local seen tmp n used line rest kind text
     seen=$(num "$(cat "$STATE/events.seen" 2>/dev/null)")
     tmp=$(mktemp "$STATE/ev.XXXXXX") || return 0
     if with_timeout 40 via_master "tail -n +$((seen + 1)) $(printf '%q' "$REMOTE_EVENTS") 2>/dev/null | head -n 20" > "$tmp" 2>/dev/null; then
         n=0
-        while IFS=$'\t' read -r when kind text; do
-            [ -n "${kind:-}" ] || continue
+        used=0
+        while IFS= read -r line || [ -n "$line" ]; do
+            used=$((used + 1))
+            case "$line" in *$'\t'*$'\t'*) ;; *) continue ;; esac
+            rest=${line#*$'\t'}
+            kind=${rest%%$'\t'*}
+            text=${rest#*$'\t'}
+            [ -n "$kind" ] || continue
             notify "TII: ${kind:0:60}" "${text:0:200}"
             n=$((n + 1))
         done < "$tmp"
-        if [ "$n" -gt 0 ]; then echo $((seen + n)) > "$STATE/events.seen"; log "relayed $n event(s)"; fi
+        if [ "$used" -gt 0 ]; then echo $((seen + used)) > "$STATE/events.seen"; fi
+        if [ "$n" -gt 0 ]; then log "relayed $n event(s)"; fi
     fi
     rm -f "$tmp"
 }
