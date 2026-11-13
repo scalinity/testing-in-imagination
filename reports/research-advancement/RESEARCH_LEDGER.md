@@ -287,3 +287,34 @@ it; if not met, no policy of the training track is trained and the result is rep
 fit the 3-GPU-hour bench cap: Nemotron 60 training and 8 validation admissions with the reference
 (about 2.4 GPU-hours, benches allowance); Granite 110 and 12 without the reference (about 2.1,
 E9's allowance).
+
+### D-REGIME, November 13, 2026: the regime map's scale coordinate
+
+Finding (REANALYZED_FIXED_DATA from E1, post hoc, outside the card; independent re-derivation by the
+E1 implementer, seed 0, base, W0). tau_B averaged over a trajectory's decision points does not order
+readers by their scale error: the over-reactive family's marker sits at 0.92 [0.88, 0.95] and the
+under-reactive at 1.13 [1.07, 1.18], each on the wrong side of 1, and over the 81-reader grid at
+zero drift tau_B is a hump in the likelihood power (0.63 at 1/4, 1.57 at 1, 0.50 at 4). At the first
+decision point tau_B reads the distortion exactly (2.00 for power 2, 0.50 for power 0.5, 1.00 for
+the independence reader); later the reader's own distorted belief moves it (over-reactive falls to
+0.33-0.89 with up to 59% clipped at 1/8; under-reactive rises to 2.85; independence to 2.98), while
+R0 stays at 1.00. Mechanism: the budget measures what the test can tell given the history, but the
+projected pair's information is measured around the reader's current belief; once that belief is
+over- or under-confident, matching the budget pushes tau_B the other way. Specification 10.2's
+regime call uses this statistic.
+
+Decision. The regime map's scale coordinate becomes tau_B at the first decision point of each
+trajectory (the shared starting history), with the per-step profile reported as a secondary
+diagnostic; location incoherence for the regime call is taken at the same point. Before it is used,
+it is validated in the twin: monotone ordering over the grid's likelihood power at every drift
+level, correct side of 1 for every R4 family, under W0 and W2. If validated, EXPERIMENT_CARDS E2, E4
+and E7 are amended before their first runs; if not, the regime call is reported as not identified
+and the coordinate is reported only descriptively. Gate G2a waits for this validation and for the
+E1-C interval. CEE-Scale's own per-step use of tau_B (part D) is unaffected: it scales increments
+around the tracked coherent belief, and its verdicts stand.
+
+Also from the re-derivation: E1's verdicts reproduce byte for byte from the committed tables; the
+figure step's harmful_region polygon is invalid (it encloses harmless readers and the repaired drift
+markers) and is not drawn; regret_attribution.json must carry each agent's stability and its range
+across orders; and byte-level reproduction of D_heldout with --jobs 1 needs VECLIB_MAXIMUM_THREADS=1
+exported before Python starts (differences below 1e-14 relative otherwise; no rule input changes).
