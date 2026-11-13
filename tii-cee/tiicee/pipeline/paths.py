@@ -35,6 +35,10 @@ class Paths:
         self.status = self.state / "STATUS.md"
         self.status_json = self.state / "status.json"   # for the monitor (monitor/DATA_CONTRACT.md)
         self.progress = self.state / "progress"         # one small file per running stage
+        # Where a write into progress/ or export/approved/ is prepared before it is renamed in.
+        # The watcher polices those two folders and moves anything unexpected out of them, so a
+        # file that is still being written must never be seen there.
+        self.staging = self.state / "tmp"
         self.blocked_md = self.state / "BLOCKED.md"
         self.blocked = self.state / "blocked.json"
         self.watcher = self.state / "watcher.json"

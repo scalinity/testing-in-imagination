@@ -11,7 +11,9 @@ and copies the bundle to $TII/deploy/ through the existing SSH master, then runs
    left alone; if the branch is checked out anywhere, nothing is done.
 2. `git archive <commit>` into $TII/code/<commit>/, then make it read-only.
 3. A submodule is not in a bundle. For each one the commit pins (lacdm/upstream), the checkout's
-   own copy must sit at exactly that commit with no local changes; the export links to it.
+   own copy must sit at exactly that commit with no change to a tracked file and no untracked
+   Python file; the export links to it. Other untracked files (an editor's temporary file, one
+   the filesystem leaves behind) are no code a stage could run, and are ignored.
 4. Point $TII/code/current at the new export, atomically.
 
 A stage runs from the export recorded in its manifest for its whole life, so a later deployment
@@ -101,6 +103,16 @@ def fetch(checkout, bundle, branch):
     return offered[ref]
 
 
+def local_changes(source):
+    """Lines of `git status` that matter in a submodule's checkout: every change to a tracked
+    file, and every untracked *.py. None if git could not say."""
+    status = git(source, "--no-optional-locks", "status", "--porcelain", "--untracked-files=all", check=False)
+    if status is None:
+        return None
+    return [line for line in status.splitlines()
+            if not line.startswith("?? ") or line.rstrip('"').endswith(".py")]
+
+
 def pinned_submodules(checkout, commit):
     """Each submodule the commit pins, checked against the checkout's own copy of it."""
     found = []
@@ -114,7 +126,7 @@ def pinned_submodules(checkout, commit):
             raise Refused("submodule_missing")
         if git(source, "rev-parse", "HEAD") != pin:
             raise Refused("submodule_not_at_pin")
-        if git(source, "--no-optional-locks", "status", "--porcelain"):
+        if local_changes(source) != []:
             raise Refused("submodule_not_clean")
         found.append({"path": path, "commit": pin, "source": str(source)})
     return found

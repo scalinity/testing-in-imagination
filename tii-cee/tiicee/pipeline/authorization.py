@@ -102,9 +102,15 @@ def pools(study_dir):
     return BASE_POOLS + (ADDENDUM_1_POOLS if signed else ())
 
 
+def pool_key(pool):
+    """What a pool's use is counted under: GPUs by account (the class limit is per account,
+    whatever the partition or QOS a GPU job runs on); CPUs by account and QOS."""
+    return pool.account if pool.kind == "gpu" else (pool.account, pool.qos)
+
+
 def pick_pool(usable, kind, need, in_use):
-    """First pool of this kind with room. in_use maps (account, qos) to GPUs or CPUs held now."""
+    """First pool of this kind with room. in_use maps pool_key(pool) to GPUs or CPUs held now."""
     for pool in usable:
-        if pool.kind == kind and in_use.get((pool.account, pool.qos), 0) + need <= pool.limit:
+        if pool.kind == kind and in_use.get(pool_key(pool), 0) + need <= pool.limit:
             return pool
     return None

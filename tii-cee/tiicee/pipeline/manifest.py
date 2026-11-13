@@ -75,9 +75,11 @@ def code_identity(paths):
 
 
 def _at_pin(submodule):
-    """Is a pinned submodule's checkout still at its commit, with no local changes?"""
+    """Is a pinned submodule's checkout still at its commit, with nothing changed that a stage
+    could run? The rule is deploy.py's: tracked changes and untracked *.py count, other untracked
+    files do not, so a stray file cannot stop every stage from starting."""
     return (_git(submodule["source"], "rev-parse", "HEAD") == submodule["commit"]
-            and _git(submodule["source"], "--no-optional-locks", "status", "--porcelain") == "")
+            and deploy.local_changes(submodule["source"]) == [])
 
 
 def resolve(paths, spec):

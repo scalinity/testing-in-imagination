@@ -40,6 +40,18 @@ BOUND_AUTHORIZATION_SHA = authorization.AUTHORIZATION_SHA256
 BOUND_ADDENDUM_SHA = authorization.ADDENDUM_1_SHA256
 
 
+# A stage the fake cluster can stop at an exact step (see fakeslurm.py): noop_slow, paced by
+# permission. PACE stands for the stage's own pace folder; write_graph fills it in.
+PACE = "@pace"
+SLOW = ["noop_slow", "--steps", "6", "--pace", PACE]
+
+
+def wait_until(condition, what):
+    """Wait for something a subprocess does. An error, never a silent pass, if it does not happen."""
+    if not fakeslurm._wait_for(condition):
+        raise AssertionError("did not happen within %d seconds: %s" % (fakeslurm.LIMIT_S, what))
+
+
 def pin(monkeypatch):
     """Point the in-process authorization module at the synthetic files, for this test only."""
     monkeypatch.setattr(authorization, "AUTHORIZATION_SHA256", AUTHORIZATION_SHA)
@@ -89,13 +101,15 @@ class Study:
         self.write_graph(stages, gates)
 
     def close(self):
-        for process, _ in self.cluster.frozen.values():
+        for process, _ in self.cluster.held.values():
             process.kill()
             process.wait()
 
     def write_graph(self, stages, gates=(), stage_modules=()):
+        stages = [dict(spec, command=[str(self.cluster.pace("tii-" + spec["id"])) if part == PACE else part
+                                      for part in spec["command"]]) for spec in stages]
         self.paths.graph.parent.mkdir(parents=True, exist_ok=True)
-        self.paths.graph.write_text(json.dumps({"study": "TII-CEE-1", "milestone": "M0", "stages": list(stages),
+        self.paths.graph.write_text(json.dumps({"study": "TII-CEE-1", "milestone": "M0", "stages": stages,
                                                 "gates": list(gates), "stage_modules": list(stage_modules)}))
 
     def set_allowance(self, key, gpu_hours):

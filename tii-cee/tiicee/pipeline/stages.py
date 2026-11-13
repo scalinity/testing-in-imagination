@@ -12,6 +12,7 @@ import argparse
 import importlib
 import json
 import time
+from pathlib import Path
 
 REGISTRY = {}
 
@@ -46,16 +47,29 @@ def noop(ctx):
 
 @register("noop_slow")
 def noop_slow(ctx):
-    """Works through --steps items, one completed key at a time, so it can be stopped and resumed."""
+    """Works through --steps items, one completed key at a time, so it can be stopped and resumed.
+
+    --sleep paces it by the clock. --pace DIR paces it by permission instead: before step n it
+    leaves DIR/waiting-n and waits for DIR/go-n (or DIR/go-all). Whoever grants the steps then
+    decides exactly how far it gets, however loaded the machine is; the tests' fake cluster does.
+    """
     parser = argparse.ArgumentParser(prog="noop_slow")
     parser.add_argument("--steps", type=int, default=5)
     parser.add_argument("--sleep", type=float, default=0.0)
+    parser.add_argument("--pace")
     options = parser.parse_args(ctx.args)
+    pace = Path(options.pace) if options.pace else None
+    if pace:
+        pace.mkdir(parents=True, exist_ok=True)
     resumed_at = (ctx.load_checkpoint() or {}).get("next", 0)
     for step in range(options.steps):
         key = "step-%04d" % step
         if ctx.is_done(key):
             continue
+        if pace:
+            (pace / ("waiting-%d" % step)).touch()
+            while not (ctx.stop or (pace / ("go-%d" % step)).exists() or (pace / "go-all").exists()):
+                time.sleep(0.005)
         if ctx.stop:
             ctx.save_checkpoint({"next": step, "resumed_at": resumed_at})
             raise StageInterrupted()

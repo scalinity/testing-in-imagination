@@ -5,22 +5,34 @@ directory named by FAKE_SLURM_DIR. sbatch only records a job; nothing runs until
 the cluster with Cluster.run() (or `scontrol run`), which applies the next planned outcome to each
 pending or running job:
 
-    complete   run the job script; COMPLETED on exit 0, else FAILED with its exit code (default)
-    usr1       run it, send SIGUSR1 once the trigger is met (the ten-minute warning), let it exit
-    kill       run it, SIGKILL it once the trigger is met; "state" names what Slurm reports
+    complete   run the job script to its end; COMPLETED on exit 0, else FAILED with its exit code
+               (the default)
+    usr1       let it reach step "steps", send SIGUSR1 (the ten-minute warning), let it exit
+    kill       let it reach step "steps", SIGKILL it; "state" names what Slurm reports
                (NODE_FAIL by default, or TIMEOUT, PREEMPTED, ...)
+    start      let it reach step "steps" and leave it there, alive, reported RUNNING; the next
+               advance applies the next outcome to the same process. Only through Cluster.run()
+               on one Cluster object, which holds the process
     timeout, preempt, node_fail, oom, fail, cancel
                end the job in that state without running it
-    start      start the job script, freeze it (SIGSTOP) once the trigger is met, and report it
-               RUNNING; the next advance resumes it and applies the next outcome. Only through
-               Cluster.run() on one Cluster object, which holds the frozen process
     hold       leave it PENDING for this advance; "reason" sets what squeue shows for it
                (QOSGrpGRES when the QOS's shared GPUs are all in use)
 
-An outcome is a name or {"outcome": name, "state": ..., "elapsed": seconds, "wait_file": path,
-"wait_lines": n}; the trigger is "wait_file has at least wait_lines lines", and "elapsed" is what
-sacct reports (for "start": the time run so far). Planning "reject" makes the next sbatch for that
-job name fail. Every executable call is appended to calls.log.
+usr1, kill and start act on a job in the middle of its work, so they need a job that cannot run
+ahead of the test: a stage paced by permission (noop_slow --pace <Cluster.pace(job name)>). The
+cluster grants it exactly "steps" steps and acts once the job says it is waiting for the next.
+Nothing here depends on how fast the machine is. A job that does not get there in two minutes,
+or ends first, is an error in the test and raises.
+
+squeue answers `-O field:width,...` as the real one does: fixed-width columns, no separator.
+add_job() puts another job of the same user in the queue (work that is not the study's), with
+whatever TRES strings a test needs: a GPU asked for per job shows N/A under tres-per-node.
+
+An outcome is a name or {"outcome": name, "steps": n, "state": ..., "elapsed": seconds}; "elapsed"
+is what sacct reports (for "start": the time run so far). Planning "reject" makes the next sbatch
+for that job name fail. With FAKE_SLURM_HOLD=<file> in its environment, squeue does not answer
+until that file exists, so a test can keep a cycle inside its queue query, holding its lock.
+Every executable call is appended to calls.log.
 """
 from __future__ import annotations
 
@@ -33,6 +45,7 @@ import subprocess
 import time
 from pathlib import Path
 
+LIMIT_S = 120  # how long a wait may last before it is reported as an error; never a pace
 ENDED_WITHOUT_RUNNING = {"timeout": ("TIMEOUT", "0:0"), "preempt": ("PREEMPTED", "0:0"),
                          "node_fail": ("NODE_FAIL", "0:0"), "oom": ("OUT_OF_MEMORY", "0:125"),
                          "fail": ("FAILED", "1:0"), "cancel": ("CANCELLED", "0:0")}
@@ -44,7 +57,7 @@ class Cluster:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.file = self.dir / "state.json"
         self.crontab = self.dir / "scrontab"
-        self.frozen = {}  # job id -> (process, start time) of jobs left RUNNING by "start"
+        self.held = {}  # job id -> (process, start time) of jobs left RUNNING by "start"
 
     # ---- state -----------------------------------------------------------------------------
 
@@ -70,6 +83,18 @@ class Cluster:
     def record(self, command, argv):
         with open(self.dir / "calls.log", "a") as handle:
             handle.write("\t".join([command] + list(argv)) + "\n")
+
+    def add_job(self, name, state, account, qos, cpus=1, reason="None", per_node="N/A", per_job="N/A", held=""):
+        """Another job of this user, not submitted by the watcher. It is never run or advanced."""
+        def add(store):
+            job_id = str(store["next"])
+            store["next"] += 1
+            store["jobs"][job_id] = {"id": job_id, "name": name, "state": state, "account": account, "qos": qos,
+                                     "cpus": cpus, "reason": reason, "script": None, "tres": [per_node, per_job, held],
+                                     "gres": "", "gpus": 0, "mem": "0", "exit": "0:0", "elapsed": 0,
+                                     "start": None, "end": None, "output": None, "env": {}}
+            return job_id
+        return self._locked(add)
 
     def plan(self, name, outcomes):
         self._locked(lambda state: state["plan"].setdefault(name, []).extend(outcomes))
@@ -115,19 +140,33 @@ class Cluster:
         return 0
 
     def squeue(self, argv):
-        time.sleep(float(os.environ.get("FAKE_SLURM_DELAY", "0")))
+        hold = os.environ.get("FAKE_SLURM_HOLD")
+        if hold and not _wait_for(lambda: os.path.exists(hold)):
+            return 1
         if os.environ.get("FAKE_SLURM_FAIL") == "squeue":
             return 1
-        layout = argv[argv.index("-o") + 1]
+        if os.environ.get("FAKE_SLURM_FAIL") == "squeue_layout":
+            print("51138665|v2-C2-s4|RUNNING|cai6734|cai6734|N/A|6|None")  # not the layout asked for
+            return 0
+        columns = [(name.lower(), int(width)) for name, width in
+                   (item.split(":") for item in argv[argv.index("-O") + 1].split(","))]
         for job in self.jobs():
-            if job["state"] in ("PENDING", "RUNNING"):
-                values = {"%i": job["id"], "%j": job["name"], "%T": job["state"], "%a": job["account"],
-                          "%q": job["qos"], "%b": "gres/" + job["gres"] if job["gres"] else "N/A",
-                          "%C": str(job["cpus"]), "%r": job["reason"] if job["state"] == "PENDING" else "None"}
-                line = layout
-                for token, value in values.items():
-                    line = line.replace(token, value)
-                print(line)
+            if job["state"] not in ("PENDING", "RUNNING"):
+                continue
+            if "tres" in job:
+                per_node, per_job, held = job["tres"]
+            else:  # submitted through sbatch: its --gres is a per-node request
+                per_node, per_job = ("gres/" + job["gres"] if job["gres"] else "N/A"), "N/A"
+                held = "cpu=%d,mem=%s,node=1,billing=%d" % (job["cpus"], job["mem"], job["cpus"])
+                if job["gpus"]:
+                    held += ",gres/gpu=%d,gres/%s=%d" % (job["gpus"], job["gres"].rsplit(":", 1)[0], job["gpus"])
+                if job["state"] == "PENDING" and os.environ.get("FAKE_SLURM_PENDING_TRES") == "absent":
+                    held = "N/A"  # a squeue that shows nothing under tres-alloc until a job runs
+            values = {"jobid": job["id"], "state": job["state"], "account": job["account"], "qos": job["qos"],
+                      "numcpus": str(job["cpus"]), "tres-per-node": per_node, "tres-per-job": per_job,
+                      "tres-alloc": held, "name": job["name"],
+                      "reason": job["reason"] if job["state"] == "PENDING" else "None"}
+            print("".join("%-*.*s" % (width, width, values[name]) for name, width in columns))
         return 0
 
     def sacct(self, argv):
@@ -185,7 +224,7 @@ class Cluster:
     def run(self):
         """Advance once: apply the next planned outcome to every pending or running job."""
         for job in self.jobs():
-            if job["state"] not in ("PENDING", "RUNNING"):
+            if job["state"] not in ("PENDING", "RUNNING") or job["script"] is None:
                 continue
             step = self._locked(lambda state: self._next_outcome(state, job["name"]))
             outcome = step["outcome"]
@@ -202,11 +241,35 @@ class Cluster:
                 update = self._execute(job, step)
             self._locked(lambda state: state["jobs"][job["id"]].update(update))
 
+    def pace(self, job_name):
+        """The folder through which a paced job (noop_slow --pace) is granted its steps."""
+        return self.dir / "pace" / job_name
+
+    def _grant(self, job, steps):
+        """Permit a paced job its first `steps` steps and no more (None: all of them).
+
+        Returns the marker the job leaves when it is waiting for the step after those.
+        """
+        pace = self.pace(job["name"])
+        pace.mkdir(parents=True, exist_ok=True)
+        for permit in pace.glob("go-*"):
+            permit.unlink()
+        if steps is None:
+            (pace / "go-all").touch()
+            return None
+        for step in range(steps):
+            (pace / ("go-%d" % step)).touch()
+        waiting = pace / ("waiting-%d" % steps)
+        if job["id"] not in self.held and waiting.exists():
+            waiting.unlink()  # left by an earlier attempt of this job name
+        return waiting
+
     def _execute(self, job, step):
         outcome = step["outcome"]
-        if job["id"] in self.frozen:
-            process, started = self.frozen.pop(job["id"])
-            os.killpg(process.pid, signal.SIGCONT)
+        steered = outcome in ("usr1", "kill", "start")
+        waiting = self._grant(job, step["steps"] if steered else None)
+        if job["id"] in self.held:
+            process, started = self.held.pop(job["id"])
         else:
             environment = dict(job["env"], SLURM_JOB_ID=job["id"], SLURM_JOB_NAME=job["name"],
                                SLURM_JOB_ACCOUNT=job["account"], SLURM_JOB_QOS=job["qos"])
@@ -215,20 +278,23 @@ class Cluster:
             with open(output, "ab") as log:
                 process = subprocess.Popen(["bash", job["script"]], env=environment, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=True)
-        if outcome in ("usr1", "kill", "start"):
-            deadline = time.time() + 30
-            while process.poll() is None and time.time() < deadline and not self._triggered(step):
-                time.sleep(0.01)
-            if process.poll() is None:
-                if outcome == "start":
-                    os.killpg(process.pid, signal.SIGSTOP)
-                    self.frozen[job["id"]] = (process, started)
-                    return {"state": "RUNNING", "start": started, "elapsed": step.get("elapsed", 0)}
-                if outcome == "usr1":
-                    os.kill(process.pid, signal.SIGUSR1)  # the script execs the stage: same pid
-                else:
-                    os.killpg(process.pid, signal.SIGKILL)
-        code = process.wait(timeout=120)
+        if steered:
+            # The job cannot pass step "steps", so there is no race to win: wait until it says it
+            # is there. It is then idle between two steps, with its checkpoint written.
+            arrived = _wait_for(lambda: waiting.exists() or process.poll() is not None)
+            if not arrived or process.poll() is not None:
+                process.kill()
+                process.wait()
+                raise RuntimeError("fake Slurm: %s did not reach step %d alive; '%s' needs a paced stage"
+                                   % (job["name"], step["steps"], outcome))
+            if outcome == "start":
+                self.held[job["id"]] = (process, started)
+                return {"state": "RUNNING", "start": started, "elapsed": step.get("elapsed", 0)}
+            if outcome == "usr1":
+                os.kill(process.pid, signal.SIGUSR1)  # the script execs the stage: same pid
+            else:
+                os.killpg(process.pid, signal.SIGKILL)
+        code = process.wait(timeout=LIMIT_S)
         ended = time.time()
         elapsed = step.get("elapsed", max(1, int(math.ceil(ended - started))))
         timing = {"elapsed": elapsed, "start": ended - elapsed if "elapsed" in step else started, "end": ended}
@@ -237,14 +303,15 @@ class Cluster:
         return dict(timing, state="COMPLETED" if code == 0 else "FAILED",
                     exit="%d:0" % code if code >= 0 else "0:%d" % -code)
 
-    def _triggered(self, step):
-        if "wait_file" not in step:
-            return True
-        try:
-            with open(step["wait_file"], "rb") as handle:
-                return handle.read().count(b"\n") >= step.get("wait_lines", 1)
-        except OSError:
+
+def _wait_for(condition):
+    """Wait until condition() holds. False if it has not within LIMIT_S, which callers treat as an error."""
+    deadline = time.monotonic() + LIMIT_S
+    while not condition():
+        if time.monotonic() > deadline:
             return False
+        time.sleep(0.005)
+    return True
 
 
 def _clock(epoch):

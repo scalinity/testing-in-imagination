@@ -12,6 +12,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
 from pipeline_harness import Study, pin, stage  # noqa: E402
 
+from tiicee.pipeline import export_guard  # noqa: E402
 from tiicee.pipeline import graph as graphs  # noqa: E402
 from tiicee.pipeline import manifest as manifests  # noqa: E402
 from tiicee.pipeline import stage as runner  # noqa: E402
@@ -219,7 +220,13 @@ def test_progress_is_counts_only_written_at_most_once_a_minute_and_once_at_the_e
     clock = [1000.0]
     monkeypatch.setattr(runner, "time", types.SimpleNamespace(monotonic=lambda: clock[0]))
 
+    # A progress file is prepared outside state/progress/ and renamed in, so a watcher cycle
+    # running at that instant finds nothing unexpected there to move away.
+    moments, rename = [], os.replace
+    monkeypatch.setattr(os, "replace", lambda source, target: (
+        moments.append((Path(source).parent, export_guard.file_violations(s.paths))), rename(source, target))[1])
     context.progress(1, 2160, "admission")
+    assert moments == [(s.paths.staging, [])]
     first = s.progress("a")
     assert {key: first[key] for key in ("stage", "unit", "done", "total")} == {
         "stage": "a", "unit": "admission", "done": 1, "total": 2160}

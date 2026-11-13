@@ -16,12 +16,12 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
-from pipeline_harness import PACKAGE, Study, stage  # noqa: E402
+from pipeline_harness import PACKAGE, SLOW, Study, stage, wait_until  # noqa: E402
 
 from tiicee.pipeline import export_guard, watcher  # noqa: E402
 from tiicee.pipeline.util import iso, now, sha256_file  # noqa: E402
 
-SLOW = ["noop_slow", "--steps", "6", "--sleep", "0.05"]
+STEPS = ["step-%04d" % step for step in range(6)]  # what SLOW, the paced no-op stage, works through
 OTHER_ENTRIES_ABOVE = """#SCRON --job-name=nightly
 #SCRON --time=00:05:00
 0 3 * * * /home/someone/nightly.sh
@@ -129,12 +129,10 @@ def test_watcher_cycle_script_runs_one_cycle_from_its_own_settings(study):
 
 def test_killed_stage_resumes_from_its_checkpoint_and_repeats_no_key(study):
     s = study([stage("slow", SLOW)])
-    items = s.paths.stage_dir("slow") / "items.jsonl"
-    s.cluster.plan("tii-slow", [{"outcome": "kill", "state": "NODE_FAIL", "wait_file": str(items), "wait_lines": 2}])
+    s.cluster.plan("tii-slow", [{"outcome": "kill", "state": "NODE_FAIL", "steps": 2}])
     s.cycle()
-    s.advance()
-    before = s.items("slow")
-    assert 2 <= len(before) < 6
+    s.advance()  # the node dies when two of the six items are done
+    assert s.items("slow") == STEPS[:2]
 
     s.cycle()  # sees the node failure and resubmits from the checkpoint
     state = s.state("slow")
@@ -142,36 +140,32 @@ def test_killed_stage_resumes_from_its_checkpoint_and_repeats_no_key(study):
     s.advance()
     s.cycle()
     assert s.status("slow") == "COMPLETED"
-    keys = s.items("slow")
-    assert keys == ["step-%04d" % step for step in range(6)]  # every key once
-    assert keys[:len(before)] == before                         # and none of the earlier ones again
+    assert s.items("slow") == STEPS  # every key once: the first two were not done again
     checkpoint = json.loads((s.paths.stage_dir("slow") / "checkpoint.json").read_text())
-    assert checkpoint["next"] == 6 and len(before) - 1 <= checkpoint["resumed_at"] <= len(before)
+    assert checkpoint == {"next": 6, "resumed_at": 2}  # the second attempt began at the checkpoint
     assert [a["state"] for a in s.state("slow")["attempts"]] == ["NODE_FAIL", "COMPLETED"]
     assert json.loads((s.paths.stage_out("slow") / "result.json").read_text())["count"] == 6
 
 
 def test_warning_signal_checkpoints_and_the_continuation_is_not_a_retry(study):
     s = study([stage("slow", SLOW)])
-    items = s.paths.stage_dir("slow") / "items.jsonl"
-    s.cluster.plan("tii-slow", [{"outcome": "usr1", "wait_file": str(items), "wait_lines": 2}])
+    s.cluster.plan("tii-slow", [{"outcome": "usr1", "steps": 2}])
     s.cycle()
     s.advance()
     s.cycle()
     state = s.state("slow")
     assert (state["attempts"][0]["exit_code"], state["attempts"][0]["outcome"]) == (10, "continue")
     assert state["retries"] == {"interrupt": 0, "oom": 0, "other": 0} and state["status"] == "QUEUED"
-    assert 2 <= len(s.items("slow")) < 6
+    assert s.items("slow") == STEPS[:2]
+    assert json.loads((s.paths.stage_dir("slow") / "checkpoint.json").read_text()) == {"next": 2, "resumed_at": 0}
     s.advance()
     s.cycle()
-    assert s.status("slow") == "COMPLETED" and s.items("slow") == ["step-%04d" % step for step in range(6)]
+    assert s.status("slow") == "COMPLETED" and s.items("slow") == STEPS
 
 
 def test_timeout_is_a_retry_only_when_the_checkpoint_did_not_move(study):
     s = study([stage("slow", SLOW)])
-    items = s.paths.stage_dir("slow") / "items.jsonl"
-    s.cluster.plan("tii-slow", [{"outcome": "kill", "state": "TIMEOUT", "wait_file": str(items), "wait_lines": 2},
-                                "timeout"])
+    s.cluster.plan("tii-slow", [{"outcome": "kill", "state": "TIMEOUT", "steps": 2}, "timeout"])
     s.cycle()
     s.advance()
     s.cycle()
@@ -324,10 +318,9 @@ def test_experiment_the_authorization_does_not_name_is_not_submitted(study):
 
 def test_without_authorization_nothing_new_is_submitted_and_restoring_it_resumes(study):
     s = study([stage("a", SLOW), stage("b", depends_on=["a"])])
-    items = s.paths.stage_dir("a") / "items.jsonl"
-    s.cluster.plan("tii-a", [{"outcome": "start", "wait_file": str(items), "wait_lines": 1}, "complete"])
+    s.cluster.plan("tii-a", [{"outcome": "start", "steps": 1}, "complete"])
     s.cycle()
-    s.advance()  # a is verified, has made progress, and is left running
+    s.advance()  # a is verified, has done one item, and is left running
     authorization = s.docs / "AUTHORIZATION.md"
     authorization.rename(s.docs / "AUTHORIZATION.md.revoked")
 
@@ -372,13 +365,20 @@ def test_changed_authorization_or_missing_signature_blocks_too(study):
 
 def test_two_cycles_at_once_one_exits_on_the_lock(study):
     s = study([stage("a")])
-    first = s.start_cycle(FAKE_SLURM_DELAY="1.0")
-    second = s.start_cycle(FAKE_SLURM_DELAY="1.0")
-    outputs = [first.communicate(timeout=60)[0], second.communicate(timeout=60)[0]]
-    assert (first.returncode, second.returncode) == (0, 0)
-    assert sum("another cycle holds the lock" in output for output in outputs) == 1
+    release = s.root / "let-the-first-cycle-go"
+    first = s.start_cycle(FAKE_SLURM_HOLD=str(release))
+    wait_until(lambda: s.calls("squeue"), "the first cycle reaching its queue query")
+    # The first cycle is now in the middle of its work, holding the lock. A second one starts.
+    assert s.paths.lock.is_dir()
+    assert "another cycle holds the lock" in s.cycle()
+    assert len(s.calls("squeue")) == len(s.calls("sacct")) == 1 and not s.calls("sbatch")
+    assert s.paths.lock.is_dir()  # the one that lost leaves the lock where it is
+
+    release.touch()
+    output = first.communicate(timeout=120)[0]
+    assert first.returncode == 0 and "another cycle" not in output
     assert len(s.calls("squeue")) == len(s.calls("sacct")) == len(s.calls("sbatch")) == 1
-    assert not s.paths.lock.exists()
+    assert s.status("a") == "QUEUED" and not s.paths.lock.exists()
 
 
 def test_fresh_lock_is_respected_and_a_stale_one_is_taken_and_recorded(study):
@@ -389,7 +389,8 @@ def test_fresh_lock_is_respected_and_a_stale_one_is_taken_and_recorded(study):
 
     old = time.time() - 21 * 60
     os.utime(s.paths.lock, (old, old))
-    assert "stale_lock taken age_s=12" in s.cycle()
+    taken = [line for line in s.cycle().splitlines() if "stale_lock taken" in line]
+    assert len(taken) == 1 and int(taken[0].rsplit("age_s=", 1)[1]) >= 21 * 60
     assert s.status("a") == "QUEUED" and not s.paths.lock.exists()
     assert s.status_json()["watcher"]["lock"] == "stale_taken"
 
@@ -447,7 +448,149 @@ def test_gpu_jobs_take_the_other_account_while_the_first_waits_on_its_group_limi
     assert {job["name"][4:]: job["account"] for job in s.cluster.jobs()} == {
         "g0": "cai6734", "g1": "cai6734", "prep": "cai6734", "g2": "cai5724", "g3": "cai5724"}
     # Still one queue query per cycle; the reason is one more column of it.
-    assert len(s.calls("squeue")) == 2 and all(call[-1].endswith("|%r") for call in s.calls("squeue"))
+    assert s.calls("squeue") == [["squeue"] + watcher.SQUEUE[1:]] * 2 and "Reason:" in watcher.SQUEUE[-1]
+
+
+# What the live no-op run on HiPerGator showed on November 13, 2026: other work under the same
+# account (jobs named v2-*, on another partition) asks for its GPU per job, so squeue's per-node
+# column says N/A for it. Three such jobs ran on cai6734 and two on cai5724.
+PER_JOB_GPU = {"per_node": "N/A", "per_job": "gres/gpu:1",
+               "held": "cpu=6,mem=60G,node=1,billing=6,gres/gpu=1,gres/gpu:b200=1"}
+
+
+def other_work(s):
+    for name, account in (("v2-C2-s4", "cai6734"), ("v2-C2-s5", "cai6734"), ("v2-C3-s1", "cai6734"),
+                          ("v2-C1-s2", "cai5724"), ("v2-C1-s3", "cai5724")):
+        s.cluster.add_job(name, "RUNNING", account, account, cpus=6, **PER_JOB_GPU)
+    s.cluster.add_job("v2-eval-C1", "PENDING", "cai6734", "cai6734-b", cpus=32, reason="Dependency",
+                      held="cpu=32,mem=120G,node=1,billing=32")
+    s.cluster.add_job("tii-watcher", "PENDING", "cai6734", "cai6734-b", reason="BeginTime",
+                      held="cpu=1,mem=1G,node=1,billing=1")
+
+
+def test_gpus_asked_for_per_job_by_other_work_count_against_the_account(study):
+    s = study([stage("g%d" % index, gpus=1) for index in range(9)])
+    s.sign_addendum()
+    other_work(s)
+    output = s.cycle()
+    ours = [job["account"] for job in s.cluster.jobs() if job["name"].startswith("tii-g")]
+    # 3 of cai6734's 8 GPUs and 2 of cai5724's are already held: 5 more fit on the first, then
+    # 4 of the 6 left on the second. Reading only the per-node column would have put 8 on cai6734.
+    assert ours == ["cai6734"] * 5 + ["cai5724"] * 4
+    assert s.status_json()["gpu"] == {"limit_by_account": {"cai6734": 8, "cai5724": 8},
+                                      "in_use_by_account": {"cai6734": 8, "cai5724": 6}}
+    # One queue query, and the watcher's own queued job (tii-watcher) is not taken for a stage.
+    assert len(s.calls("squeue")) == 1 and "adopted" not in output
+    assert {line["stage"] for line in s.runlog()} == {"g%d" % index for index in range(9)}
+
+
+def test_without_the_addendum_other_work_leaves_five_gpus(study):
+    s = study([stage("g%d" % index, gpus=1) for index in range(7)])
+    other_work(s)
+    s.cycle()
+    assert len(s.calls("sbatch")) == 5 and (s.status("g5"), s.status("g6")) == ("PLANNED", "PLANNED")
+    assert s.status_json()["gpu"]["in_use_by_account"] == {"cai6734": 8}
+
+
+def test_pending_gpu_requests_count_even_if_squeue_shows_no_tres_for_them(study):
+    """The manual says tres-alloc shows a pending job's request. Should the installed squeue show
+    nothing there, the per-node and per-job columns still carry it."""
+    s = study([stage("g%d" % index, gpus=1) for index in range(10)])
+    s.cluster.add_job("v2-wait", "PENDING", "cai6734", "cai6734", cpus=6, reason="Priority",
+                      per_node="N/A", per_job="gres/gpu:2", held="N/A")
+    s.cycle(FAKE_SLURM_PENDING_TRES="absent")
+    assert len(s.calls("sbatch")) == 6  # 8 less the 2 another job is waiting for
+    s.cycle(FAKE_SLURM_PENDING_TRES="absent")
+    assert len(s.calls("sbatch")) == 6  # our own six, still pending, are counted from their per-node request
+
+
+def test_cpu_jobs_take_another_qos_when_other_work_fills_the_burst_qos(study):
+    s = study([stage("prep")])
+    s.sign_addendum()
+    for index in range(10):  # ten pending 32-CPU jobs: 320 of cai6734-b's 288 CPUs asked for
+        s.cluster.add_job("v2-eval-%d" % index, "PENDING", "cai6734", "cai6734-b", cpus=32, reason="Dependency")
+    s.cycle()
+    assert [(job["account"], job["qos"]) for job in s.cluster.jobs() if job["name"] == "tii-prep"] == [("cai5724", "cai5724-b")]
+
+
+def test_queue_that_cannot_be_read_stops_the_cycle_from_deciding(study):
+    s = study([stage("g", gpus=1)])
+    output = s.cycle(expect=1, FAKE_SLURM_FAIL="squeue_layout")  # lines in some other layout
+    assert "squeue_unreadable lines=1" in output and "scheduler_error sacct=True squeue=False" in output
+    assert not s.calls("sbatch") and "scheduler: error" in s.paths.status.read_text()
+    s.cycle()
+    assert s.status("g") == "QUEUED"
+
+
+# squeue's answer on HiPerGator (Slurm 25.11.8) on November 13, 2026 to the watcher's own command,
+# as the lead read it there: every line 956 characters wide; shown here with the padding squeezed.
+LIVE_QUEUE = """\
+51145811 PENDING cai6734 cai6734 6 N/A gres/gpu:1 cpu=6,mem=60G,node=1,billing=6,gres/gpu=1 QOSGrpMemLimit v2-cal-C2
+51137362 RUNNING cai5724 cai5724 6 N/A gres/gpu:1 cpu=6,mem=60G,node=1,billing=6,gres/gpu=1,gres/gpu:b200=1 None v2-C1-s2
+51150702 PENDING cai6734 cai6734-b 32 N/A N/A cpu=32,mem=400G,node=1,billing=32 Dependency v2-eval-C1
+51144941 PENDING cai6734 cai6734-b 1 N/A N/A cpu=1,mem=1G,node=1,billing=1 BeginTime tii-watcher
+"""
+
+
+def test_lines_from_the_live_cluster_are_read_correctly():
+    padded = ["".join("%-*s" % (width, cell) for (_, width), cell in zip(watcher.SQUEUE_FIELDS, line.split(" ")))
+              for line in LIVE_QUEUE.splitlines()]
+    assert {len(line) for line in padded} == {956}  # the width the cluster printed
+    rows = watcher.parse_queue("\n".join(padded) + "\n")
+    assert [(row["id"], row["state"], row["account"], row["qos"], row["cpus"], row["gpus"], row["reason"], row["name"])
+            for row in rows] == [
+        # A GPU asked for per job: N/A in the per-node column, found under tres-per-job and
+        # tres-alloc. Pending, its tres-alloc is its request, so it counts before it runs.
+        ("51145811", "PENDING", "cai6734", "cai6734", 6, 1, "QOSGrpMemLimit", "v2-cal-C2"),
+        ("51137362", "RUNNING", "cai5724", "cai5724", 6, 1, "None", "v2-C1-s2"),
+        ("51150702", "PENDING", "cai6734", "cai6734-b", 32, 0, "Dependency", "v2-eval-C1"),
+        ("51144941", "PENDING", "cai6734", "cai6734-b", 1, 0, "BeginTime", "tii-watcher")]
+
+
+def test_memory_group_limit_reroutes_gpu_jobs_like_the_gpu_limit(study):
+    """The class GPU QOS also caps memory at 250 GB. Other work waiting on that cap (the live
+    line above: QOSGrpMemLimit) means cai6734 cannot start another GPU job now."""
+    s = study([stage("g%d" % index, gpus=1) for index in range(3)])
+    s.sign_addendum()
+    s.cluster.add_job("v2-cal-C2", "PENDING", "cai6734", "cai6734", cpus=6, reason="QOSGrpMemLimit",
+                      per_job="gres/gpu:1", held="cpu=6,mem=60G,node=1,billing=6,gres/gpu=1")
+    s.cycle()
+    assert [job["account"] for job in s.cluster.jobs() if job["name"].startswith("tii-")] == ["cai5724"] * 3
+    assert s.status_json()["gpu"]["in_use_by_account"] == {"cai6734": 1, "cai5724": 3}
+
+
+def test_queue_lines_are_read_by_position():
+    def line(job, state, account, qos, cpus, per_node, per_job, held, reason, name):
+        cells = (job, state, account, qos, cpus, per_node, per_job, held, reason, name)
+        return "".join("%-*.*s" % (width, width, cell) for (_, width), cell in zip(watcher.SQUEUE_FIELDS, cells))
+
+    text = "\n".join([
+        line("51138665", "RUNNING", "cai6734", "cai6734", "6", "N/A", "gres/gpu:1",
+             "cpu=6,mem=60G,node=1,billing=6,gres/gpu=1,gres/gpu:b200=1", "None", "v2-C2-s4"),
+        line("51150702", "PENDING", "cai6734", "cai6734-b", "32", "N/A", "N/A", "cpu=32,mem=120G,node=1,billing=32",
+             "Dependency", "v2-eval-C1"),
+        line("51152783", "PENDING", "cai5724", "cai5724-b", "1", "N/A", "N/A", "", "None", "tii-noop_c"),
+        line("51160001_7", "PENDING", "cai6734", "cai6734", "4", "gres/gpu:rtx_pro_6000:1", "N/A", "N/A",
+             "ReqNodeNotAvail, Reserved for maintenance", "a name with spaces"),
+        ""]) + "\n"
+    rows = watcher.parse_queue(text)
+    assert [(row["id"], row["name"], row["state"], row["account"], row["qos"], row["cpus"], row["gpus"], row["reason"])
+            for row in rows] == [
+        ("51138665", "v2-C2-s4", "RUNNING", "cai6734", "cai6734", 6, 1, "None"),
+        ("51150702", "v2-eval-C1", "PENDING", "cai6734", "cai6734-b", 32, 0, "Dependency"),
+        ("51152783", "tii-noop_c", "PENDING", "cai5724", "cai5724-b", 1, 0, "None"),
+        ("51160001_7", "a name with spaces", "PENDING", "cai6734", "cai6734", 4, 1,
+         "ReqNodeNotAvail, Reserved for maintenance")]
+    assert watcher.parse_queue("") == [] and watcher.parse_queue("\n\n") == []
+    # Anything not laid out as asked makes the whole answer unusable, never a guess.
+    for bad in ("51138665|v2-C2-s4|RUNNING|cai6734|cai6734|N/A|6|None",                  # the -o layout
+                line("JOBID", "STATE", "ACCOUNT", "QOS", "CPUS", "", "", "", "REASON", "NAME"),  # a header
+                line("51138665", "RUNNING", "cai6734", "cai6734", "six", "N/A", "N/A", "", "None", "x"),
+                line("51138665", "RUNNING", "cai6734", "cai6734", "6", "N/A", "N/A", "", "None", "x")[40:]):
+        assert watcher.parse_queue(text + bad + "\n") is None, bad[:40]
+    assert watcher.SQUEUE[:5] == ["squeue", "--me", "-h", "-r", "-O"]
+    assert watcher.SQUEUE[5].startswith("JobID:24,State:20,Account:40,QOS:40,NumCPUs:12,tres-per-node:100,")
+    assert watcher.SQUEUE[5].endswith("tres-per-job:100,tres-alloc:300,Reason:120,Name:200")
 
 
 def test_group_limit_changes_nothing_without_another_account_or_for_an_ordinary_wait(study):
@@ -680,7 +823,10 @@ def test_surface_holds_names_and_numbers_only_and_rejects_free_text(study):
 def test_pure_helpers():
     assert [watcher.gpus_in(text) for text in (
         "billing=4,cpu=4,gres/gpu=1,gres/gpu:rtx_pro_6000=1,mem=16G,node=1", "gres/gpu:rtx_pro_6000:1",
-        "gpu:2", "gres:gpu:rtx_pro_6000:3", "gpu", "N/A", "billing=1,cpu=1,mem=1G,node=1", "")] == [1, 1, 2, 3, 1, 0, 0, 0]
+        "gpu:2", "gres:gpu:rtx_pro_6000:3", "gpu", "N/A", "billing=1,cpu=1,mem=1G,node=1", "",
+        "cpu=6,mem=60G,node=1,billing=6,gres/gpu=1,gres/gpu:b200=1", "gres/gpu:1", "gres/gpu:b200=2",
+        "cpu=32,mem=250G,node=1,billing=32,gres/gpu=4,gres/gpu:a100=2,gres/gpu:b200=2")] == [
+        1, 1, 2, 3, 1, 0, 0, 0, 1, 1, 2, 4]
     entry = (PACKAGE / "tiicee" / "pipeline" / "scrontab_entry.txt").read_text()
     assert entry.splitlines()[-1].endswith(watcher.TAG) and entry.count("#SCRON") == 5
     assert watcher.remove_tagged(OTHER_ENTRIES_ABOVE + entry + OTHER_ENTRIES_BELOW) == OTHER_ENTRIES_ABOVE + OTHER_ENTRIES_BELOW
@@ -706,8 +852,7 @@ def test_status_json_has_the_shape_of_the_data_contract(study):
                stage("e8-eval", experiment="E8", gpus=1, estimate=2, depends_on=["e8-seed1-part1"], gate="G2a"),
                stage("big", experiment="E2", gpus=1, estimate=500)],  # more than E2's whole allowance
               [{"id": "G2a", "rule": "noop_gate.py", "inputs": ["e8-seed1-part1"], "reads": []}])
-    items = s.paths.stage_dir("e8-seed1-part1") / "items.jsonl"
-    s.cluster.plan("tii-e8-seed1-part1", [{"outcome": "start", "wait_file": str(items), "wait_lines": 1, "elapsed": 3600},
+    s.cluster.plan("tii-e8-seed1-part1", [{"outcome": "start", "steps": 1, "elapsed": 3600},
                                           {"outcome": "complete", "elapsed": 7200}])
     s.cycle()
     s.advance()
@@ -823,14 +968,14 @@ def test_runlog_lines_follow_the_data_contract(study):
 
 def test_running_stage_reports_progress_for_the_monitor(study):
     s = study([stage("slow", SLOW), stage("quick")])
-    items = s.paths.stage_dir("slow") / "items.jsonl"
-    s.cluster.plan("tii-slow", [{"outcome": "usr1", "wait_file": str(items), "wait_lines": 2}])
+    s.cluster.plan("tii-slow", [{"outcome": "usr1", "steps": 2}])
     s.cycle()
     s.advance()
     partial = s.progress("slow")
     assert set(partial) == {"stage", "unit", "done", "total", "updated_at"} and is_time(partial["updated_at"])
-    assert (partial["stage"], partial["unit"], partial["total"]) == ("slow", "step", 6)
-    assert 2 <= partial["done"] < 6 and partial["done"] == len(s.items("slow"))  # written when the attempt ended
+    # Two of six, written when the attempt ended although a minute had not passed.
+    assert {key: partial[key] for key in ("stage", "unit", "done", "total")} == {
+        "stage": "slow", "unit": "step", "done": 2, "total": 6}
     assert {key: s.progress("quick")[key] for key in ("stage", "unit", "done", "total")} == {
         "stage": "quick", "unit": "item", "done": 1, "total": 1}
     s.cycle()
@@ -874,6 +1019,12 @@ def test_surface_check_covers_the_monitors_files(study):
         (s.paths.progress / name).unlink()
     (s.paths.progress / "b.json").write_text(json.dumps(report))
     assert export_guard.surface_check(s.paths) == []  # a well-formed report from another stage is fine
+
+    # A write that was cut off for good leaves its unfinished file where writes are prepared,
+    # outside the folders the watcher polices: nothing to move, nothing to raise.
+    (s.paths.staging / ".a.json.tmp.4242").write_text('{"stage": "a", "un')
+    s.cycle()
+    assert not s.blocked() and not s.paths.quarantine.exists()
 
     (s.paths.progress / "rogue.json").write_text(json.dumps({"hpi": "65 year old with chest pain"}))
     s.cycle()  # the watcher moves it out of what the monitor reads and raises an item

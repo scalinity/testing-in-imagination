@@ -40,7 +40,17 @@ MISSING_CYCLES = 4  # a submitted job unknown to both squeue and sacct for this 
 ENDED = ("COMPLETED", "FAILED", "TIMEOUT", "PREEMPTED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED",
          "BOOT_FAIL", "DEADLINE", "REVOKED", "MISSING")
 SACCT_FORMAT = "JobID,JobName,State,ExitCode,ElapsedRaw,AllocTRES,Account,QOS,Start,End"
-SQUEUE_FORMAT = "%i|%j|%T|%a|%q|%b|%C|%r"  # the reason last: it is the one free-form field
+# The one squeue call. --Format (-O) and not --format (-o): %b shows only a per-node GPU request
+# and prints N/A for a job that asked per job (--gpus), which other work under this account does.
+# tres-alloc is what a running job holds and, by the manual, what a pending one requested;
+# tres-per-job and tres-per-node are read too, and the largest count wins, so a GPU is never
+# missed whichever way it was asked for. -O prints fixed-width columns: each field gets a width
+# far beyond any real value and is read by position, so a space or comma in one value cannot
+# shift another. Name is last because it alone has no bound.
+SQUEUE_FIELDS = (("JobID", 24), ("State", 20), ("Account", 40), ("QOS", 40), ("NumCPUs", 12),
+                 ("tres-per-node", 100), ("tres-per-job", 100), ("tres-alloc", 300), ("Reason", 120),
+                 ("Name", 200))
+SQUEUE = ["squeue", "--me", "-h", "-r", "-O", ",".join("%s:%d" % field for field in SQUEUE_FIELDS)]
 GROUP_LIMIT = "QOSGrp"  # pending reasons that mean the QOS's shared limit is reached: QOSGrpGRES, ...
 # The fields of a runlog.jsonl line, in the order monitor/DATA_CONTRACT.md shows them.
 RUNLOG_FIELDS = ("stage", "experiment", "attempt", "job_id", "account", "state", "exit_code", "elapsed_s",
@@ -69,6 +79,30 @@ def gpus_in(tres):
     """GPU count in a Slurm TRES or gres string: gres/gpu=1, gpu:rtx_pro_6000:1, gres:gpu:2."""
     match = re.search(r"gpu(?::[A-Za-z0-9_.-]+)?[:=](\d+)", tres)
     return int(match.group(1)) if match else (1 if "gpu" in tres else 0)
+
+
+def parse_queue(text):
+    """The rows of the squeue call, or None if any line is not laid out as SQUEUE asked.
+
+    None stops the cycle from deciding anything: a job that cannot be read might hold a GPU.
+    """
+    edges = [0]
+    for _, width in SQUEUE_FIELDS[:-1]:
+        edges.append(edges[-1] + width)
+    rows = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        if len(line) < edges[-1]:
+            return None
+        cells = [line[start:end].strip() for start, end in zip(edges, edges[1:])]
+        job, state, account, qos, cpus, per_node, per_job, held, reason = cells
+        if not re.match(r"[0-9][0-9_+]*\Z", job) or not re.match(r"[A-Z_]+\Z", state) or not cpus.isdecimal():
+            return None
+        rows.append({"id": job, "name": line[edges[-1]:].strip(), "state": state, "account": account,
+                     "qos": qos, "cpus": int(cpus), "reason": reason,
+                     "gpus": max(gpus_in(held), gpus_in(per_job), gpus_in(per_node))})
+    return rows
 
 
 def clock(text):
@@ -310,16 +344,12 @@ class Cycle:
         return records
 
     def squeue(self):
-        code, out = call(["squeue", "--me", "-h", "-o", SQUEUE_FORMAT])
+        code, out = call(SQUEUE)
         if code != 0:
             return None
-        rows = []
-        for line in out.splitlines():
-            fields = line.split("|", 7)
-            if len(fields) == 8 and fields[0].isdecimal():
-                rows.append({"id": fields[0], "name": fields[1], "state": fields[2], "account": fields[3],
-                             "qos": fields[4], "gpus": gpus_in(fields[5]),
-                             "cpus": int(fields[6]) if fields[6].isdecimal() else 0, "reason": fields[7]})
+        rows = parse_queue(out)
+        if rows is None:
+            self.note("squeue_unreadable lines=%d" % len(out.splitlines()))
         return rows
 
     # ---- step 4 ----------------------------------------------------------------------------
@@ -458,15 +488,19 @@ class Cycle:
         for row in queue:
             if row["id"] not in tracked:
                 strays.setdefault(row["name"], row)
-            kind, held = ("gpu", row["gpus"]) if row["gpus"] else ("cpu", row["cpus"])
-            pool = (row["account"], row["qos"])
-            in_use[kind][pool] = in_use[kind].get(pool, 0) + held
+            # Every job of this user counts, the study's or not, running or pending. GPUs count
+            # against the account whatever the partition or QOS: the class limit is per account.
+            if row["gpus"]:
+                in_use["gpu"][row["account"]] = in_use["gpu"].get(row["account"], 0) + row["gpus"]
+            else:
+                pool = (row["account"], row["qos"])
+                in_use["cpu"][pool] = in_use["cpu"].get(pool, 0) + row["cpus"]
         # A GPU account where one of our jobs waits on the QOS's shared limit goes to the back of
         # the line, so new GPU jobs take another authorized account while that one has room.
-        limited = {(row["account"], row["qos"]) for row in queue
+        limited = {row["account"] for row in queue
                    if row["gpus"] and row["state"] == "PENDING" and row["reason"].startswith(GROUP_LIMIT)}
-        gpu_pools = [pool for pool in self.pools if (pool.account, pool.qos) not in limited]
-        gpu_pools += [pool for pool in self.pools if (pool.account, pool.qos) in limited]
+        gpu_pools = [pool for pool in self.pools if pool.account not in limited]
+        gpu_pools += [pool for pool in self.pools if pool.account in limited]
         reserved = {}  # allowance key -> GPU-hours still expected from stages already under way
         for stage in self.graph.stages:
             if self.states[stage["id"]]["status"] in ACTIVE + (INTERRUPTED,):
@@ -527,12 +561,12 @@ class Cycle:
             state["manifest_id"] = manifest["manifest_id"]
             self.begin(stage, state, job_id, pool.account, pool.qos)
             self.counts["submitted"] += 1
-            in_use[kind][(pool.account, pool.qos)] = in_use[kind].get((pool.account, pool.qos), 0) + need
+            held = authorization.pool_key(pool)
+            in_use[kind][held] = in_use[kind].get(held, 0) + need
             if not resuming:
                 reserved[key] = reserved.get(key, 0.0) + mine
 
-        for (account, _), held in in_use["gpu"].items():
-            self.gpu_in_use[account] = self.gpu_in_use.get(account, 0) + held
+        self.gpu_in_use = in_use["gpu"]
 
     # ---- step 6 ----------------------------------------------------------------------------
 
@@ -622,7 +656,10 @@ class Cycle:
         """Move anything unguarded out of the trees the Mac copies, then check the whole surface."""
         for path, code in export_guard.file_violations(self.paths):
             self.paths.quarantine.mkdir(parents=True, exist_ok=True)
-            os.replace(path, self.paths.quarantine / ("%d-%s" % (time.time_ns(), path.name)))
+            try:
+                os.replace(path, self.paths.quarantine / ("%d-%s" % (time.time_ns(), path.name)))
+            except FileNotFoundError:
+                continue  # gone since it was listed
             self.note("quarantined code=%s" % code)
         try:
             quarantined = len(os.listdir(self.paths.quarantine))

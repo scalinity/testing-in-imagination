@@ -56,11 +56,17 @@ def tree_digest(directory, keep=None):
     return digest(entries), len(entries)
 
 
-def write_text(path, text):
-    """Write to a temporary name in the same directory, then rename."""
+def write_text(path, text, staging=None):
+    """Write to a temporary name, then rename: a reader sees the old file or the new one, never half.
+
+    The temporary file sits beside the target, or in `staging` (a folder on the same filesystem)
+    when the target's own folder must never hold anything but finished files.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(".%s.tmp.%d" % (path.name, os.getpid()))
+    if staging is not None:
+        Path(staging).mkdir(parents=True, exist_ok=True)
+    temp = Path(staging or path.parent) / (".%s.tmp.%d" % (path.name, os.getpid()))
     with open(temp, "w") as handle:
         handle.write(text)
         handle.flush()
@@ -69,8 +75,8 @@ def write_text(path, text):
     return path
 
 
-def write_json(path, value):
-    return write_text(path, json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n")
+def write_json(path, value, staging=None):
+    return write_text(path, json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n", staging)
 
 
 def write_new_json(path, value):

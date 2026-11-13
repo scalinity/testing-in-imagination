@@ -251,9 +251,10 @@ def test_addendum_counts_only_while_its_exact_text_is_signed(study):
 def test_pools_fill_in_order(study):
     study.sign_addendum()
     usable = authorization.pools(study.docs)
-    assert authorization.pick_pool(usable, "gpu", 1, {("cai6734", "cai6734"): 7}).account == "cai6734"
-    assert authorization.pick_pool(usable, "gpu", 1, {("cai6734", "cai6734"): 8}).account == "cai5724"
-    assert authorization.pick_pool(usable, "gpu", 1, {("cai6734", "cai6734"): 8, ("cai5724", "cai5724"): 8}) is None
+    # GPUs in use are counted per account; CPUs per account and QOS.
+    assert authorization.pick_pool(usable, "gpu", 1, {"cai6734": 7}).account == "cai6734"
+    assert authorization.pick_pool(usable, "gpu", 1, {"cai6734": 8}).account == "cai5724"
+    assert authorization.pick_pool(usable, "gpu", 1, {"cai6734": 8, "cai5724": 8}) is None
     assert authorization.pick_pool(usable, "cpu", 4, {}).qos == "cai6734-b"
     assert authorization.pick_pool(usable, "cpu", 4, {("cai6734", "cai6734-b"): 286}).qos == "cai5724-b"
 

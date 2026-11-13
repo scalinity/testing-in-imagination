@@ -114,7 +114,8 @@ class Context:
     def flush_progress(self):
         """Write the latest reported counts now. The runner calls this when the attempt ends."""
         if self._progress is not None:
-            write_json(self.paths.progress_file(self.stage_id), dict(self._progress, updated_at=now()))
+            write_json(self.paths.progress_file(self.stage_id), dict(self._progress, updated_at=now()),
+                       self.paths.staging)
             self._progress, self._progress_at = None, time.monotonic()
 
 

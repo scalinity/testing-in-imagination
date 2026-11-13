@@ -93,6 +93,27 @@ def test_approve_writes_only_what_passes(tmp_path):
     assert export_guard.surface_check(paths) == []
 
 
+def test_write_in_flight_is_never_seen_in_the_folder_the_watcher_polices(tmp_path, monkeypatch):
+    """The watcher moves anything unexpected out of export/approved/. An aggregate that is still
+    being written must not be there for it to find: it is prepared elsewhere and renamed in."""
+    paths = Paths(root=tmp_path, code=tmp_path)
+    moments, rename = [], os.replace
+
+    def watched(source, target):
+        # The instant before the file appears: where is it, and what would a watcher cycle find?
+        moments.append((Path(source).parent, export_guard.file_violations(paths)))
+        return rename(source, target)
+
+    monkeypatch.setattr(os, "replace", watched)
+    approve(paths, "e2_summary.json", AGGREGATE)
+    approve(paths, "E2/readers.json", {"n": 9})
+    assert len(moments) == 2 and all(folder == paths.staging and found == [] for folder, found in moments)
+    assert list(paths.staging.iterdir()) == [] and export_guard.surface_check(paths) == []
+    # What an interrupted write leaves behind stays out of the policed folders too.
+    (paths.staging / ".e2_summary.json.tmp.4242").write_text("{")
+    assert export_guard.surface_check(paths) == []
+
+
 def test_command_line_approves_or_refuses_without_echoing_content(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("TII_ROOT", str(tmp_path / "tii"))
     good, bad, broken = tmp_path / "good.json", tmp_path / "bad.json", tmp_path / "broken.json"

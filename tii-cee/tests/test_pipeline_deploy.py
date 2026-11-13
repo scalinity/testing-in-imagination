@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
-from pipeline_harness import PACKAGE, WATCHER_PYTHON, Study, pin, stage  # noqa: E402
+from pipeline_harness import PACKAGE, SLOW, WATCHER_PYTHON, Study, pin, stage  # noqa: E402
 
 from tiicee.pipeline import deploy  # noqa: E402
 from tiicee.pipeline import graph as graphs  # noqa: E402
@@ -26,7 +26,6 @@ from tiicee.pipeline.manifest import Refusal  # noqa: E402
 from tiicee.pipeline.paths import DEFAULT_ROOT, Paths  # noqa: E402
 
 BRANCH = "tii-cee-1/2026-11-13"
-SLOW = ["noop_slow", "--steps", "6", "--sleep", "0.05"]
 # git with nobody's settings: no global configuration, no signing, a fixed identity.
 GIT_ENV = {"PATH": os.environ["PATH"], "HOME": "/nonexistent", "GIT_CONFIG_GLOBAL": os.devnull,
            "GIT_CONFIG_SYSTEM": os.devnull, "GIT_AUTHOR_NAME": "test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
@@ -177,16 +176,39 @@ def refused(result):
     return result.stdout.strip()
 
 
-def test_upstream_must_sit_at_the_pinned_commit_with_no_local_changes(sites):
-    (sites.upstream / "scratch.txt").write_text("left behind\n")
+def test_upstream_must_sit_at_the_pinned_commit_with_no_change_a_stage_could_run(sites):
+    # An untracked Python file, at the top or in a new folder, is code that was not pinned.
+    (sites.upstream / "extra.py").write_text("VALUE = 3\n")
     assert refused(sites.deploy()) == "refused submodule_not_clean"
-    (sites.upstream / "scratch.txt").unlink()
+    (sites.upstream / "extra.py").unlink()
+    (sites.upstream / "new" / "deep").mkdir(parents=True)
+    (sites.upstream / "new" / "deep" / "module.py").write_text("VALUE = 4\n")
+    assert refused(sites.deploy()) == "refused submodule_not_clean"
+    shutil.rmtree(sites.upstream / "new")
+    # So is any change to a tracked file, committed or not.
     (sites.upstream / "upstream.py").write_text("VALUE = 2\n")
+    assert refused(sites.deploy()) == "refused submodule_not_clean"
     git(sites.upstream, "commit", "-q", "-a", "-m", "moved off the pin")
     assert refused(sites.deploy()) == "refused submodule_not_at_pin"
     shutil.rmtree(sites.upstream)
     assert refused(sites.deploy()) == "refused submodule_missing"
     assert not (sites.root / "code").exists()  # no export, no current
+
+
+def test_stray_file_in_upstream_stops_neither_a_deployment_nor_a_stage(sites):
+    for name in (".upstream.py.swp", ".nfs000000000a1b2c3d", "notes.txt", "__pycache__/upstream.cpython-312.pyc"):
+        (sites.upstream / name).parent.mkdir(exist_ok=True)
+        (sites.upstream / name).write_text("left behind\n")
+    sites.deployed()
+    paths = Paths(sites.root, sites.root / "code" / "current")
+    graph = graphs.load(paths)
+    manifests.ensure(paths, graph, graph.by_id["a"])
+    manifests.verify(paths, graph, graph.by_id["a"])
+    # An untracked Python file appearing later is caught at the next stage start.
+    (sites.upstream / "extra.py").write_text("VALUE = 3\n")
+    with pytest.raises(Refusal) as caught:
+        manifests.verify(paths, graph, graph.by_id["a"])
+    assert (caught.value.exit_code, caught.value.code) == (20, "submodule_changed")
 
 
 def test_branch_checked_out_on_the_cluster_is_never_moved(sites):
@@ -268,10 +290,9 @@ def test_stage_in_flight_stays_on_its_export_and_new_stages_use_current(sites):
     s = sites.study
     s.write_graph([stage("slow", SLOW), stage("later", depends_on=["slow"])])
     first = sites.deployed()
-    items = s.paths.stage_dir("slow") / "items.jsonl"
-    s.cluster.plan("tii-slow", [{"outcome": "usr1", "wait_file": str(items), "wait_lines": 2}])
+    s.cluster.plan("tii-slow", [{"outcome": "usr1", "steps": 2}])
     s.cycle()
-    s.advance()  # the first part ends on the warning signal
+    s.advance()  # the first part ends on the warning signal, two items in
 
     sites.commit()
     second = sites.deployed()  # new code arrives while the stage is between parts
@@ -402,7 +423,7 @@ def test_deploy_code_never_opens_a_connection_and_reports_a_refusal(sites):
     assert mac.calls() == [["ssh", "-O", "check", "hpg"]] and not (sites.root / "deploy").exists()
 
     (sites.tmp / "master_up").touch()
-    (sites.upstream / "scratch.txt").write_text("left behind\n")
+    (sites.upstream / "extra.py").write_text("VALUE = 3\n")
     result = mac.run()
     assert result.returncode == 5 and "refused submodule_not_clean" in result.stdout
     assert not (sites.root / "code").exists()

@@ -124,7 +124,7 @@ def approve(paths, name, value):
         raise Refused("file_name")
     check_aggregate(value)
     return write_text(paths.approved.joinpath(*parts),
-                      json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n")
+                      json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n", paths.staging)
 
 
 def check_status_json(value):
