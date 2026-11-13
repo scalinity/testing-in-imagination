@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 11:56 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 2:15 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -10,7 +10,9 @@ Updated November 13, 2026, about 11:56 AM EST. Times are US Eastern.
 - M1: the twin repairs (REVIEW-002, -006, -011) are verified (GATE_DECISIONS/G1-twin.md); the
   section 8.3 preflight and manifests are built (tii-cee/tiicee/pipeline); the training-track
   adapters, the resume guarantee (D-CLIN-RESUME) and gate G_resume are committed; the training
-  track's first graph is installed on HiPerGator (G1 training part met). Launch check 7.4a is
+  track's first graph is installed on HiPerGator (G1 training part met). G_resume is MET
+  (GATE_DECISIONS/G_resume.md, 2:13 PM EST): the Nemotron bench trained in parts on the same
+  admission at every step as the uninterrupted run. Launch check 7.4a is
   accepted: 240 of 240 final answers and digests match (LAUNCH_CHECKS.md). REVIEW-001 (for E3) and
   REVIEW-008 (for E5) are not started.
 - M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
@@ -20,15 +22,15 @@ Updated November 13, 2026, about 11:56 AM EST. Times are US Eastern.
   validation"); for the twin's readers the ordering is an identity, and the amendments of E2, E4 and
   E7 are not yet made.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
-  done; training waits on G_resume); E11 SKIPPED (accepted gap, not run); all others PLANNED.
+  done; G_resume met, training stages wait on a redeploy); E9 IN PROGRESS (Granite bench running); E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
   (accepted by Daniel November 13, 2026). BLOCKED-001 is closed.
 - AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
   their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
   unaffected.
-- Next executable actions: the Nemotron resume bench decides gate G_resume; then the Granite bench
-  and the E8 to E10 training stages, with a redeploy; the E1-C interval finishes locally (about 20
+- Next executable actions: redeploy with the E8 and E10 training stages (G_resume met); E9's
+  training after the Granite bench; the E1-C interval finishes locally (about 20
   hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; the E2, E4 and
   E7 amendments for D-REGIME (open: the scale call against R0, and whether the check gains readers
   whose distortion depends on the result or the history); REVIEW-001 and REVIEW-008.
@@ -98,13 +100,14 @@ Updated November 13, 2026, about 11:56 AM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| bench-nemotron, attempt 4 | 51188916 | cai6734 | RUNNING | 11:17 AM EST |
+| e9-bench-granite, attempt 1 | 51202779 | cai6734 | RUNNING | 1:49 PM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 
 ## 6. GPU-hours by experiment
 
-Benches: about 3.3 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
-Nemotron bench's attempts 1 to 3, 1.624, 0.854 and 0.410), plus its running attempt 4, as of 11:56 AM
-EST from the runlog. E8, E9, E10: none spent.
+Benches: 3.707 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
+Nemotron bench's five attempts, 1.624, 0.854, 0.410, 0.396 and 0.051), complete. E9: 0.238 so far
+on the running Granite bench. E8, E10: none spent. As of 2:15 PM EST from the runlog and the
+watcher's status.json.
 Estimates and allowances: AUTHORIZATION.md section 4.

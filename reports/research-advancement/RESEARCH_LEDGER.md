@@ -113,9 +113,9 @@ df467ea, all unchanged since the review.
 | E5 | PLANNED | Frozen at G3 | Waits on G3 |
 | E6 | PLANNED | Frozen at G4 | Waits on G4 |
 | E7 | PLANNED | EXPERIMENT_CARDS/E7.md | Waits on G2a and dataset licenses |
-| E8 | IN PROGRESS | EXPERIMENT_CARDS/E8.md | Data copy (stage e8-data) completed November 13, 2026, 6:49 AM EST; the Nemotron resume bench is running; training stages are added only after gate G_resume (GATE_DECISIONS/G1-training.md) |
-| E9 | PLANNED | EXPERIMENT_CARDS/E9.md | Preflight built (G1 training part met); the Granite bench (e9-bench-granite) is in the training graph; training waits on G_resume |
-| E10 | IN PROGRESS | EXPERIMENT_CARDS/E10.md | Folds (stage e10-folds) completed November 13, 2026, 6:49 AM EST: 432, 1,555 and 173 admissions, no leaks; training waits on G_resume |
+| E8 | IN PROGRESS | EXPERIMENT_CARDS/E8.md | Data copy (stage e8-data) completed November 13, 2026, 6:49 AM EST; gate G_resume MET at 2:13 PM EST (GATE_DECISIONS/G_resume.md); training stages are added by a redeploy |
+| E9 | IN PROGRESS | EXPERIMENT_CARDS/E9.md | Preflight built (G1 training part met); G_resume MET; the Granite bench (e9-bench-granite) is running since 1:49 PM EST; training waits on it |
+| E10 | IN PROGRESS | EXPERIMENT_CARDS/E10.md | Folds (stage e10-folds) completed November 13, 2026, 6:49 AM EST: 432, 1,555 and 173 admissions, no leaks; G_resume MET; training stages are added by a redeploy |
 | E11 | SKIPPED (accepted gap: not run, decided by Daniel November 13, 2026) | None | No other credentialed cohort exists or will be acquired; the paper states the missing independent cohort as a limitation (BLOCKED.md, Accepted gaps, BLOCKED-002). Nothing waits on it |
 
 ## 5. Job ledger
@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 11:56 AM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 2:15 PM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -137,9 +137,11 @@ retry.
 | bench-nemotron | 1 | 51161948 | cai6734 | 7:05 AM | FAILED (continue: the uninterrupted reference run is recorded) | 10 | 5,847 s | 1.624 |
 | bench-nemotron | 2 | 51171760 | cai6734 | 8:46 AM | FAILED (planned continuation) | 10 | 3,075 s | 0.854 |
 | bench-nemotron | 3 | 51179098 | cai6734 | 10:21 AM | FAILED (planned continuation) | 10 | 1,475 s | 0.410 |
-| bench-nemotron | 4 | 51188916 | cai6734 | 11:17 AM | RUNNING | | | |
+| bench-nemotron | 4 | 51188916 | cai6734 | 11:17 AM | FAILED (planned continuation) | 10 | 1,425 s | 0.396 |
+| bench-nemotron | 5 | 51191830 | cai6734 | 1:41 PM | COMPLETED | 0 | 185 s | 0.051 |
 | p-rollout-val | 1 | 51161967 | cai6734 | 7:06 AM | COMPLETED | 0 | 1,340 s | 0.372 |
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
+| e9-bench-granite | 1 | 51202779 | cai6734 | 1:49 PM | RUNNING | | | |
 
 ## 6. Recorded design decisions
 
