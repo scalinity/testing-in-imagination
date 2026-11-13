@@ -46,7 +46,7 @@ Every job redirects stdout and stderr to a private log before Python starts. Pub
 | `prereg/` | the frozen protocol, addenda and amendment notes |
 | `approvals/` | approval requests and Daniel's committed approvals |
 | `scripts/` | `tim.sh` (capture wrapper), `run_tim.py`, `gpu.slurm`, `cpu.slurm`, `submit_slurm.py` |
-| `results/credentialed/` | published credentialed bundles, the Phase reports, `WRITEUP.md` and `SLIDE.md` covering both phases, and the exploratory validation `DIAGNOSTICS.md` |
+| `results/credentialed/` | published credentialed bundles, the Phase reports, `WRITEUP.md` and `SLIDE.md` covering both phases, and the exploratory validation `DIAGNOSTICS.md` (its availability verdict is narrowed by ERRATUM-001 in `reports/research-advancement/ERRATA.md`) |
 | `results/synthetic/` | the same structure from the synthetic fixture |
 
 ## Run log
