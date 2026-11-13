@@ -71,12 +71,12 @@
     if (a.ended != null) rows.push(["Ended", `${dayClock(a.ended)}${a.started != null ? `, after ${span(a.ended - a.started)}` : ""}`]);
     else if (a.started != null) rows.push(["Running for", `${span(known - a.started)} as of the watcher's last cycle`]);
     else if (a.submitted != null) rows.push(["Queued for", `${span(known - a.submitted)} as of the watcher's last cycle`]);
-    if (a.state) rows.push(["Scheduler state", `${a.state}. ${END_STATE[a.state]?.meaning ?? ""}`]);
+    if (a.state) rows.push(["Scheduler state", `${a.state}. ${l === "cont" ? "The scheduler calls any nonzero exit FAILED; exit 10 is a planned continuation." : END_STATE[a.state]?.meaning ?? ""}`]);
     if (a.exitCode != null) rows.push(["Exit code", `${a.exitCode}${EXIT_CODE[a.exitCode] ? `: ${EXIT_CODE[a.exitCode]}` : ": a failure"}`]);
     if (a.gpuHours != null) rows.push(["GPU-hours", `${fmt(a.gpuHours, 2)}, charged to ${a.experiment || "its experiment"}'s allowance`]);
     return {
       title: `${row.id}, attempt ${a.attempt}`,
-      sub: l === "running" ? "Running." : l === "done" ? "Completed." : l === "cont" ? "Checkpointed at the time limit; it continues in the next attempt." : l === "fail" ? (a.refused || a.exitCode === 20 || a.exitCode === 30 ? "Refused. Never retried; it becomes a BLOCKED item." : "Failed; retries are exhausted.") : "Ended early; the watcher resubmits it from its checkpoint.",
+      sub: l === "running" ? "Running." : l === "done" ? "Completed." : l === "cont" ? "Checkpointed; it continues in the next attempt." : l === "fail" ? (a.refused || a.exitCode === 20 || a.exitCode === 30 ? "Refused. Never retried; it becomes a BLOCKED item." : "Failed; retries are exhausted.") : "Ended early; the watcher resubmits it from its checkpoint.",
       rows,
       terms: terms("stage"),
       source: clusterSource("state/runlog.jsonl"),

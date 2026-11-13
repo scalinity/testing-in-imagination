@@ -296,7 +296,7 @@ export const FIGURE_PANELS = [
 /** Stage exit codes (WATCHER_DESIGN.md section 3). */
 export const EXIT_CODE: Record<number, string> = {
   0: "done",
-  10: "checkpointed at the time limit; continues in a new attempt",
+  10: "checkpointed; continues in a new attempt, near the time limit or by the stage's own choice; never counted as a retry",
   20: "identity refusal: a bound artifact changed; never retried",
   30: "authorization or data-use refusal; never retried",
   40: "out of memory, detected by the stage",
@@ -304,7 +304,7 @@ export const EXIT_CODE: Record<number, string> = {
 
 /** What the watcher does with each end state (WATCHER_DESIGN.md section 4). */
 export const END_STATE: Record<string, { letter: string; meaning: string }> = {
-  COMPLETED: { letter: "", meaning: "Finished. Exit 0 marks the stage done; exit 10 means it checkpointed and continues." },
+  COMPLETED: { letter: "", meaning: "Finished with exit 0; the stage is done." },
   TIMEOUT: { letter: "T", meaning: "Hit the time limit. Resubmitted from its checkpoint; counted against three retries only if it made no progress." },
   PREEMPTED: { letter: "P", meaning: "Preempted by the scheduler. Resubmitted from its checkpoint, up to three times." },
   NODE_FAIL: { letter: "N", meaning: "The node failed. Resubmitted from its checkpoint, up to three times." },
