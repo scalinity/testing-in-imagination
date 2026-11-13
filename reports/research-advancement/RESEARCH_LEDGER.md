@@ -163,3 +163,28 @@ injected faults caught in a mutation check.
     manifest records with the snapshot digest and the code commit.
 Reference: Bayes-optimal value on the reduced base twin at lambda 1 rises from 0.3988 with no test to
 0.6819 with six; 0.8224 at lambda 0. These are VERIFIED_CODE reference values, not results.
+
+### D-CEE, November 13, 2026: the CEE library (tii-cee/tiicee/cee)
+
+166 fixture tests (E0), passing with numpy warnings as errors; 56 of 56 planted faults caught in a
+mutation check.
+
+1. The floor (1e-6, then renormalize) applies once, to reader vectors on entry; world-model weights
+   are not floored (a zero weight is a point mass), and the tracked coherent belief is never floored
+   (flooring it would break the martingale). Inputs more than 1e-6 from summing to one are rejected.
+2. tau_B: r' is evaluated on a factor-2 grid of tau and bisected on log tau inside the crossing
+   cell to the specified 1% relative tolerance; the result is the largest tau with r' ≥ B, so the
+   monotonicity fallback of section 5.11 is a real check (a rise narrower than one grid step is not
+   detected). r' was monotone in all 2,320 random and adversarial cases tried. Consequence of the 1%
+   tolerance: a coherent reader given its exact budget gets tau_B within 0.27% of 1, not exactly 1;
+   E1's 1e-9 no-harm rule concerns the projection, which is exact for a coherent pair, not the
+   scale stage.
+3. Non-convergence of IPF (tolerance 1e-8, 500 iterations) uses the raw reader as specified: the
+   stateless track carries q_real, the stateful track the uncorrected proposal; the step records the
+   fallback. At default limits IPF fails at tau = 1/8 in about 3% of random cases and never at
+   tau ≥ 1/2, which E1-D reports for the two-sided variant.
+4. The CEE-Gate bounds of section 5.8 are upper 90% bootstrap bounds of the absolute value of each
+   estimated term (bootstrap of |mean|), resampling caller-supplied units.
+5. tau_ratio is undefined (None) for a reader that does not move (r ≤ 1e-12 nats) and is reported
+   only as a secondary diagnostic.
+6. Names: coherent_voi, gate_allows, scaling.scale; realized_gain is separate from gain_terms.
