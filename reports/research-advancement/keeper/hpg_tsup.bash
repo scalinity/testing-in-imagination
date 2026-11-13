@@ -5,6 +5,7 @@ tsup() {
     here=$(hostname -s)
     if [ -z "$owner" ] || [ "$owner" != "$here" ]; then
         echo "Tailscale belongs on ${owner:-an unrecorded node}; do not start it on $here." >&2
+        echo "If that node is retired, verify its daemon is stopped before recording a new owner in $dir/owner." >&2
         return 1
     fi
     command tailscale --socket="$TS_SOCK" status >/dev/null 2>&1 && return 0

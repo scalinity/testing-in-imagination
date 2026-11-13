@@ -32,7 +32,12 @@ Install that function in the existing Tailscale section of HiPerGator's `.bashrc
 retain its `TS_SOCK`, `tailscale` alias and `sshmac` alias. Record `login7` in
 `~/.local/share/tailscale/owner` only after checking the live daemon on that node.
 Changing the function does not restart the live daemon. If the owner node is
-retired, reassignment requires first verifying that its daemon is stopped.
+retired, reassignment requires first verifying that its daemon is stopped. Only
+after that check, run `hostname -s > ~/.local/share/tailscale/owner` on the chosen
+replacement node, then run `tsup`. If the owner record is missing, establish where
+the live daemon runs before restoring that record. Never erase it just to bypass
+a refusal. Internal SSH to `login7` from a different login node is NOT_RUN; it may
+require the normal authentication flow.
 
 On the Mac, `TII_HPG_HOST="hpg-tail"` selects the shared connection. Set
 `TII_RECOVERY_HINT` to include the public-route and owner-node recovery instructions.
