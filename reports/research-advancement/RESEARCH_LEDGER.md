@@ -106,7 +106,7 @@ df467ea, all unchanged since the review.
 | ID | Status | Card | Notes |
 |---|---|---|---|
 | E0 | COMPLETED (VERIFIED_CODE, PASS) | EXPERIMENT_CARDS/E0.md | Run 1: 166 fixtures at ef7c4ac. Run 2 after the tracks extension: 185 fixtures at 714feb2. tii-cee/results/E0/runs/ |
-| E1 (A to D) | PLANNED | EXPERIMENT_CARDS/E1.md | Twin in construction |
+| E1 (A to D) | COMPLETED except the E1-C interval (running) | EXPERIMENT_CARDS/E1.md | EXECUTED_EXPERIMENT, exact (twin), at a4f34bd; tii-cee/results/E1/. Projection repair present (G2b met); negative controls confirmed; gate not valid; scale present with the exact budget; G2c not met; attribution unstable across orders; stateful track; projection-only layer carried downstream |
 | E2 | PLANNED | EXPERIMENT_CARDS/E2.md | Waits on G2a |
 | E3 | PLANNED | EXPERIMENT_CARDS/E3.md | Waits on REVIEW-001 repair and G1 |
 | E4 | PLANNED | EXPERIMENT_CARDS/E4.md | Waits on G2a, probe conformance, data-use check F2 |
