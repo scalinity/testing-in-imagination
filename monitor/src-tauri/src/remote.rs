@@ -763,6 +763,53 @@ mod tests {
         assert!(remote.data.calls.is_empty());
     }
 
+    /// A running stage's progress file and the append-only run log are followed from one read
+    /// to the next: changed files are fetched again, unchanged ones are not, and only the
+    /// appended bytes of the run log are asked for.
+    #[test]
+    fn progress_and_run_log_follow_the_files_between_reads() {
+        let root = std::env::temp_dir().join(format!("tii-monitor-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        for dir in ["state/progress", "gates", "export/approved"] {
+            std::fs::create_dir_all(root.join(dir)).unwrap();
+        }
+        let write = |rel: &str, text: &str, epoch_s: u64| {
+            let path = root.join(rel);
+            std::fs::write(&path, text).unwrap();
+            let file = std::fs::File::options().write(true).open(&path).unwrap();
+            file.set_modified(std::time::UNIX_EPOCH + Duration::from_secs(epoch_s)).unwrap();
+        };
+        write("state/status.json", r#"{"schema":"tii-status/1"}"#, 1000);
+        write("state/runlog.jsonl", "{\"event\":\"submitted\",\"stage\":\"s1\"}\n", 1000);
+        write("state/progress/s1.json", r#"{"stage":"s1","done":10,"total":100}"#, 1000);
+
+        let up = || (true, String::new());
+        let mut remote = Remote { transport: Transport::Fixture(root.clone()), data: RemoteData::default(), last_start_ms: None, cache_file: None, stamp_file: None };
+        assert!(remote.cycle(1, 1_000_000, up()));
+        assert_eq!(remote.data.phase, "ok");
+        assert_eq!(remote.data.runlog.len(), 1);
+        assert_eq!(remote.data.progress["s1.json"].json.as_ref().unwrap()["done"], 10);
+        let first_read = remote.data.calls.len();
+
+        // Nothing changed: the next read lists and re-reads status.json, and fetches nothing else.
+        assert!(remote.cycle(2, 1_061_000, up()));
+        assert!(remote.data.calls.len() < first_read);
+        assert!(!remote.data.calls.iter().any(|c| c.command.starts_with("tail")));
+        assert_eq!(remote.data.runlog.len(), 1);
+
+        // The stage reports more progress and the watcher appends a line.
+        write("state/progress/s1.json", r#"{"stage":"s1","done":55,"total":100}"#, 1060);
+        let mut log = std::fs::read_to_string(root.join("state/runlog.jsonl")).unwrap();
+        log.push_str("{\"event\":\"started\",\"stage\":\"s1\"}\n");
+        write("state/runlog.jsonl", &log, 1060);
+        assert!(remote.cycle(3, 1_122_000, up()));
+        assert_eq!(remote.data.progress["s1.json"].json.as_ref().unwrap()["done"], 55);
+        assert_eq!(remote.data.runlog.len(), 2);
+        assert_eq!(remote.data.runlog[1]["event"], "started");
+        assert!(remote.data.calls.iter().any(|c| c.command.starts_with("tail -c +") && !c.command.starts_with("tail -c +1 ")));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
     #[test]
     fn a_dead_master_means_no_call() {
         let mut remote = Remote {
