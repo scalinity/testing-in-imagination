@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 9:25 AM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 11:56 AM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -135,7 +135,9 @@ retry.
 | e8-data | 1 | 51157675 | cai5724 | 6:48 AM | COMPLETED | 0 | 6 s | 0 |
 | e10-folds | 1 | 51157681 | cai5724 | 6:48 AM | COMPLETED | 0 | 7 s | 0 |
 | bench-nemotron | 1 | 51161948 | cai6734 | 7:05 AM | FAILED (continue: the uninterrupted reference run is recorded) | 10 | 5,847 s | 1.624 |
-| bench-nemotron | 2 | 51171760 | cai6734 | 8:46 AM | RUNNING | | | |
+| bench-nemotron | 2 | 51171760 | cai6734 | 8:46 AM | FAILED (planned continuation) | 10 | 3,075 s | 0.854 |
+| bench-nemotron | 3 | 51179098 | cai6734 | 10:21 AM | FAILED (planned continuation) | 10 | 1,475 s | 0.410 |
+| bench-nemotron | 4 | 51188916 | cai6734 | 11:17 AM | RUNNING | | | |
 | p-rollout-val | 1 | 51161967 | cai6734 | 7:06 AM | COMPLETED | 0 | 1,340 s | 0.372 |
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 
@@ -364,3 +366,57 @@ so the suite failed under -W error whenever garbage collection ran inside that t
 tiicee/experiments/e1/tree.py repeats the multistep arithmetic on arrays, including the m_0
 division; its beliefs come from floored readers or projections, so m_0 > 0 there and it was left
 as is. Full suite after the fixes: 883 passed, 23 skipped, under -W error.
+
+### D-REGIME validation, November 13, 2026: result
+
+Run of tii-cee/tiicee/regime_check.py at 8c37be1; its docstring states the criteria, written before
+the run. The code was reviewed before the counted run by Gemini 4 Argon High through NativePeers
+(task f9cde0e7, read-only); all four findings were applied in 8c37be1, and a run started on the
+reviewed commit 57ae925 was stopped and discarded, then repeated from scratch on 8c37be1. Setting:
+E1 card configuration, 20 seeds, 2,000 evaluation patients, both acquisition rules, the full twin;
+W0 and W2; tau_B two-sided under the exact budget at the first decision point; R0, the seven R4
+families and the 81 grid readers; decided on the base variant, the other three method-choice
+variants reported. Output: tii-cee/results/D-REGIME/verdict.json (SHA-256 8b5e85e5…) and rows/ (80
+files, one per seed and variant).
+
+Result: VALIDATED. Under W0 and under W2 the seed mean of tau_B rises strictly with the likelihood
+power on all nine drift lines of the grid, and in every seed; every R4 family is on its correct side
+of 1. The no_correlation, strong_correlation and duplicated_panel variants give the same result. No
+search was clipped or took the fallback path, and every search projection converged
+(search_converged 1.0 in every row, review F004 of the M2 code).
+
+| Family | Power | W0, tau_B [95% seed interval] | W2 |
+|---|---|---|---|
+| over | 2 | 1.995 [1.995, 1.996] | 2.014 [2.003, 2.025] |
+| under | 0.5 | 0.499 [0.499, 0.499] | 0.503 [0.501, 0.506] |
+| entrench+over | 2 | 1.995 [1.995, 1.995] | 2.014 [2.003, 2.025] |
+| fixed+under | 0.5 | 0.501 [0.500, 0.501] | 0.503 [0.501, 0.506] |
+| independence | 1 | 1.001 [1.000, 1.001] | 1.007 [1.002, 1.012] |
+| entrench | 1 | 0.997 [0.997, 0.997] | 1.007 [1.001, 1.013] |
+| fixed | 1 | 1.001 [1.001, 1.002] | 1.007 [1.002, 1.013] |
+| R0 (reported, not decided on) | 1 | 1.001 [1.001, 1.002] | 1.007 [1.002, 1.013] |
+
+What the result shows, and what it cannot. At the empty history an R4 reader's reactions are the
+true likelihood to its power times a class factor that does not depend on the result, and the
+projection absorbs any class factor, so tau_B(p, delta) = p x tau_B(1, 0) under any world model
+(review F002; confirmed on the rows: within each world model and acquisition rule, all 81 grid
+readers sit at one offset from log p, within the search's resolution). The ordering criterion is
+therefore an identity for the twin's readers under W0 and W2 alike. The check shows that the
+coordinate is computed right, that it reads the R4 distortion exactly where E1's averaged statistic
+inverted it, and that a fitted world model moves every reader by one common factor: W2 raises tau_B
+by 0.7% (interval 0.2% to 1.3%). It cannot show how the coordinate orders a reader whose distortion
+depends on the result or on the history, which a language-model reader may have. The independence
+reader's double counting of correlated evidence is such an error and cannot be seen at the first
+decision point.
+
+For the amendments of E2, E4 and E7, which are not yet made:
+1. Under W2 the power-1 families pass only through the search's error bound, log(1 + RTOL) / 2: the
+   lower ends of their intervals, 1.001 to 1.002, fall inside it. Specification 10.2's scale call
+   ("the 95% interval of log tau_B excludes 0") has no such band; with a fitted world model and
+   enough samples it would place R0 itself in the scale regime. What follows from F002: read the
+   scale call against R0 under identical sampling and the same world model, as the drift call
+   already does. That cancels the common factor; for an R4 reader tau_B / tau_B(R0) = p under any
+   world model.
+2. Wherever the regime map is drawn, it states the limit above.
+Open: whether the check is extended with simulated readers whose distortion depends on the result or
+the history, so that the ordering criterion can fail. Gate G2a still waits for the E1-C interval.

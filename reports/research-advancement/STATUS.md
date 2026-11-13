@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 9:25 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 11:56 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -15,7 +15,10 @@ Updated November 13, 2026, about 9:25 AM EST. Times are US Eastern.
   REVIEW-008 (for E5) are not started.
 - M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
   (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
-  charts get projection only, stateful track). G2a waits for E1-C.
+  charts get projection only, stateful track). G2a waits for E1-C. D-REGIME's coordinate (tau_B at
+  the first decision point) is VALIDATED in the twin under W0 and W2 (RESEARCH_LEDGER.md, "D-REGIME
+  validation"); for the twin's readers the ordering is an identity, and the amendments of E2, E4 and
+  E7 are not yet made.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
   done; training waits on G_resume); E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
@@ -26,8 +29,9 @@ Updated November 13, 2026, about 9:25 AM EST. Times are US Eastern.
   unaffected.
 - Next executable actions: the Nemotron resume bench decides gate G_resume; then the Granite bench
   and the E8 to E10 training stages, with a redeploy; the E1-C interval finishes locally (about 20
-  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; D-REGIME's
-  validation in the twin; REVIEW-001 and REVIEW-008.
+  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; the E2, E4 and
+  E7 amendments for D-REGIME (open: the scale call against R0, and whether the check gains readers
+  whose distortion depends on the result or the history); REVIEW-001 and REVIEW-008.
 
 ## 2. Authorization
 
@@ -94,13 +98,13 @@ Updated November 13, 2026, about 9:25 AM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| bench-nemotron, attempt 2 | 51171760 | cai6734 | RUNNING | 8:46 AM EST |
+| bench-nemotron, attempt 4 | 51188916 | cai6734 | RUNNING | 11:17 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 
 ## 6. GPU-hours by experiment
 
-Benches: about 2.5 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
-Nemotron bench's reference run 1.624; the rest is its running attempt 2), as of 9:20 AM EST from the
-runlog. E8, E9, E10: none spent.
+Benches: about 3.3 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
+Nemotron bench's attempts 1 to 3, 1.624, 0.854 and 0.410), plus its running attempt 4, as of 11:56 AM
+EST from the runlog. E8, E9, E10: none spent.
 Estimates and allowances: AUTHORIZATION.md section 4.
