@@ -158,11 +158,11 @@ export interface BoardNode {
 export const ROWS = 9;
 
 export const NODES: BoardNode[] = [
-  { id: "M0", kind: "milestone", row: 0, x0: 0.04, x1: 0.072, planRow: "Nov 14–19", planNote: "M0 and its launch checks are planned for Nov 14–19." },
-  { id: "G0", kind: "gate", row: 0, x0: 0.092, x1: 0.092, planRow: "Nov 14–19", planNote: "The plan gives no date for G0. It is drawn in the window that holds M0." },
+  { id: "M0", kind: "milestone", row: 0, x0: 0.02, x1: 0.062, planRow: "Nov 14–19", planNote: "M0 and its launch checks are planned for Nov 14–19." },
+  { id: "G0", kind: "gate", row: 0, x0: 0.094, x1: 0.094, planRow: "Nov 14–19", planNote: "The plan gives no date for G0. It is drawn in the window that holds M0." },
   { id: "E0", kind: "experiment", row: 0, x0: 0.112, x1: 0.158, planRow: "Nov 14–19", planNote: "Planned for Nov 14–19." },
-  { id: "M1", kind: "milestone", row: 4, x0: 0.112, x1: 0.144, planRow: "Nov 14–19", planNote: "Twin repairs and the preflight of spec 8.3 are planned for Nov 14–19." },
-  { id: "G1", kind: "gate", row: 4, x0: 0.17, x1: 0.17, planRow: "Nov 14–19", planNote: "The plan gives no date for G1. It is drawn in the window that holds the repairs." },
+  { id: "M1", kind: "milestone", row: 4, x0: 0.104, x1: 0.146, planRow: "Nov 14–19", planNote: "Twin repairs and the preflight of spec 8.3 are planned for Nov 14–19." },
+  { id: "G1", kind: "gate", row: 4, x0: 0.182, x1: 0.182, planRow: "Nov 14–19", planNote: "The plan gives no date for G1. It is drawn in the window that holds the repairs." },
   { id: "E1", kind: "experiment", row: 1, x0: 0.232, x1: 0.348, planRow: "Nov 20–26", planNote: "Parts A to D are planned for Nov 20–26." },
   { id: "E3", kind: "experiment", row: 4, x0: 0.232, x1: 0.278, planRow: "Nov 20–26", planNote: "Planned for Nov 20–26." },
   { id: "E8", kind: "experiment", row: 6, x0: 0.232, x1: 0.456, planRow: "Nov 14–19", planNote: "Submitted by Thu Nov 19; training finishes in Nov 20–26." },

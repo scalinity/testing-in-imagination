@@ -18,7 +18,13 @@
   const RIGHT = 26;
   const ROWH = $derived(store.compact ? 18 : 20);
   const MIRROR = $derived(store.compact ? 74 : 96);
-  const idChars = $derived(store.compact ? 12 : 18);
+  // The experiment column is as wide as its longest label (capped), and the stage id starts after it,
+  // so a long experiment name such as "benches" never overprints the stage id.
+  const EXP_X = $derived(store.compact ? 6 : 10);
+  const EXP_MAX = 7;
+  const expChars = $derived(Math.min(EXP_MAX, Math.max(2, ...work.rows.map((r) => (r.experiment || "").length))));
+  const stageX = $derived(EXP_X + expChars * 6.7 + 8);
+  const idChars = $derived(Math.max(6, Math.floor((LABEL - 12 - stageX) / 6.4)));
   const RANGES = { "6h": 6 * 3600e3, "24h": 86400e3, "7d": 7 * 86400e3 } as const;
 
   const now = $derived(store.now);
@@ -181,8 +187,8 @@
           <g class="row">
             <g use:tip={() => rowTip(row)} tabindex="0" role="group" aria-label="Stage {row.id}">
               <rect class="hit" x="0" y={y - ROWH / 2} width={LABEL - 4} height={ROWH} />
-              <text class="exp" x={store.compact ? 6 : 10} y={y + 4}>{row.experiment}</text>
-              <text class="stage" x={store.compact ? 34 : 42} y={y + 4}>{short(row.id, idChars)}</text>
+              <text class="exp" x={EXP_X} y={y + 4}>{short(row.experiment ?? "", EXP_MAX)}</text>
+              <text class="stage" x={stageX} y={y + 4}>{short(row.id, idChars)}</text>
               {#if row.attempts.length > 1}<text class="times" x={LABEL - 6} y={y + 4} text-anchor="end">×{row.attempts.length}</text>{/if}
             </g>
             {#each row.attempts as a (a.attempt)}

@@ -305,10 +305,10 @@
             <text x={X(n.x0)} y={Y(n.row) - G - (store.compact ? 2 : 3.5)} text-anchor="middle">{n.id}</text>
           </g>
         {:else}
-          {@const x = X(n.x0)}
-          {@const w = X(n.x1) - X(n.x0)}
           {@const name = n.kind === "experiment" ? (EXPERIMENT_NAME[n.id] ?? "") : ""}
           {@const idW = n.id.length * 6.6 + 18}
+          {@const w = Math.max(X(n.x1) - X(n.x0), idW + 2)}
+          {@const x = X(n.x1) - w}
           {@const counts = n.kind === "experiment" ? stageCounts(n.id, remote) : null}
           <g
             class="chip {v.look} {n.kind}"
