@@ -1,0 +1,44 @@
+{
+  "study_id": "TII-CEE-1",
+  "experiment_id": "E0",
+  "run": 2,
+  "reason": "library extended: tracks accept real_posterior (commit 714feb2)",
+  "evidence_label": "VERIFIED_CODE",
+  "code": {
+    "commit": "714feb276867752238d52ed5ed28790af05cd438",
+    "bound_paths_clean": true
+  },
+  "bound_files": {
+    "tests/test_cee_api.py": "f4dc8451992558c09460202c38a7d7c35ebd8a873832fa6f99d3e9e8b7e7bc80",
+    "tests/test_cee_audit.py": "027c4035ffc322b018afa95c01bc0e8a27a15afffc06a954a25e5cc26910a2ae",
+    "tests/test_cee_core.py": "10b67930d30aa868ad6c27e5baa5d8266ac12fc942696cafb4838a6b43f2eb0d",
+    "tests/test_cee_decision.py": "4e01bfd41d4797f54412cd4185b2bdb2b5287e26110ff9d7a0dd7114c7073953",
+    "tests/test_cee_identity.py": "c5da3e8df470fcbdcc05a35543b68bb82a0fec48f54327a95385a905785d2435",
+    "tests/test_cee_measures.py": "e0fbc5a44fe184969c0796ab7d79de78200a9b8bd58ed144d73ecde49e3acf1e",
+    "tests/test_cee_multistep.py": "2be31d64ea9f2184f33d5f694932f00bb450801918e79a60058568a82db5bc1e",
+    "tests/test_cee_scale.py": "522dc2b7e9f0f92d8e150715748c9228a4c05c49082e0b9eb1b317b108383c35",
+    "tests/test_cee_tracks.py": "17f1e3970856bbf3e69c72c741593de585b8b2048984dbf8668a4792c39664dc",
+    "tiicee/cee/__init__.py": "26ff4e94c9505e3f1a6dfa83c2c3c381bdc68afcf8dc2d0f95922e25cbf500a6",
+    "tiicee/cee/audit.py": "04e6be460a99ab4e059270775d07f8a4fa88159de8ddb45f987abda93042d98f",
+    "tiicee/cee/card.py": "f820581d47d99c38ab4b533e98ef70b19646ebe9ad1eaa2422bdb64f530f9e02",
+    "tiicee/cee/core.py": "121db8b1cccaa19a35ed4e86456b065e48a920e6b5ba0dd5392f0db1f9c96bf5",
+    "tiicee/cee/decision.py": "b04109fa897972e2e6c5e5070652f30a2329418dfaa532964acd6d3d84cb12de",
+    "tiicee/cee/gate.py": "aed882ba744a22e9d4ce13b84c511b800fd45f391b8363b4b201f9297d7b4b26",
+    "tiicee/cee/identity.py": "920b465083cd3bc5a43e7718b7f2600cb2a7596fd6dd810ca5003f47c2b7f47c",
+    "tiicee/cee/measures.py": "5f8e84a1f98afdbafe1d1e5593027aaf8f84f5f0f720c1b3a549a8848f2f352b",
+    "tiicee/cee/multistep.py": "b1de81aaaed2c367850a2593848dfdfd653b11a98bcb420f74cfc36c946c1966",
+    "tiicee/cee/scaling.py": "a5e0d92aef221fe4c17263c12f8f2087a7d7bb57f66b076fca340426e894850d",
+    "tiicee/cee/tracks.py": "40387d17bf1b7a83d3f8cd209199dabff8764bfdedb80ead905b42f5959cb670",
+    "tiicee/interfaces.py": "624d5832689ad948be947d390e2b2b2b50084f926dddb79373dcee9d2e06cc75"
+  },
+  "card_sha256": "bfd83cba45cb909482f2506034eaa7d8f1102eec4d158d07797988c958ef9f33",
+  "authorization": {
+    "AUTHORIZATION.md": "72ccc89c8a825c82578c8efdf942025e3ce60d72f179b8b13489737ee37221ae",
+    "AUTHORIZATION_ADDENDUM_1.md": "f59cd6fa638d00b2d1bc9bdc4848ba9ae412f9abecb7cdfcfa83cb4475e05658"
+  },
+  "command": "uv run pytest -q -W error tests/test_cee_*.py -p no:cacheprovider",
+  "exit_code": 0,
+  "summary": "185 passed in 3.79s",
+  "decision": "PASS: every fixture within tolerance",
+  "run_at": "2026-11-13T03:51:43-05:00"
+}
