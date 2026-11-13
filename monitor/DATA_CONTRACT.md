@@ -60,3 +60,15 @@ study completed, all remaining items blocked. Text holds names and counts only.
 
 As WATCHER_DESIGN.md describes. The monitor may list export/approved/ and read its JSON files,
 which already passed the export guard.
+
+## Figure 1 files (local, written by the study's figure step)
+
+Figure 1 (specification 1.7) is drawn only from result manifests, so its three data files are
+written by the study's figure step into the repository, aggregates only, and the monitor reads them
+locally, never over SSH:
+
+- `tii-cee/results/figure1/regime_map.json`: `{"schema": "tii-fig1-regime/1", "generated_at", "harmful_region": [{"tau_b", "kl_inc"}, ...] (polygon from E1), "markers": [{"id", "label", "experiment": "E1|E2|E4|E7|E8|E9", "kind": "simulated|language_model|trained_policy|second_backbone|public_dataset", "tau_b", "tau_b_lo", "tau_b_hi", "kl_inc", "kl_inc_lo", "kl_inc_hi", "params_b" (optional), "dataset" (optional), "delta_log_loss"}]}`. `kl_inc` is the location incoherence after scaling, in nats per decision; `tau_b` is the budget-implied scale (log axis, 1 = matched).
+- `tii-cee/results/figure1/gain_accounting.json`: `{"schema": "tii-fig1-gain/1", "generated_at", "cells": [{"id", "reader", "setting", "experiment", "predicted_gain", "predicted_lo", "predicted_hi", "realized_gain", "realized_lo", "realized_hi"}]}`.
+- `tii-cee/results/figure1/regret_attribution.json`: `{"schema": "tii-fig1-regret/1", "generated_at", "agents": [{"id", "label", "variant": "raw|repaired", "selection", "reading", "commitment"}]}`, shares summing to 1.
+
+A missing file means that panel's experiments have not produced results; the monitor says which.
