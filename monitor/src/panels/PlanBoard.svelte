@@ -8,7 +8,7 @@
   import { clusterSource, fileSource } from "../lib/sources";
   import { glyphFor, look, meaning, word, type Look } from "../lib/status";
   import { store } from "../lib/store.svelte";
-  import { EDGES, EXPERIMENT_NAME, EXPERIMENT_TERMS, FLAGS, JUNCTIONS, MILESTONE_NAME, NODES, ROWS, WINDOWS, terms, xOfTime, type BoardEdge, type BoardNode } from "../lib/study";
+  import { EDGES, EXPERIMENT_NAME, EXPERIMENT_TERMS, FLAGS, JUNCTIONS, MILESTONE_NAME, NODES, REGIONS, ROWS, WINDOWS, terms, xOfTime, type BoardEdge, type BoardNode } from "../lib/study";
   import { day, dayClock, fmt, span } from "../lib/time";
   import { tip, type Tip } from "../lib/tip.svelte";
 
@@ -189,12 +189,13 @@
   }
 
   function milestoneTip(id: string): Tip {
-    const node = byId.get(id)!;
+    const node = byId.get(id);
+    const region = REGIONS.find((r) => r.id === id);
     const state = docs?.milestones.find((m) => m.id === id)?.state;
     return {
       title: `${id}: ${MILESTONE_NAME[id] ?? ""}`,
       sub: state ? `${cap(state.toLowerCase())}.` : "STATUS.md does not state this milestone.",
-      body: node.planNote,
+      body: node?.planNote ?? `Its work is ${region?.members.join(", ")} (${region?.spec}). The tinted region marks where that work sits on the plan.`,
       rows: docs?.status_milestone_line ? [["STATUS.md says", docs.status_milestone_line]] : [],
       source: fileSource(docs?.status_file),
     };
@@ -282,6 +283,18 @@
           <rect class="hit" x={X(xOfTime(f.at)) - 6} y={10} width={12} height={RAIL - 22} />
           <line x1={X(xOfTime(f.at))} x2={X(xOfTime(f.at))} y1={13} y2={RAIL - 13} />
           <path d="M{X(xOfTime(f.at))},13h6l-2,2.5l2,2.5h-6z" />
+        </g>
+      {/each}
+
+      <!-- Milestones made of experiments: a tinted region under their work -->
+      {#each REGIONS as r (r.id)}
+        {@const state = docs?.milestones.find((m) => m.id === r.id)?.state ?? ""}
+        <g class="region {state ? look(state) : 'unknown'}" role="group" aria-label="Milestone {r.id}, {word(state)}" use:tip={() => milestoneTip(r.id)}>
+          <path d={r.rects.map(([a, b, r0, r1]) => `M${X(a)},${Y(r0) - ROW / 2 + 2}H${X(b)}V${Y(r1) + ROW / 2 - 2}H${X(a)}Z`).join("")} />
+          {#each r.labels as [lx, lr]}
+            <g class="mark"><Glyph name={glyphFor(state)} size={9} x={X(lx)} y={Y(lr) - 4.5} /></g>
+            <text x={X(lx) + 12} y={Y(lr) + 3.5}>{r.id}</text>
+          {/each}
         </g>
       {/each}
 
@@ -596,6 +609,27 @@
   .chip.queued .body {
     stroke: var(--ink-2);
     stroke-dasharray: 3 2;
+  }
+  .region path {
+    fill: var(--ink-3);
+    fill-opacity: 0.07;
+  }
+  .region.running path {
+    fill: var(--live);
+    fill-opacity: 0.09;
+  }
+  .region text {
+    fill: var(--ink-3);
+    font-size: var(--fs-1);
+    font-weight: 700;
+  }
+  .region .mark {
+    color: var(--ink-3);
+  }
+  .region.running text,
+  .region.running .mark {
+    fill: var(--live-text);
+    color: var(--live-text);
   }
   .chip.running .body {
     fill: color-mix(in srgb, var(--live) 20%, var(--ground));

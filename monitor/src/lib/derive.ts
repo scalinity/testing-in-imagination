@@ -42,9 +42,13 @@ export function experimentStatus(id: string, remote: Remote | null, docs: Docs |
   const row = docs?.register.find((r) => belongsTo(r.id, id));
   const ledger = row ? canonical(row.status) : null;
   if (fromCluster.length) {
-    const status = combine(fromCluster.map((e) => canonical(e.status).status));
+    let status = combine(fromCluster.map((e) => canonical(e.status).status));
+    // The cluster holds only the stages installed so far; only the ledger can say the whole experiment is done.
+    const partial = status === "COMPLETED" && !(ledger && ["COMPLETED", "COMPLETE"].includes(ledger.status));
+    if (partial) status = "IN PROGRESS";
     return {
       status,
+      detail: partial ? "every stage on the cluster so far is done; the rest are not in its graph yet" : undefined,
       source: "state/status.json on HiPerGator",
       other: row && ledger!.status !== status ? `RESEARCH_LEDGER.md says ${row.status}` : undefined,
       note: row?.notes,

@@ -183,6 +183,25 @@ export const NODES: BoardNode[] = [
   { id: "G5", kind: "gate", row: 5, x0: 0.946, x1: 0.946, planRow: "Mon Jan 11", planNote: "The plan gives no date for G5. Its recommendation is the go or no-go of Mon Jan 11, so it is drawn there." },
 ];
 
+/**
+ * M0, M1 and M5 are units of work and get a chip. M2 to M4 are made of experiments (spec 9 to 11), so
+ * each is a tinted region under its work. Rectangles are [x0, x1, first row, last row] and are filled as
+ * one shape; each label [x, row] sits in empty board space beside one separate part of the region.
+ */
+export interface MilestoneRegion {
+  id: string;
+  members: string[];
+  spec: string;
+  rects: [number, number, number, number][];
+  labels: [number, number][];
+}
+
+export const REGIONS: MilestoneRegion[] = [
+  { id: "M2", members: ["E0", "E1", "E3", "G2a", "G2b", "G2c"], spec: "spec 9", rects: [[0.104, 0.414, 0, 3], [0.222, 0.288, 3, 4]], labels: [[0.222, 2.5]] },
+  { id: "M3", members: ["E2", "E7", "E4", "G3"], spec: "spec 10", rects: [[0.434, 0.7, 1, 2], [0.494, 0.624, 4, 5]], labels: [[0.636, 1.5], [0.5, 4]] },
+  { id: "M4", members: ["E8", "E9", "E10", "E5", "G4", "E6"], spec: "spec 11", rects: [[0.1, 0.466, 6, 8], [0.648, 0.812, 4, 5]], labels: [[0.11, 7], [0.7, 4]] },
+];
+
 export interface BoardEdge {
   from: string;
   to: string;
