@@ -362,7 +362,10 @@ for (let t = NOW - 26 * HOUR; t <= NOW - 2 * MIN; t += 5 * MIN + Math.round(rand
     line("closed unresponsive master");
     line("notified: sign-in needed", 1000);
   } else if (hoursAgo <= 4.75 && hoursAgo > 4.0) line("down, already notified");
-  else if (hoursAgo <= 4.0 && hoursAgo > 3.91) line("reconnected");
+  else if (hoursAgo <= 4.0 && hoursAgo > 3.91) {
+    line("reconnected"); // the keeper logs both in the same second, as hpg_keeper.sh does
+    line("ok");
+  }
   else {
     line("ok");
     if (rand() < 0.04) line("relayed 2 event(s)", 2000);

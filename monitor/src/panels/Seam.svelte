@@ -46,7 +46,7 @@
         const next = entries[i + 1];
         const start = Math.max(prev ? (prev.t_ms + e.t_ms) / 2 : e.t_ms - half, e.t_ms - half);
         const end = Math.min(next ? (next.t_ms + e.t_ms) / 2 : e.t_ms + half, e.t_ms + half, now);
-        return { e, start, end };
+        return { e, i, start, end }; // i keys the block: the keeper writes two lines in one second on reconnecting
       })
       .filter((b) => b.end > from);
   });
@@ -123,7 +123,7 @@
         }}
       />
     {/each}
-    {#each blocks as b (b.e.t_ms)}
+    {#each blocks as b (b.i)}
       <rect class="block {LOOK[b.e.kind]}" x={CX - 3} y={y(b.end)} width="6" height={Math.max(1.5, y(b.start) - y(b.end))} use:tip={() => blockTip(b.e)} />
       {#if b.e.kind === "reconnected" || b.e.kind === "signin"}<circle class="event {LOOK[b.e.kind]}" cx={CX} cy={y(b.e.t_ms)} r="5" />{/if}
     {/each}
