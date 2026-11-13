@@ -422,3 +422,66 @@ For the amendments of E2, E4 and E7, which are not yet made:
 2. Wherever the regime map is drawn, it states the limit above.
 Open: whether the check is extended with simulated readers whose distortion depends on the result or
 the history, so that the ordering criterion can fail. Gate G2a still waits for the E1-C interval.
+
+### D-REGIME decisions, November 13, 2026: the scale call and the extension
+
+The two questions the validation left open (the amendments' items 1 and 2 above) were put to the
+study lead as a brief (options, evidence, recommendation) and answered at about 2:35 PM EST,
+before any E2, E4 or E7 run and before any extension result. The answer, verbatim:
+
+> Q1: A. Band: search error bound. Reason: F002 makes tau_B(reader)/tau_B(R0) exactly p for every R4 reader under any world model, so a paired comparison removes the world-model offset that makes 10.2's absolute call misfire on R0 itself; the 1% search error is far below any scale distortion worth calling, so a declared band is cheaper than touching E1-C's fingerprinted library.
+> Q2: A. If the extension fails: (a) scope limit. Reason: result-dependent distortion is the only language-model-like error the first-decision-point coordinate can see and misplace; history-dependent errors are invisible there by construction and are already covered by the drift call and the probes, and the original criteria were fixed before the run and passed, so a new failure condition after the fact should narrow scope, not void the validation.
+> Conditions or changes to the proposed criteria:
+> 1. Q1 rule, stated exactly: scale regime if the paired 95% interval of log tau_B(reader) - log tau_B(R0) lies wholly outside +/- log(1.01), the bound for a difference of two bisected values at RTOL = 0.01. Pair by patient, rendering, selector path and world model; bootstrap over patients.
+> 2. Q1 under W4: if a reader's W4 gives a budget below the unresponsive threshold, or the tau search hits its bracket limits for either the reader or R0, the scale call for that reader is "not identified" rather than forced. Report absolute tau_B and R0's own tau_B under that W4 beside every relative call, so the size of the offset is visible.
+> 3. Q2 world models: add one deliberately miscalibrated outcome distribution to W0 and W2, for example W0 with the abnormal-result frequency shifted by a declared factor such as x2 and x0.5. E2's risk lives in W4, and W2's 0.7% offset is too gentle to show whether "relative to R0" cancels the outcome-frequency dependence of a mixed reader. CPU only, new module, fixed before the run.
+> 4. Q2 grid: declare it in advance, e.g. a, b in {0.5, 1, 2} (nine readers). Criteria 1 and 2 are judged under W0 and W2; the miscalibrated model and all mixed readers are reported descriptively, absolute and relative to R0.
+> 5. E2 analysis: for each R5 reader, also report the first-decision-point temper separately for abnormal and normal results. A mixed language model then shows up directly instead of hiding inside the collapsed tau_B, whatever the extension finds.
+
+How the answer is applied, fixed here before the extension runs:
+
+1. The twin has no normal and abnormal results. A test returns a finding that points to one of the
+   four classes, the nonspecific finding, or UNAVAILABLE. "Abnormal" is read as a class-pointing
+   finding; "normal" as the nonspecific finding and UNAVAILABLE (which is uninformative in the base
+   variant, so its power changes nothing there).
+2. Condition 2's "budget" of a reader's W4 is that reader's own expected information under its
+   sampler: the W4-weighted mean over outcomes of KL(reader's posterior after the outcome || its
+   belief). "Below the unresponsive threshold" means below 5% of the exact budget, the threshold of
+   the unresponsive call. "Hits its bracket limits" means any first-decision-point search of the
+   reader or of R0 ends clipped at 1/8 or 16.
+3. Condition 5's temper by result kind is read as two slopes, because tau_B is fixed by one budget
+   for the whole test and cannot be split without a further assumption. The reader's log reaction
+   at the first decision point, log posterior minus log belief for every class and outcome, is
+   fitted by W0-weighted least squares as p_abnormal x (true log likelihood) on class-pointing
+   findings and p_normal x (true log likelihood) on the nonspecific finding, plus a class term shared
+   by all outcomes and a normalizing term per outcome; class-outcome pairs the truth rules out are
+   left out. The shared class term keeps a result-independent class factor (drift at the empty
+   history) out of the slopes. For an R4 reader of power p both slopes are p; for the extension's
+   readers they are a and b.
+4. The extension (Q2, condition 3 and 4):
+   - Readers: at the empty history, power a on the four class-pointing findings and power b on the
+     nonspecific finding and UNAVAILABLE, a and b in {0.5, 1, 2}: nine readers. Reader (1, 1) is R0
+     there, (2, 2) and (0.5, 0.5) are the over and under families. Drift is left out: at the empty
+     history it is a class factor, which the projection absorbs (F002).
+   - World models: W0 and W2, judged; W0 with the probability of every class-pointing finding
+     multiplied by 2, and by 0.5, then renormalized, descriptive.
+   - Setting as the validation: E1 card configuration, its 20 seeds, base variant, both acquisition
+     rules, tau_B two-sided under the exact budget at the first decision point.
+   - Criterion 1, side. Under W0 and W2, every reader whose two powers are on the same side of 1,
+     counting 1 as either side, and are not both 1, has the seed interval of log tau_B minus log
+     tau_B(R0), paired by seed, wholly beyond log(1.01) on its side: (2, 2), (2, 1) and (1, 2) above;
+     (0.5, 0.5), (0.5, 1) and (1, 0.5) below. Read literally, "both above 1, or both below 1" leaves
+     only (2, 2) and (0.5, 0.5), which the validation already passed, so a power of 1 counts as
+     either side.
+   - Criterion 2, ordering. Under W0 and W2, the seed mean of log tau_B rises strictly with a at each
+     fixed b and with b at each fixed a (six lines of three powers).
+   - Reported, not decided on: the mixed readers (2, 0.5) and (0.5, 2) under all four world models;
+     every reader under the two shifted world models; absolute and relative to R0 throughout; the
+     slopes of item 3 for every reader.
+   - Outcome: both criteria under both world models support the scale call for result-dependent
+     distortions of this kind. A failure is a scope limit: the scale call is stated as validated for
+     distortions that do not depend on the result, and the extension's findings are printed beside
+     it. It never changes D-REGIME's VALIDATED.
+5. Cards E2, E4 and E7 are amended accordingly (each card's "Amendments before the first run").
+   Clinical and public data have no R0, so E4 and E7 make no scale call: they report the
+   first-decision-point coordinate descriptively, with its limits.
