@@ -1,6 +1,8 @@
 """D-REGIME's check: the first-decision-point tau_B against the library, its exact values under W0, and the criteria."""
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -59,6 +61,8 @@ def test_first_point_is_the_library_search_at_the_empty_history(ctx, trajectorie
         # r' crosses the budget exactly at a grid point under W0, so the two searches may bracket it from either side
         assert abs(row["log_tau_b"] - np.log(found.tau)) <= RESOLUTION
         assert row["search_converged"] == float(found.converged)
+        tempered = cee.temper(reader.belief(()), posteriors, np.exp(row["log_tau_b"]))
+        assert abs(row["kl_inc_at_tau_b"] - cee.project(reader.belief(()), weights, tempered).kl_inc) <= 1e-6
 
 
 @pytest.mark.parametrize("selector", points.SELECTORS)
@@ -72,6 +76,17 @@ def test_under_w0_the_first_point_reads_the_likelihood_power(trajectories, selec
             row = regime_check.first_point(traj, regime_check.grid_name(power, delta, drift), "W0")
             assert abs(row["log_tau_b"] - np.log(power)) <= RESOLUTION, (power, delta, drift)
             assert row["clipped"] == 0.0 and row["fallback"] == 0.0
+
+
+@pytest.mark.parametrize("selector", points.SELECTORS)
+def test_under_w2_every_grid_reader_moves_by_one_common_factor(trajectories, selector):
+    """tau_B(p, delta) = p x tau_B(1, 0) at the empty history whatever the world model (module docstring)."""
+    traj = trajectories[selector]
+    offset = regime_check.first_point(traj, regime_check.grid_name(1.0, 0.0, "none"), "W2")["log_tau_b"]
+    for power in figure1.POWERS:
+        for delta, drift in ((0.0, "none"), (0.4, "entrench"), (0.8, "fixed")):
+            row = regime_check.first_point(traj, regime_check.grid_name(power, delta, drift), "W2")
+            assert abs(row["log_tau_b"] - np.log(power) - offset) <= 2 * RESOLUTION, (power, delta, drift)
 
 
 def synthetic_rows(cfg, shift=None):
@@ -116,3 +131,17 @@ def test_grid_has_81_readers_and_covers_every_r4_family_by_parameters():
     names = regime_check.reader_names()
     assert len(names) == 1 + len(config.R4) + 81 and len(set(names)) == len(names)
     assert len(regime_check.ordering(synthetic_rows(tiny()), "W0", tiny().seeds)["lines"]) == 9
+
+
+def test_command_line_runs_every_seed_and_decides(tmp_path):
+    cfg = tiny()
+    regime_check.main(["cells", "--out", str(tmp_path), "--config", "tiny"])
+    files = sorted((tmp_path / "rows").glob("*.json"))
+    assert [f.name for f in files] == [f"seed{s:02d}_base.json" for s in cfg.seeds]
+    rows = [r for f in files for r in json.loads(f.read_text())]
+    assert len(rows) == len(cfg.seeds) * len(points.SELECTORS) * len(regime_check.WORLD_MODELS) * len(regime_check.reader_names())
+    assert all(r["n_points"] == cfg.n_eval and r["log_tau_b_range"] == 0.0 for r in rows)
+    regime_check.main(["evaluate", "--out", str(tmp_path), "--config", "tiny"])
+    verdict = json.loads((tmp_path / "verdict.json").read_text())
+    assert verdict["seeds"] == list(cfg.seeds) and verdict["variant"] == "base"
+    assert set(verdict["primary"]) == {"W0", "W2", "validated"} and len(verdict["code"]["regime_check_sha256"]) == 64

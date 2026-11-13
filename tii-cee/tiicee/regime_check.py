@@ -17,18 +17,26 @@ Criteria, fixed before the run (the decision's wording, and how this module read
      (over, under, entrench+over, fixed+under) has its 95% seed interval of log tau_B wholly on the
      side of 0 its power is on. A family of power 1 (independence, entrench, fixed) has no scale
      error at the empty history, so it has no side: it passes when its interval, widened by the
-     search's resolution log(1 + RTOL), contains 0, so that the regime call of specification 10.2
-     would not place it in the scale regime.
+     search's own error bound (half its final bracket, log(1 + RTOL) / 2), contains 0, so that the
+     regime call of specification 10.2 would not place it in the scale regime. The widening is
+     needed because tau = 1 lies on the search's grid, so a reader exactly at 1 is reported up to
+     that bound away from it, and under W0 its interval over seeds has no width.
   Validated only when both hold under W0 and under W2.
 
-Under W0 the check is close to an identity. At the empty history a reader whose reactions are the
-true likelihood raised to a power p, times a class factor that does not depend on the result (both
-drift kinds there), becomes the true posterior when tempered at tau = p and projected; that pair
-carries exactly the budget, so tau_B = p to the search's resolution. W2, whose predictive is fitted,
-is the part of the check that is not an identity.
-
-What the first decision point cannot see: an error that needs a history. The independence reader's
-double counting of correlated evidence is one; at the empty history that reader is the Bayes reader.
+What the check can and cannot show for the twin's readers. At the empty history an R4 reader's
+reactions are the true likelihood raised to its power p, times a class factor that does not depend
+on the result (both drift kinds there). Tempering at tau gives the likelihood to the power p / tau
+times a class factor, and the projection's class weights absorb any class factor whatever the
+world model's weights. So r'(tau) depends on p and tau only through p / tau, and tau_B(p, delta) =
+p x tau_B(1, 0) for every drift, under W0 and W2 alike (review F002 of this module). Criterion 1 is
+therefore an identity for these readers under both world models. Under W0, tau_B(1, 0) = 1, because
+the true pair carries exactly the budget; under W2 it is the common factor by which W2's fitted
+predictive, measured against the exact budget, moves every reader, and criterion 2 tests its size.
+The check shows that the coordinate is computed right, reads the R4 distortion exactly at the
+empty history, and moves by a common factor under a fitted world model. It cannot show how the
+coordinate orders a reader whose distortion depends on the result or on the history, which a
+language-model reader may have. The independence reader's double counting of correlated evidence
+is a history error of that kind; at the empty history that reader is the Bayes reader.
 
 Every row reports the shares of searches clipped, on the fallback path, and with an unconverged
 projection (review F004: a result that rests on tau_B reports search_converged beside it).
@@ -55,7 +63,7 @@ WORLD_MODELS = ("W0", "W2")
 SCALE_VARIANT = "two-sided"
 POWER = {"independence": 1.0, "entrench": 1.0, "fixed": 1.0, "over": 2.0, "under": 0.5,
          "entrench+over": 2.0, "fixed+under": 0.5}
-RESOLUTION = float(np.log1p(RTOL))
+RESOLUTION = float(np.log1p(RTOL)) / 2       # the search's error bound in log tau: half its final bracket
 KEY = 5000                  # bootstrap streams of this check: KEY + 100 x world model + reader
 
 
@@ -101,10 +109,10 @@ def seed_values(rows: list, world: str, reader: str, seeds) -> np.ndarray:
     """One value per seed: log tau_B averaged over the acquisition rules."""
     out = []
     for seed in seeds:
-        here = [r["log_tau_b"] for r in rows if (r["seed"], r["world_model"], r["reader"]) == (seed, world, reader)]
-        if len(here) != len(points.SELECTORS):
-            raise ValueError(f"seed {seed}, {world}, {reader}: {len(here)} rows, expected {len(points.SELECTORS)}")
-        out.append(np.mean(here))
+        here = [r for r in rows if (r["seed"], r["world_model"], r["reader"]) == (seed, world, reader)]
+        if sorted(r["selector"] for r in here) != sorted(points.SELECTORS):
+            raise ValueError(f"seed {seed}, {world}, {reader}: acquisition rules {sorted(r['selector'] for r in here)}, expected {sorted(points.SELECTORS)}")
+        out.append(np.mean([r["log_tau_b"] for r in here]))
     return np.array(out)
 
 
@@ -144,7 +152,7 @@ def families(rows: list, world: str, cfg: config.Config, w: int) -> dict:
 
 
 def evaluate_variant(rows: list, cfg: config.Config, variant: str) -> dict:
-    rows = [r for r in rows if r["variant"] == variant]
+    rows = [r for r in rows if r["variant"] == variant and r["seed"] in cfg.seeds]
     out = {}
     for w, world in enumerate(WORLD_MODELS):
         here = [r for r in rows if r["world_model"] == world]
