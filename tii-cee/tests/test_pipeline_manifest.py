@@ -24,6 +24,12 @@ BIND = {"card": "cards/E4.md", "calibration": "$TII/private/artifacts/calibratio
         "policy_checkpoints": "$TII/private/checkpoints"}
 
 
+def _append(path, text):
+    """Append and close, so no file handle is left for the garbage collector (a ResourceWarning under -W error)."""
+    with path.open("a") as handle:
+        handle.write(text)
+
+
 @pytest.fixture(autouse=True)
 def synthetic_authorization(monkeypatch):
     """Every test here works on the study's own synthetic files, never the repository's."""
@@ -120,8 +126,8 @@ def test_unchanged_stage_verifies(study):
      (20, "bound_changed", "policy_checkpoints")),
     (lambda s: (s.paths.private / "checkpoints" / "seed-3").mkdir() or
      (s.paths.private / "checkpoints" / "seed-3" / "adapter.bin").write_bytes(b"new"), (20, "bound_changed", "policy_checkpoints")),
-    (lambda s: (s.code / "tii-cee" / "tiicee" / "pipeline" / "stages.py").open("a").write("\n# edited\n"), (20, "code_changed", None)),
-    (lambda s: (s.docs / "AUTHORIZATION.md").open("a").write("x"), (30, "authorization_changed", None)),
+    (lambda s: _append(s.code / "tii-cee" / "tiicee" / "pipeline" / "stages.py", "\n# edited\n"), (20, "code_changed", None)),
+    (lambda s: _append(s.docs / "AUTHORIZATION.md", "x"), (30, "authorization_changed", None)),
     (lambda s: (s.docs / "SIGNATURE.md").write_text("unsigned"), (30, "signature_mismatch", None)),
     (lambda s: s.paths.manifest("a").unlink(), (20, "manifest_missing", None)),
 ])
@@ -185,7 +191,7 @@ def test_clean_git_checkout_is_bound_by_its_commit(study):
     assert manifest["code"]["clean"] is True and len(manifest["code"]["commit"]) == 40
     assert manifest["code"]["snapshot"] is None
     manifests.verify(study.paths, graph, a)
-    (study.paths.package / "tiicee" / "pipeline" / "stages.py").open("a").write("\n# uncommitted\n")
+    _append(study.paths.package / "tiicee" / "pipeline" / "stages.py", "\n# uncommitted\n")
     assert code_of(lambda: manifests.verify(study.paths, graph, a)) == (20, "code_changed", None)
 
 
