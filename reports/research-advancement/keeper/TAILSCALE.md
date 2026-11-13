@@ -5,7 +5,9 @@ The Mac's `hpg.rc.ufl.edu` and `hpg-tail` SSH entries connect to
 `StrictHostKeyChecking yes` retain the trusted UF SSH host key. The first login
 uses the normal UF password and Duo flow; later sessions reuse that connection.
 
-Use a fixed, separate ControlPath for each of the Tailscale and public routes.
+Use a ControlPath independent of the Mac's local hostname for each route, such as
+`~/.ssh/cm-%r@%h:%p`. The expanded paths must stay below the platform socket-path
+limit (104 bytes on macOS).
 When updating an existing installation, pin each route to the exact path reported
 by `ssh -G` while `ssh -O check` confirms its live master. This preserves the live
 socket while removing dependence on the Mac's changing local hostname. Keep the
