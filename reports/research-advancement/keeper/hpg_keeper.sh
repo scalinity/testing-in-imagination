@@ -113,7 +113,7 @@ now_s=$(date +%s)
 last=$(num "$(cat "$STATE/down.notified" 2>/dev/null)")
 REMIND_HOURS=$(num "$REMIND_HOURS")
 if [ "$last" -eq 0 ] || { [ "$REMIND_HOURS" -gt 0 ] && [ $((now_s - last)) -ge $((REMIND_HOURS * 3600)) ]; }; then
-    notify "HiPerGator sign-in needed" "In Terminal run: ssh -fN $HOST   Your jobs on HiPerGator keep running meanwhile.${RECOVERY_HINT:+ $RECOVERY_HINT}"
+    notify "HiPerGator sign-in needed" "Run: ssh -fN $HOST   ${RECOVERY_HINT:+$RECOVERY_HINT }Jobs keep running."
     echo "$now_s" > "$STATE/down.notified"
     log "notified: sign-in needed"
 else
