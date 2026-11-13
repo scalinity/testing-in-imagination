@@ -66,7 +66,9 @@ def test_noop_graph_runs_to_completion_and_disables_only_its_own_entry(study):
     assert [s.status(name) for name in ("noop_a", "noop_b", "noop_c")] == ["COMPLETED"] * 3
     record = json.loads(s.paths.gate_record("G_noop").read_text())
     assert (record["result"], record["path_taken"], record["skipped"]) == ("met", "met", [])
-    assert record["inputs"] == {"noop_a": "COMPLETED"}
+    assert record["inputs"] == [{"stage": "noop_a", "status": "COMPLETED"}]
+    # The record is also published through the export guard, for the Mac and the ledger.
+    assert json.loads((s.paths.approved / "gates" / "G_noop.json").read_text()) == record
     assert record["input_digests"] == [{"file": "export/approved/noop_a.json",
                                         "sha256": sha256_file(s.paths.approved / "noop_a.json")}]
     assert record["rule_sha256"] == sha256_file(s.paths.gate_rules / "noop_gate.py")
@@ -431,6 +433,41 @@ def test_signed_addendum_adds_cai5724_once_cai6734_is_full(study):
     assert status["authorization"]["addenda"][0]["signed"] is True
 
 
+def test_gpu_jobs_take_the_other_account_while_the_first_waits_on_its_group_limit(study):
+    s = study([stage("g0", gpus=1), stage("g1", gpus=1), stage("prep"),
+               stage("g2", gpus=1, depends_on=["prep"]), stage("g3", gpus=1, depends_on=["prep"])])
+    s.sign_addendum()
+    # The class holds every GPU of the cai6734 QOS: our job there waits on the group limit.
+    s.cluster.plan("tii-g0", [{"outcome": "hold", "reason": "QOSGrpGRES"}] * 2)
+    s.cluster.plan("tii-g1", [{"outcome": "hold"}] * 2)
+    s.cycle()
+    s.advance()
+    s.cycle()  # g2 and g3 are ready now
+    assert {job["name"][4:]: job["account"] for job in s.cluster.jobs()} == {
+        "g0": "cai6734", "g1": "cai6734", "prep": "cai6734", "g2": "cai5724", "g3": "cai5724"}
+    # Still one queue query per cycle; the reason is one more column of it.
+    assert len(s.calls("squeue")) == 2 and all(call[-1].endswith("|%r") for call in s.calls("squeue"))
+
+
+def test_group_limit_changes_nothing_without_another_account_or_for_an_ordinary_wait(study):
+    s = study([stage("g0", gpus=1), stage("prep"), stage("g2", gpus=1, depends_on=["prep"])])
+    s.cluster.plan("tii-g0", [{"outcome": "hold", "reason": "QOSGrpGRES"}] * 2)
+    s.cycle()
+    s.advance()
+    s.cycle()  # unsigned addendum: cai6734 is the only account, so the job queues there
+    assert {job["name"]: job["account"] for job in s.cluster.jobs()}["tii-g2"] == "cai6734"
+
+
+def test_ordinary_queue_wait_does_not_reroute(study):
+    s = study([stage("g0", gpus=1), stage("prep"), stage("g2", gpus=1, depends_on=["prep"])])
+    s.sign_addendum()
+    s.cluster.plan("tii-g0", [{"outcome": "hold", "reason": "Priority"}] * 2)
+    s.cycle()
+    s.advance()
+    s.cycle()  # waiting for priority is not a full QOS: cai6734 is still filled first
+    assert {job["name"]: job["account"] for job in s.cluster.jobs()}["tii-g2"] == "cai6734"
+
+
 def test_generated_scripts_follow_the_project_conventions(study):
     s = study([stage("g", gpus=1, time_hours=24, mem_gb=16), stage("c", time_hours=0.5)])
     s.cycle()
@@ -461,6 +498,26 @@ def test_gate_not_met_skips_its_stages_and_their_dependents(study):
     assert record["path_taken"] == "not_met" and export_guard.TIME.match(record["decided_at"])
     assert len(s.calls("sbatch")) == 2 and s.final()["kind"] == "study completed"
     assert "| SKIPPED BY GATE | 2 |" in s.paths.status.read_text()
+
+
+def test_gate_records_are_published_through_the_export_guard(study):
+    s = study([stage("a", ["noop", "--count", "0"]), stage("b", depends_on=["a"], gate="G"), stage("c")],
+              [{"id": "G", "rule": "noop_gate.py", "inputs": ["a"], "reads": ["export/approved/a.json"]},
+               {"id": "G-after", "rule": "noop_gate.py", "inputs": ["b", "c"], "reads": ["export/approved/c.json"]}])
+    s.run_to_end()
+    published = {path.name: json.loads(path.read_text()) for path in (s.paths.approved / "gates").iterdir()}
+    assert sorted(published) == ["G-after.json", "G.json"]
+    for name, record in published.items():
+        assert record == json.loads(s.paths.gate_record(name[:-5]).read_text())
+        export_guard.check_aggregate(record)
+    # A gate whose input was itself skipped by a gate: the status is one of the fixed names.
+    assert published["G-after.json"]["inputs"] == [{"stage": "b", "status": "SKIPPED BY GATE"},
+                                                   {"stage": "c", "status": "COMPLETED"}]
+    assert published["G-after.json"]["result"] == "met" and export_guard.surface_check(s.paths) == []
+    # Published once: a record removed from the export tree by hand comes back, unchanged.
+    (s.paths.approved / "gates" / "G.json").unlink()
+    s.cycle()
+    assert json.loads((s.paths.approved / "gates" / "G.json").read_text()) == published["G.json"]
 
 
 def test_gate_whose_rule_does_not_decide_is_a_blocked_item(study):
@@ -558,7 +615,8 @@ def test_surface_holds_names_and_numbers_only_and_rejects_free_text(study):
     assert export_guard.surface_check(s.paths) == ["export/approved:1:file_name", "export/approved:2:forbidden_key"]
 
     s.cycle()  # the watcher moves both out of the tree the Mac copies and raises an item
-    assert sorted(path.name for path in s.paths.approved.iterdir()) == ["a.json"]
+    assert sorted(path.name for path in s.paths.approved.iterdir()) == ["a.json", "gates"]
+    assert [path.name for path in (s.paths.approved / "gates").iterdir()] == ["G.json"]  # the gate's own record
     assert len(list(s.paths.quarantine.iterdir())) == 2
     assert s.blocked()["surface"]["detail"] == {"quarantined": 2, "violations": 0}
     assert export_guard.surface_check(s.paths) == []

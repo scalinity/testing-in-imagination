@@ -109,9 +109,10 @@ class Study:
     # ---- driving -----------------------------------------------------------------------------
 
     def start_cycle(self, **extra):
-        return subprocess.Popen([WATCHER_PYTHON, "-m", "tiicee.pipeline.watcher"], cwd=self.code / "tii-cee",
-                                env=dict(self.env, **extra), stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True)
+        """A watcher cycle, started as watcher_cycle.sh starts it: from the code TII_CODE names."""
+        return subprocess.Popen([WATCHER_PYTHON, "-m", "tiicee.pipeline.watcher"],
+                                cwd=Path(self.env["TII_CODE"]) / "tii-cee", env=dict(self.env, **extra),
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     def cycle(self, expect=0, **extra):
         """One watcher cycle. Returns what it printed."""

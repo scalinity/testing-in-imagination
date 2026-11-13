@@ -16,7 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import authorization
+from . import authorization, deploy
 from . import graph as graphs
 from .paths import Paths
 from .util import digest, now, read_json, sha256_file, tree_digest, write_new_json
@@ -56,13 +56,28 @@ def snapshot(paths):
 
 
 def code_identity(paths):
-    """The commit when tii-cee/ is clean; otherwise (or without git) a digest of its code files."""
+    """How the code a stage runs is bound.
+
+    A deployed export (deploy.py): its path, its commit, a digest of every file in it, and the
+    submodule commits it pins. Otherwise a git checkout whose tii-cee/ is clean: the commit.
+    Otherwise, or without git: a digest of tii-cee's code files.
+    """
+    export = read_json(paths.code / deploy.META)
+    if export is not None:
+        return {"export": str(paths.code), "commit": export["commit"], "clean": True,
+                "snapshot": tree_digest(paths.code)[0], "submodules": export["submodules"]}
     commit = _git(paths.code, "rev-parse", "HEAD")
     # --no-optional-locks: many jobs start at once in one checkout and must not contend for its index.
     dirty = _git(paths.code, "--no-optional-locks", "status", "--porcelain", "--", "tii-cee") if commit else None
     if commit and dirty == "":
-        return {"commit": commit, "clean": True, "snapshot": None}
-    return {"commit": commit, "clean": False, "snapshot": snapshot(paths)}
+        return {"export": None, "commit": commit, "clean": True, "snapshot": None, "submodules": []}
+    return {"export": None, "commit": commit, "clean": False, "snapshot": snapshot(paths), "submodules": []}
+
+
+def _at_pin(submodule):
+    """Is a pinned submodule's checkout still at its commit, with no local changes?"""
+    return (_git(submodule["source"], "rev-parse", "HEAD") == submodule["commit"]
+            and _git(submodule["source"], "--no-optional-locks", "status", "--porcelain") == "")
 
 
 def resolve(paths, spec):
@@ -93,7 +108,7 @@ def _described(graph, stage):
         "seeds": stage["seeds"], "pairing_unit": stage["pairing_unit"],
         "allowance": {"key": stage["allowance_key"], "gpu_hours": allowance["allowance_gpu_hours"],
                       "estimate_gpu_hours": stage["estimate_gpu_hours"]},
-        "command": stage["command"],
+        "command": stage["command"], "env": stage["env"],
     }
 
 
@@ -147,7 +162,13 @@ def verify(paths, graph, stage):
         raise Refusal(IDENTITY, "stage_changed", "bind")
 
     bound_code = manifest["code"]
-    if bound_code["clean"]:
+    if bound_code["export"]:
+        # The stage must be running from the export it was bound to, byte for byte.
+        if code_identity(paths) != bound_code:
+            raise Refusal(IDENTITY, "code_changed")
+        if not all(_at_pin(submodule) for submodule in bound_code["submodules"]):
+            raise Refusal(IDENTITY, "submodule_changed")
+    elif bound_code["clean"]:
         current = code_identity(paths)
         if not current["clean"] or current["commit"] != bound_code["commit"]:
             raise Refusal(IDENTITY, "code_changed")

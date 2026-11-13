@@ -1,13 +1,16 @@
 """One generated sbatch script per submission, and the sbatch call.
 
 Follows the project's existing submissions (cdm-extension/daniel-escalante/scripts/submit_slurm.py,
-gpu.slurm, cpu.slurm): GPU jobs take one RTX PRO 6000 on hpg-rtx6000 and export
-CUBLAS_WORKSPACE_CONFIG; CPU jobs name only an account and a QOS; the script ends in `exec`, so the
-batch shell becomes the stage process and Slurm's warning signal reaches it directly.
+gpu.slurm, cpu.slurm): GPU jobs take one RTX PRO 6000 on hpg-rtx6000; CPU jobs name only an
+account and a QOS; the script ends in `exec`, so the batch shell becomes the stage process and
+Slurm's warning signal reaches it directly. Unlike gpu.slurm, no variable is exported for every
+GPU job: a stage's own "env" in graph.json says what it runs with (training without
+CUBLAS_WORKSPACE_CONFIG, as the replication trained; evaluation with it).
 Standard library only and Python 3.9 compatible.
 """
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 
@@ -20,7 +23,8 @@ def wall(hours):
     return "%02d:%02d:00" % (minutes // 60, minutes % 60)
 
 
-def script(paths, stage, pool, mem_gb, python):
+def script(paths, stage, pool, mem_gb, python, code):
+    """code is the directory the stage runs from: the export its manifest names."""
     name = "tii-" + stage["id"]
     resources = stage["resources"]
     lines = ["#!/bin/bash",
@@ -38,20 +42,20 @@ def script(paths, stage, pool, mem_gb, python):
               "#SBATCH --signal=B:USR1@600",   # ten minutes before the limit, to the batch shell
               "#SBATCH --no-requeue",          # the watcher alone decides on resubmission
               "#SBATCH --output=%s/%s-%%j.log" % (paths.logs, name),
-              "export TII_ROOT=%s TII_CODE=%s" % (shlex.quote(str(paths.root)), shlex.quote(str(paths.code))),
+              "export TII_ROOT=%s TII_CODE=%s" % (shlex.quote(str(paths.root)), shlex.quote(str(code))),
               "export PYTHONDONTWRITEBYTECODE=1"]
-    if pool.kind == "gpu":
-        lines.append("export CUBLAS_WORKSPACE_CONFIG=:4096:8")
-    lines += ["cd %s || exit 1" % shlex.quote(str(paths.package)),
+    for name, value in sorted(stage["env"].items()):  # this stage's environment, bound in its manifest
+        lines.append("unset %s" % name if value is None else "export %s=%s" % (name, shlex.quote(value)))
+    lines += ["cd %s || exit 1" % shlex.quote(os.path.join(str(code), "tii-cee")),
               "exec %s -m tiicee.pipeline.stage %s" % (shlex.quote(python), stage["id"])]
     return "\n".join(lines) + "\n"
 
 
-def submit(paths, stage, pool, mem_gb, python, attempt):
+def submit(paths, stage, pool, mem_gb, python, attempt, code):
     """Write the script and submit it. Returns (job id or None, sbatch's return code)."""
     paths.logs.mkdir(parents=True, exist_ok=True)
     path = write_text(paths.scripts / ("tii-%s.%d.sbatch" % (stage["id"], attempt)),
-                      script(paths, stage, pool, mem_gb, python))
+                      script(paths, stage, pool, mem_gb, python, code))
     try:
         result = subprocess.run(["sbatch", "--parsable", str(path)], capture_output=True, text=True, timeout=120)
     except (OSError, subprocess.SubprocessError):

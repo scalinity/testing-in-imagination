@@ -7,7 +7,8 @@ replication-of-original/daniel-escalante/replication/manifest.py: its FORBIDDEN_
 below and applied the same way (any dictionary key, at any depth, compared in lower case). That
 module cannot be imported here because it needs third-party packages. This guard then adds:
   - every key, and every string value, is a short identifier (no spaces, so no sentences);
-  - a value is a number, a boolean, null, an identifier string, or a list or object of those;
+  - a value is a number, a boolean, null, an identifier string, or a list or object of those
+    (the study's few fixed multi-word names, such as the status SKIPPED BY GATE, also pass);
   - no key resembles row, rows, patient, subject, hadm, stay, text, note, prompt, generation, hpi.
 
 surface_check applies the same idea to everything the Mac reads: events.tsv, STATUS.md,
@@ -52,6 +53,7 @@ STATUS_TITLE = "# TII-CEE-1 watcher status"
 STATUS_HEADINGS = ("Stages by status", "Running and queued jobs", "GPU-hours by experiment",
                    "Open BLOCKED items", "Latest gate records", "Latest events")
 STATUS_FIELDS = ("updated", "milestone", "cycle", "authorization", "addendum_1", "scheduler", "final")
+# The study's fixed multi-word names: the event kinds and one status. Nothing else has a space.
 STATUS_PHRASES = EVENT_KINDS + ("SKIPPED BY GATE",)
 _FIELD = re.compile(r"(?:%s): %s\Z" % ("|".join(STATUS_FIELDS), NAME_TEXT))
 _CELL = re.compile(r"(?:|-+|%s|%s|%s)\Z" % ("|".join(STATUS_PHRASES), NAME_TEXT, PAIRS_TEXT))
@@ -77,26 +79,23 @@ def _resembles_forbidden(key):
     return any(word.startswith(FORBIDDEN_WORDS) for word in words)
 
 
-def check_aggregate(value, top=True, phrases=()):
-    """Raise Refused unless value is an aggregate: names, counts, numbers and codes only.
-
-    phrases are the few fixed multi-word names (a status such as SKIPPED BY GATE) a caller allows.
-    """
+def check_aggregate(value, top=True):
+    """Raise Refused unless value is an aggregate: names, counts, numbers and codes only."""
     if top and not isinstance(value, dict):
         raise Refused("not_an_object")
     if isinstance(value, dict):
         for key, item in value.items():
-            if key not in phrases:
+            if key not in STATUS_PHRASES:
                 if not isinstance(key, str) or key.lower() in FORBIDDEN_KEYS or _resembles_forbidden(key):
                     raise Refused("forbidden_key")
                 if not KEY.match(key):
                     raise Refused("key_not_identifier")
-            check_aggregate(item, top=False, phrases=phrases)
+            check_aggregate(item, top=False)
     elif isinstance(value, list):
         for item in value:
-            check_aggregate(item, top=False, phrases=phrases)
+            check_aggregate(item, top=False)
     elif isinstance(value, str):
-        if value not in phrases and not NAME.match(value):
+        if value not in STATUS_PHRASES and not NAME.match(value):
             raise Refused("string_not_identifier")
     elif isinstance(value, float):
         if not math.isfinite(value):
@@ -130,7 +129,7 @@ def approve(paths, name, value):
 
 def check_status_json(value):
     """status.json: the contract's top-level fields and nothing else, holding names and numbers only."""
-    check_aggregate(value, phrases=STATUS_PHRASES)
+    check_aggregate(value)
     if (set(value) != set(STATUS_JSON_SHAPE) or value["schema"] != STATUS_SCHEMA
             or not all(isinstance(value[key], kind) for key, kind in STATUS_JSON_SHAPE.items())
             or not TIME.match(value["generated_at"])

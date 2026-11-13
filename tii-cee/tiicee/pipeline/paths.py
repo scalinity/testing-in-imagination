@@ -14,11 +14,17 @@ ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,47}\Z")  # stage, gate and experiment 
 
 
 class Paths:
-    """root is $TII (env TII_ROOT); code is the repository checkout (env TII_CODE)."""
+    """root is $TII (env TII_ROOT); code is the code this process runs from (env TII_CODE).
+
+    On the cluster TII_CODE is a code export, $TII/code/<commit>/ (deploy.py): the watcher is given
+    $TII/code/current and a stage is given the export its manifest names. Both are resolved once,
+    here, so one cycle or one stage sees one export even if `current` moves meanwhile.
+    """
 
     def __init__(self, root=None, code=None):
         self.root = Path(root or os.environ.get("TII_ROOT") or DEFAULT_ROOT)
-        self.code = Path(code or os.environ.get("TII_CODE") or Path(__file__).resolve().parents[3])
+        self.code = Path(os.path.realpath(code or os.environ.get("TII_CODE") or Path(__file__).resolve().parents[3]))
+        self.current = self.root / "code" / "current"
 
         self.graph = self.root / "pipeline" / "graph.json"
         self.state = self.root / "state"
@@ -44,7 +50,10 @@ class Paths:
         self.package = self.code / "tii-cee"
         self.gate_rules = self.package / "gates"
         self.allowances = self.package / "tiicee" / "pipeline" / "allowances.json"
-        self.study_dir = self.code / "reports" / "research-advancement"
+        # The authorization is a live fact, not part of a stage's frozen code: everything reads it
+        # where the newest deployment put it, whichever export the reader itself runs from.
+        newest = Path(os.path.realpath(self.current)) if self.current.exists() else self.code
+        self.study_dir = newest / "reports" / "research-advancement"
 
     def stage_state(self, stage_id):
         return self.stages / (stage_id + ".json")

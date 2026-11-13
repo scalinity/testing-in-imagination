@@ -73,7 +73,8 @@ def test_manifest_binds_every_field_of_the_specification(study):
         "addenda": {"AUTHORIZATION_ADDENDUM_1.md": {"sha256": ADDENDUM_SHA, "sha256_ok": True, "signed": False}}}
     assert sha256_file(study.docs / "AUTHORIZATION.md") == AUTHORIZATION_SHA
     # Not a git checkout here, so the code is bound by a snapshot digest.
-    assert manifest["code"] == {"commit": None, "clean": False, "snapshot": manifests.snapshot(study.paths)}
+    assert manifest["code"] == {"export": None, "commit": None, "clean": False,
+                                "snapshot": manifests.snapshot(study.paths), "submodules": []}
     bound = manifest["bound"]
     assert bound["card"] == {"path": "cards/E4.md", "type": "file", "sha256": sha256_file(study.code / "cards" / "E4.md")}
     assert bound["calibration"]["sha256"] == sha256_file(study.paths.private / "artifacts" / "calibration.json")

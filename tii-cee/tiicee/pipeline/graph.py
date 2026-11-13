@@ -6,21 +6,33 @@ graph.json:
                "resources": {"gpus": 0 | 1, "cpus", "mem_gb", "time_hours"},
                "depends_on": [stage ids], "gate": gate id (optional),
                "allowance_key", "estimate_gpu_hours",
+               "env": {NAME: "value" | null},
                "manifest": {"intervention": "new intervention" | "legacy repair",
                             "bind": {role: path}, "seeds": {purpose: int}, "pairing_unit"}}],
    "gates": [{"id", "rule": file in tii-cee/gates/, "inputs": [stage ids], "reads": [paths under $TII]}]}
 
-A stage with a gate runs only when the gate's record says "met"; otherwise it is SKIPPED BY GATE.
-A bound path is relative to the code checkout, or under the storage root when it starts with
-"$TII/", or absolute. Standard library only and Python 3.9 compatible.
+"stage_modules" are imported before a stage's name is looked up, so they can register stages
+(tiicee.clinical.train and the like). A stage with a gate runs only when the gate's record says
+"met"; otherwise it is SKIPPED BY GATE. A bound path is relative to the code the stage runs from,
+or under the storage root when it starts with "$TII/", or absolute.
+
+"env" is the stage's own environment, exported by its job script and by no other: a value is
+exported, null means the variable must not be set. A training stage has
+{"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "CUBLAS_WORKSPACE_CONFIG": null}; an
+evaluation, rollout, replay or probe stage has {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}. It is bound
+into the manifest. Standard library only and Python 3.9 compatible.
 """
 from __future__ import annotations
 
 import json
+import re
 
 from .paths import ID, STUDY
 
 KINDS = ("normal", "test")
+ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+MODULE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\Z")
+SET_BY_THE_SCRIPT = ("TII_ROOT", "TII_CODE", "PYTHONDONTWRITEBYTECODE")
 INTERVENTIONS = ("new intervention", "legacy repair")
 # One GPU per job and 24 hours at most (AUTHORIZATION.md section 3). The lower bound keeps the
 # ten-minute warning signal from arriving the moment a job starts.
@@ -71,6 +83,11 @@ def _stage(raw, stage_ids, gate_ids, allowances):
     _need(estimate > 0 or gpus == 0, where + "a GPU stage needs a positive estimate")
     gate = raw.get("gate")
     _need(gate is None or gate in gate_ids, where + "unknown gate")
+    env = raw.get("env", {})
+    _need(isinstance(env, dict) and all(
+        isinstance(name, str) and ENV_NAME.match(name) and name not in SET_BY_THE_SCRIPT
+        and (value is None or (isinstance(value, str) and "\n" not in value))
+        for name, value in env.items()), where + "env must map variable names to a value or null")
     bound = raw.get("manifest", {})
     _need(isinstance(bound, dict), where + "manifest must be an object")
     intervention = bound.get("intervention", "new intervention")
@@ -84,7 +101,7 @@ def _stage(raw, stage_ids, gate_ids, allowances):
         "command": list(command),
         "resources": {"gpus": gpus, "cpus": cpus, "mem_gb": mem, "time_hours": hours},
         "depends_on": _ids(raw.get("depends_on", []), stage_ids, where + "unknown dependency"),
-        "gate": gate, "allowance_key": key, "estimate_gpu_hours": estimate,
+        "gate": gate, "allowance_key": key, "estimate_gpu_hours": estimate, "env": dict(env),
         "intervention": intervention, "bind": dict(bind), "seeds": dict(seeds),
         "pairing_unit": bound.get("pairing_unit"),
     }
@@ -112,7 +129,10 @@ class Graph:
         self.study = raw.get("study", STUDY)
         self.milestone = raw.get("milestone", "M0")
         _need(isinstance(self.milestone, str) and ID.match(self.milestone), "bad milestone")
-        self.stage_modules = list(raw.get("stage_modules", []))
+        self.stage_modules = raw.get("stage_modules", [])
+        _need(isinstance(self.stage_modules, list) and all(
+            isinstance(name, str) and MODULE_NAME.match(name) for name in self.stage_modules),
+            "stage_modules must be a list of module names")
         self.allowances = allowances
         raw_stages, raw_gates = raw.get("stages", []), raw.get("gates", [])
         _need(isinstance(raw_stages, list) and isinstance(raw_gates, list), "stages and gates must be lists")

@@ -14,7 +14,8 @@ pending or running job:
     start      start the job script, freeze it (SIGSTOP) once the trigger is met, and report it
                RUNNING; the next advance resumes it and applies the next outcome. Only through
                Cluster.run() on one Cluster object, which holds the frozen process
-    hold       leave it PENDING for this advance
+    hold       leave it PENDING for this advance; "reason" sets what squeue shows for it
+               (QOSGrpGRES when the QOS's shared GPUs are all in use)
 
 An outcome is a name or {"outcome": name, "state": ..., "elapsed": seconds, "wait_file": path,
 "wait_lines": n}; the trigger is "wait_file has at least wait_lines lines", and "elapsed" is what
@@ -102,8 +103,8 @@ class Cluster:
                 "cpus": int(options.get("cpus-per-task", 1)), "mem": options.get("mem"),
                 "time": options.get("time"), "signal": options.get("signal"),
                 "requeue": "no-requeue" not in options, "output": options.get("output"),
-                "script": script, "state": "PENDING", "exit": "0:0", "elapsed": 0, "start": None,
-                "end": None, "env": dict(os.environ)}
+                "script": script, "state": "PENDING", "reason": "Priority", "exit": "0:0",
+                "elapsed": 0, "start": None, "end": None, "env": dict(os.environ)}
             return job_id
 
         job_id = self._locked(add)
@@ -122,7 +123,7 @@ class Cluster:
             if job["state"] in ("PENDING", "RUNNING"):
                 values = {"%i": job["id"], "%j": job["name"], "%T": job["state"], "%a": job["account"],
                           "%q": job["qos"], "%b": "gres/" + job["gres"] if job["gres"] else "N/A",
-                          "%C": str(job["cpus"])}
+                          "%C": str(job["cpus"]), "%r": job["reason"] if job["state"] == "PENDING" else "None"}
                 line = layout
                 for token, value in values.items():
                     line = line.replace(token, value)
@@ -189,6 +190,8 @@ class Cluster:
             step = self._locked(lambda state: self._next_outcome(state, job["name"]))
             outcome = step["outcome"]
             if outcome == "hold":
+                if "reason" in step:
+                    self._locked(lambda state: state["jobs"][job["id"]].update(reason=step["reason"]))
                 continue
             if outcome in ENDED_WITHOUT_RUNNING:
                 state, code = ENDED_WITHOUT_RUNNING[outcome]

@@ -5,8 +5,9 @@
 # What it does, only while an authenticated HiPerGator SSH master connection already exists:
 # reads the watcher's surface into a local mirror (the new lines of the event queue, STATUS.md,
 # status.json and the stages' progress files), copies export/approved/ (aggregates that passed the
-# export guard), shows a notification per new event, and starts ONE headless agent session in the
-# repository when a stage completed, a gate was decided, something failed or something is blocked.
+# export guard), and starts ONE headless agent session in the repository when a stage completed,
+# a gate was decided, something failed or something is blocked. With TII_NOTIFY=1 it also shows a
+# notification per new event; by default the connection keeper does that.
 # Nothing outside that surface is ever read or copied.
 # What it never does: open a connection, log in, or touch a password or a Duo prompt. With no
 # master it exits quietly; the work on HiPerGator does not depend on it.
@@ -21,7 +22,7 @@ REMOTE_ROOT="${TII_REMOTE_ROOT:?set TII_REMOTE_ROOT in local_loop.conf}"
 REPO="${TII_REPO:?set TII_REPO in local_loop.conf}"
 STATE="${TII_LOOP_STATE:-$HOME/Library/Application Support/tii-local-loop}"
 APPROVED="${TII_APPROVED_DIR:-$STATE/approved}"
-NOTIFY="${TII_NOTIFY:-1}"
+NOTIFY="${TII_NOTIFY:-0}"   # the connection keeper relays the same events (AUTHORIZATION.md section 10)
 LOG="${TII_LOOP_LOG:-$HOME/Library/Logs/tii-local-loop.log}"
 SESSION_LOG="${TII_SESSION_LOG:-$HOME/Library/Logs/tii-agent-session.log}"
 MIRROR="$STATE/mirror"

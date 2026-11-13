@@ -67,7 +67,7 @@ class Mac:
     def configure(self, **changes):
         settings = {"TII_HPG_HOST": '"hpg"', "TII_REMOTE_ROOT": '"%s"' % self.remote, "TII_REPO": '"%s"' % self.repo,
                     "TII_AGENT_CMD": '("%s/agent" --headless)' % self.bin, "TII_LOOP_STATE": '"%s"' % self.state,
-                    "TII_APPROVED_DIR": '"%s"' % self.approved}
+                    "TII_APPROVED_DIR": '"%s"' % self.approved, "TII_NOTIFY": "1"}
         settings.update(changes)
         self.conf.write_text("".join("%s=%s\n" % item for item in settings.items()))
 
@@ -229,12 +229,13 @@ def test_queue_that_started_over_is_read_from_its_first_line(mac):
     assert len(mac.notifications()) == 3 and len(mac.calls("agent")) == 2
 
 
-def test_notifications_can_be_left_to_the_keeper(mac):
-    mac.configure(TII_NOTIFY="0")
+def test_notifications_are_left_to_the_keeper_unless_asked_for(mac):
+    mac.conf.write_text("".join(line for line in mac.conf.read_text().splitlines(True) if "TII_NOTIFY" not in line))
     mac.add_events(*EVENTS)
-    mac.run()
+    mac.run()  # no TII_NOTIFY in the settings: the default
     mac.wait_for_session_to_end()
     assert not mac.calls("osascript") and len(mac.calls("agent")) == 1
+    assert (mac.state / "mirror" / "events.tsv").read_text().splitlines() == EVENTS  # still mirrored
 
 
 def test_only_one_run_of_the_loop_at_a_time(mac):
@@ -261,8 +262,10 @@ def test_launchd_template_and_example_settings():
     assert text.count("__HOME__") == 3
 
     shown = subprocess.run(["/bin/bash", "-c", '. "$1"; printf "%s\\n" "$TII_HPG_HOST" "$TII_REMOTE_ROOT" '
-                            '"${#TII_AGENT_CMD[@]}" "${TII_AGENT_CMD[1]}" "$TII_NOTIFY"',
+                            '"$TII_NOTIFY" "${TII_AGENT_CMD[@]}"',
                             "-", str(LOCAL / "local_loop.conf.example")], capture_output=True, text=True,
                            env={"HOME": "/Users/someone", "PATH": "/usr/bin:/bin"})
-    assert shown.stdout.split("\n")[:5] == ["hpg", "/blue/cai6734/daniel.escalante/private/tii-cee-1", "2", "-p", "1"]
+    assert shown.stdout.splitlines() == [
+        "hpg", "/blue/cai6734/daniel.escalante/private/tii-cee-1", "0",  # the keeper relays the events
+        "/Users/someone/.local/bin/claude", "-p", "--permission-mode", "auto", "--model", "opus"]
     assert PROMPT in (LOCAL / "local_loop.sh").read_text()  # the prompt WATCHER_DESIGN.md section 5 quotes

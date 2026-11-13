@@ -40,7 +40,8 @@ MISSING_CYCLES = 4  # a submitted job unknown to both squeue and sacct for this 
 ENDED = ("COMPLETED", "FAILED", "TIMEOUT", "PREEMPTED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED",
          "BOOT_FAIL", "DEADLINE", "REVOKED", "MISSING")
 SACCT_FORMAT = "JobID,JobName,State,ExitCode,ElapsedRaw,AllocTRES,Account,QOS,Start,End"
-SQUEUE_FORMAT = "%i|%j|%T|%a|%q|%b|%C"
+SQUEUE_FORMAT = "%i|%j|%T|%a|%q|%b|%C|%r"  # the reason last: it is the one free-form field
+GROUP_LIMIT = "QOSGrp"  # pending reasons that mean the QOS's shared limit is reached: QOSGrpGRES, ...
 # The fields of a runlog.jsonl line, in the order monitor/DATA_CONTRACT.md shows them.
 RUNLOG_FIELDS = ("stage", "experiment", "attempt", "job_id", "account", "state", "exit_code", "elapsed_s",
                  "gpu_hours", "gate", "result", "path_taken", "item", "title")
@@ -160,17 +161,6 @@ def take_lock(paths):
     except OSError:
         return None
     return int(age)
-
-
-def mark_lock_held(paths):
-    """A cycle that found the lock held says so in status.json and changes nothing else."""
-    try:
-        status = read_json(paths.status_json)
-        if isinstance(status, dict) and isinstance(status.get("watcher"), dict):
-            status["watcher"]["lock"] = "held"
-            write_json(paths.status_json, status)
-    except (OSError, ValueError):
-        pass
 
 
 class Cycle:
@@ -325,11 +315,11 @@ class Cycle:
             return None
         rows = []
         for line in out.splitlines():
-            fields = line.split("|")
-            if len(fields) == 7 and fields[0].isdecimal():
+            fields = line.split("|", 7)
+            if len(fields) == 8 and fields[0].isdecimal():
                 rows.append({"id": fields[0], "name": fields[1], "state": fields[2], "account": fields[3],
                              "qos": fields[4], "gpus": gpus_in(fields[5]),
-                             "cpus": int(fields[6]) if fields[6].isdecimal() else 0})
+                             "cpus": int(fields[6]) if fields[6].isdecimal() else 0, "reason": fields[7]})
         return rows
 
     # ---- step 4 ----------------------------------------------------------------------------
@@ -471,6 +461,12 @@ class Cycle:
             kind, held = ("gpu", row["gpus"]) if row["gpus"] else ("cpu", row["cpus"])
             pool = (row["account"], row["qos"])
             in_use[kind][pool] = in_use[kind].get(pool, 0) + held
+        # A GPU account where one of our jobs waits on the QOS's shared limit goes to the back of
+        # the line, so new GPU jobs take another authorized account while that one has room.
+        limited = {(row["account"], row["qos"]) for row in queue
+                   if row["gpus"] and row["state"] == "PENDING" and row["reason"].startswith(GROUP_LIMIT)}
+        gpu_pools = [pool for pool in self.pools if (pool.account, pool.qos) not in limited]
+        gpu_pools += [pool for pool in self.pools if (pool.account, pool.qos) in limited]
         reserved = {}  # allowance key -> GPU-hours still expected from stages already under way
         for stage in self.graph.stages:
             if self.states[stage["id"]]["status"] in ACTIVE + (INTERRUPTED,):
@@ -506,7 +502,7 @@ class Cycle:
 
             resources = stage["resources"]
             kind, need = ("gpu", resources["gpus"]) if resources["gpus"] else ("cpu", resources["cpus"])
-            pool = authorization.pick_pool(self.pools, kind, need, in_use[kind])
+            pool = authorization.pick_pool(gpu_pools if kind == "gpu" else self.pools, kind, need, in_use[kind])
             if pool is None:
                 continue  # every usable account is at its limit; wait for a slot
             try:
@@ -515,8 +511,15 @@ class Cycle:
                 self.block(state, "manifest:" + name)
                 self.block_keys["manifest:" + name] = {"stage": name, "code": refusal.code, "role": refusal.role}
                 continue
+            # The stage runs from the code its manifest names: a resume uses the export of its
+            # first submission, a new stage the one `current` named when it was bound.
+            export = manifest["code"].get("export") or str(self.paths.code)
+            if not os.path.isdir(os.path.join(export, "tii-cee")):
+                self.block(state, "manifest:" + name)
+                self.block_keys["manifest:" + name] = {"stage": name, "code": "export_missing", "role": None}
+                continue
             job_id, code = sbatch.submit(self.paths, stage, pool, state["mem_gb"], self.python,
-                                         state["attempt_count"] + 1)
+                                         state["attempt_count"] + 1, export)
             if job_id is None:
                 self.block_keys["submit:" + name] = {"stage": name, "rc": code}
                 self.note("submit_failed stage=%s rc=%s" % (name, code))
@@ -552,7 +555,7 @@ class Cycle:
                 digests.append({"file": item, "sha256": sha256_file(path) if path.is_file() else None})
             record = {"gate": name, "decided_at": now(), "rule": gate["rule"],
                       "rule_sha256": sha256_file(self.paths.gate_rules / gate["rule"]),
-                      "inputs": {s: self.states[s]["status"] for s in gate["inputs"]},
+                      "inputs": [{"stage": s, "status": self.states[s]["status"]} for s in gate["inputs"]],
                       "input_digests": digests, "result": verdict["result"],
                       "path_taken": verdict.get("path", verdict["result"]),
                       "evidence": verdict.get("evidence", {})}
@@ -567,6 +570,14 @@ class Cycle:
             except FileExistsError:
                 self.gate_records[name] = read_json(self.paths.gate_record(name))
         self.skip_by_gate()
+        # Each record also goes to export/approved/gates/ through the export guard, so the Mac and
+        # the ledger have the evidence. Done for any record not there yet, not only this cycle's.
+        for name, record in self.gate_records.items():
+            if not (self.paths.approved / "gates" / (name + ".json")).exists():
+                try:
+                    export_guard.approve(self.paths, "gates/%s.json" % name, record)
+                except export_guard.Refused as refused:
+                    self.block_keys["gate_export:" + name] = {"gate": name, "code": refused.code}
 
     def run_rule(self, gate):
         """Run the committed rule script on the files the gate may read. None if it did not decide."""
@@ -826,7 +837,8 @@ def main():
     paths = Paths()
     stale = take_lock(paths)
     if stale is None:
-        mark_lock_held(paths)
+        # Said here, in the watcher's own log, and nowhere else: a cycle without the lock writes
+        # no file, so it can never replace what the cycle holding it is about to write.
         print("%s another cycle holds the lock" % now())
         return 0
     try:

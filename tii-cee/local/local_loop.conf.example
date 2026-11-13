@@ -11,14 +11,15 @@ TII_REMOTE_ROOT="/blue/cai6734/daniel.escalante/private/tii-cee-1"
 TII_REPO="$HOME/PATH/TO/testing-in-imagination"
 
 # The headless agent session, as a bash array. The loop adds the fixed continuation prompt as the
-# last argument. Give the full path: launchd's PATH does not include ~/.local/bin.
+# last argument, so this runs
+#     claude -p --permission-mode auto --model opus "<the fixed continuation prompt>"
+# which is the same call as `claude -p "<prompt>" --permission-mode auto --model opus`: the usage
+# is `claude [options] [prompt]`. Give the full path: launchd's PATH does not include ~/.local/bin.
 # Checked against `claude --help`, Claude Code 2.1.323, on November 13, 2026:
 #   -p, --print               non-interactive: print the response and exit
-#   -c, --continue            continue the most recent conversation in the current directory
 #   --permission-mode <mode>  acceptEdits, auto, bypassPermissions, manual, dontAsk or plan
-# With -p alone, anything that would ask for permission is refused, so choose the permission mode
-# deliberately before relying on the session to edit files or run commands.
-TII_AGENT_CMD=("$HOME/.local/bin/claude" -p)
+#   --model <model>           an alias such as opus, or a model's full name
+TII_AGENT_CMD=("$HOME/.local/bin/claude" -p --permission-mode auto --model opus)
 
 # Where the loop keeps its lock, its offset into the event queue, the session's pid file, and the
 # mirror of events.tsv and STATUS.md (in mirror/).
@@ -27,6 +28,13 @@ TII_LOOP_STATE="$HOME/Library/Application Support/tii-local-loop"
 # Where approved aggregates are copied. The only tree ever copied from HiPerGator.
 TII_APPROVED_DIR="$HOME/Library/Application Support/tii-local-loop/approved"
 
-# 1 = a notification for each new event. Set 0 when keeper.conf sets TII_REMOTE_EVENTS: the keeper
-# then relays the same events, and each would show twice.
-TII_NOTIFY=1
+# 0 = no notifications from the loop: the connection keeper relays the events
+# (AUTHORIZATION.md section 10; keeper.conf sets TII_REMOTE_EVENTS). Set 1 only if the keeper's
+# relay is off, or each event would show twice.
+TII_NOTIFY=0
+
+# For deploy_code.sh, which sends committed code to HiPerGator as a git bundle. These are its
+# defaults; change one only if it differs.
+# TII_BRANCH="tii-cee-1/2026-11-13"
+# TII_REMOTE_CHECKOUT="/blue/cai6734/daniel.escalante/testing-in-imagination"
+# TII_REMOTE_PYTHON="/usr/bin/python3"

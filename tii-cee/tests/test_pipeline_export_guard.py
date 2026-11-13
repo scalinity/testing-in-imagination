@@ -16,7 +16,7 @@ PACKAGE = Path(__file__).resolve().parents[1]
 # Everything that runs under the compute node's Python 3.9: the watcher, what it imports, and gate rules.
 WATCHER_FILES = [PACKAGE / "tiicee" / "__init__.py"] + [
     PACKAGE / "tiicee" / "pipeline" / name for name in (
-        "__init__.py", "paths.py", "util.py", "authorization.py", "graph.py", "manifest.py",
+        "__init__.py", "paths.py", "util.py", "authorization.py", "graph.py", "manifest.py", "deploy.py",
         "export_guard.py", "sbatch.py", "watcher.py")] + sorted((PACKAGE / "gates").glob("*.py"))
 
 AGGREGATE = {"experiment": "E2", "status": "COMPLETED", "n": 240, "gain_nats": 0.0312, "ci": [-0.01, 0.07],
@@ -191,7 +191,7 @@ def test_everything_the_watcher_imports_compiles_and_imports_under_python_39():
     assert imported.returncode == 0, imported.stderr
     assert imported.stdout.strip() == str(sorted(
         ["tiicee", "tiicee.pipeline"] + ["tiicee.pipeline." + name for name in (
-            "paths", "util", "authorization", "graph", "manifest", "export_guard", "sbatch", "watcher")]))
+            "paths", "util", "authorization", "graph", "manifest", "deploy", "export_guard", "sbatch", "watcher")]))
 
 
 def test_watcher_and_stage_contract_code_use_the_standard_library_only():
