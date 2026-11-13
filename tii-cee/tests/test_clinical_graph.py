@@ -170,6 +170,7 @@ def test_each_training_graph_stays_within_each_experiments_estimate(trained):
         spent[stage["allowance_key"]] = spent.get(stage["allowance_key"], 0) + stage["estimate_gpu_hours"]
         if stage["command"][0] == "clinical_train":
             assert stage["resources"]["time_hours"] == 24 and stage["env"] == backbone.TRAINING_ENVIRONMENT
+            assert stage["resources"]["cpus"] == 2  # each training averaged one CPU
     assert all(total <= graph.allowances[key]["estimate_gpu_hours"] for key, total in spent.items())
 
 
@@ -201,7 +202,7 @@ def test_e9_trains_granite_after_its_bench_and_rolls_out_as_e8_does():
                                    "adapter": f"$TII/private/stages/e9-train-s{seed}/out/model/adapter",
                                    "backbone_overlay": overlay}
         assert train["experiment"] == rollout["experiment"] == train["allowance_key"] == rollout["allowance_key"] == "E9"
-        assert train["resources"] == graph.by_id["e8-train-s270"]["resources"]
+        assert train["resources"] == {**graph.by_id["e8-train-s270"]["resources"], "mem_gb": 14}  # 1.8 x Granite's peak
         assert rollout["resources"] == graph.by_id["e8-rollout-s270"]["resources"]
         # E8's figures times 1.1: the Granite bench took 2.31 GPU-hours against 2.1 estimated at Nemotron's speed
         for stage, e8 in ((train, "e8-train-s270"), (rollout, "e8-rollout-s270")):
