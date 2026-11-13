@@ -1,0 +1,6 @@
+#SCRON --job-name=tii-watcher
+#SCRON --account=cai6734 --qos=cai6734-b
+#SCRON --time=00:10:00 --mem=1gb --cpus-per-task=1
+#SCRON --dependency=singleton
+#SCRON --output=<TII>/state/watcher_%j.log --open-mode=append
+*/15 * * * * <TII>/pipeline/watcher_cycle.sh    # tii-watcher

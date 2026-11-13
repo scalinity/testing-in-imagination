@@ -1,0 +1,21 @@
+{
+  "source": "reports/research-advancement/AUTHORIZATION.md section 4",
+  "authorization_sha256": "72ccc89c8a825c82578c8efdf942025e3ce60d72f179b8b13489737ee37221ae",
+  "unit": "GPU-hours",
+  "experiments": {
+    "E0": {"authorized": true, "estimate_gpu_hours": 0, "allowance_gpu_hours": 0},
+    "E1": {"authorized": true, "estimate_gpu_hours": 0, "allowance_gpu_hours": 0},
+    "E3": {"authorized": true, "estimate_gpu_hours": 0, "allowance_gpu_hours": 0},
+    "reader_opportunity_audit": {"authorized": true, "estimate_gpu_hours": 0, "allowance_gpu_hours": 0},
+    "E2": {"authorized": true, "estimate_gpu_hours": 90, "allowance_gpu_hours": 200},
+    "E4": {"authorized": true, "estimate_gpu_hours": 180, "allowance_gpu_hours": 400},
+    "E5": {"authorized": true, "estimate_gpu_hours": 400, "allowance_gpu_hours": 800},
+    "E6": {"authorized": true, "estimate_gpu_hours": 145, "allowance_gpu_hours": 300},
+    "E7": {"authorized": true, "estimate_gpu_hours": 150, "allowance_gpu_hours": 300},
+    "E8": {"authorized": true, "estimate_gpu_hours": 105, "allowance_gpu_hours": 210},
+    "E9": {"authorized": true, "estimate_gpu_hours": 120, "allowance_gpu_hours": 300},
+    "E10": {"authorized": true, "estimate_gpu_hours": 133, "allowance_gpu_hours": 270},
+    "benches": {"authorized": true, "estimate_gpu_hours": 10, "allowance_gpu_hours": 30},
+    "E11": {"authorized": false, "estimate_gpu_hours": 0, "allowance_gpu_hours": 0}
+  }
+}

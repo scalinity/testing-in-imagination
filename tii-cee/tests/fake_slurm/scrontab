@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Fake scrontab for the pipeline tests; see fakeslurm.py. Never the real Slurm command."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fakeslurm  # noqa: E402
+
+sys.exit(fakeslurm.main("scrontab", sys.argv[1:]))

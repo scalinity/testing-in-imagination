@@ -1,0 +1,32 @@
+# ~/.tii/local-loop/local_loop.conf -- settings for local_loop.sh. Plain shell assignments, no secrets.
+
+# The destination `ssh -O check` accepts for the existing master connection: the same value as
+# TII_HPG_HOST in ~/.tii/keeper/keeper.conf.
+TII_HPG_HOST="hpg"
+
+# The study's storage root on HiPerGator (AUTHORIZATION.md section 3).
+TII_REMOTE_ROOT="/blue/cai6734/daniel.escalante/private/tii-cee-1"
+
+# The repository checkout on this Mac. The agent session starts in this directory.
+TII_REPO="$HOME/PATH/TO/testing-in-imagination"
+
+# The headless agent session, as a bash array. The loop adds the fixed continuation prompt as the
+# last argument. Give the full path: launchd's PATH does not include ~/.local/bin.
+# Checked against `claude --help`, Claude Code 2.1.323, on November 13, 2026:
+#   -p, --print               non-interactive: print the response and exit
+#   -c, --continue            continue the most recent conversation in the current directory
+#   --permission-mode <mode>  acceptEdits, auto, bypassPermissions, manual, dontAsk or plan
+# With -p alone, anything that would ask for permission is refused, so choose the permission mode
+# deliberately before relying on the session to edit files or run commands.
+TII_AGENT_CMD=("$HOME/.local/bin/claude" -p)
+
+# Where the loop keeps its lock, its offset into the event queue, the session's pid file, and the
+# mirror of events.tsv and STATUS.md (in mirror/).
+TII_LOOP_STATE="$HOME/Library/Application Support/tii-local-loop"
+
+# Where approved aggregates are copied. The only tree ever copied from HiPerGator.
+TII_APPROVED_DIR="$HOME/Library/Application Support/tii-local-loop/approved"
+
+# 1 = a notification for each new event. Set 0 when keeper.conf sets TII_REMOTE_EVENTS: the keeper
+# then relays the same events, and each would show twice.
+TII_NOTIFY=1

@@ -188,3 +188,49 @@ mutation check.
 5. tau_ratio is undefined (None) for a reader that does not move (r ≤ 1e-12 nats) and is reported
    only as a secondary diagnostic.
 6. Names: coherent_voi, gate_allows, scaling.scale; realized_gain is separate from gain_terms.
+
+### D-STATS, November 13, 2026: the statistics module (tii-cee/tiicee/stats)
+
+111 tests. Conformance with the project's own implementations, run by the project's interpreter:
+the T5 bootstrap interval of replication.stats.paired_bootstrap, T5, ΔT5, the exact class-lattice
+p-value, Holm, power and the minimum detectable effect agree to 1e-12 (Holm 1e-15); the recorded
+sensitivity block of phase-a/metrics.json (power 0.9962, 0.9993; mde_80 4.1537, 5.5433) and the
+recorded Holm families reproduce exactly.
+
+1. The sign-flip p-value is always computed exactly (the class lattice the project uses for its
+   cross-check), never by 100,000 draws; above 20 discordant admissions it therefore differs from a
+   recorded draws-based value (V1 − official: recorded 1/100,001, exact 2^-24 = 5.96e-8). Same test,
+   null, statistic and tie rule.
+2. seed_interval is the percentile bootstrap over seeds that section 15 specifies; at twenty seeds
+   its simulated coverage is 92.0% (normal) and 90.4% (skewed) against a nominal 95%. E1's rules
+   "the paired 95% interval excludes 0" therefore run slightly liberal. The method stays as
+   specified, and E1's report states this beside every such verdict.
+3. paired_interval's estimand is the mean over units of each unit's mean row difference; a unit in
+   two strata is refused, so a leak across folds cannot be split silently.
+4. t5_contrast accepts several policies (E6 averages five, paired by admission; the exact null
+   generalizes to integer magnitudes per unit) and within-fold resampling (cohort X).
+5. Orientation figures: the project's minimum-detectable-effect function returns about 6.05 and 8.8
+   T5 points at an equal 10% and 20% discordance, not the "about 6.4 and 9.1" that DECISIONS.md and
+   the old SPEC cite; both implementations agree to the digit, so the gap is in the documents. No
+   recorded result depends on those orientation figures.
+
+### D-PIPE, November 13, 2026: the pipeline, watcher and local loop (tii-cee/tiicee/pipeline, gates, local)
+
+149 tests against a fake Slurm, also with the watcher under Python 3.9.6; WATCHER_DESIGN section 7
+tests 1-6 and 8 pass. Not yet verified on HiPerGator or under launchd.
+
+1. The allowance check counts spent GPU-hours plus the remaining estimates of stages already
+   queued, running or interrupted plus the new stage's estimate, so several large stages cannot
+   start against one allowance in a single cycle.
+2. Retry counts (3, 1, 1) apply over a stage's life. Job scripts add --no-requeue so Slurm's own
+   requeue cannot run a stage beside the watcher's resubmission; a stage requests at least 15
+   minutes.
+3. The sacct window reaches back to the oldest live job's submission less five minutes, so
+   accounting lag cannot hide an ended job; attempts are deduplicated by job ID. A failed sacct or
+   squeue makes the cycle decide nothing.
+4. Events are written before the state that records them (a crash may repeat an event, never lose
+   one). Files failing the export guard are moved to private quarantine with a BLOCKED item.
+5. Blocks are recomputed every cycle, so restoring authorization or a new allowance resumes work
+   without a reset; per design step 8 the watcher disables its own entry when everything left is
+   blocked, and the agent reinstalls it when an item clears.
+6. The addendum's pools count only while its SHA-256 equals f59cd6fa…5658 and SIGNATURE.md quotes it.

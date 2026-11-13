@@ -1,0 +1,45 @@
+{
+  "study": "TII-CEE-1",
+  "milestone": "M0",
+  "stages": [
+    {
+      "id": "noop_a",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": ["noop", "--count", "1"],
+      "resources": {"gpus": 0, "cpus": 1, "mem_gb": 1, "time_hours": 0.25},
+      "depends_on": [],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0
+    },
+    {
+      "id": "noop_b",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": ["noop_slow", "--steps", "3"],
+      "resources": {"gpus": 0, "cpus": 1, "mem_gb": 1, "time_hours": 0.25},
+      "depends_on": ["noop_a"],
+      "gate": "G_noop",
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0
+    },
+    {
+      "id": "noop_c",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": ["noop"],
+      "resources": {"gpus": 0, "cpus": 1, "mem_gb": 1, "time_hours": 0.25},
+      "depends_on": ["noop_b"],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0
+    }
+  ],
+  "gates": [
+    {
+      "id": "G_noop",
+      "rule": "noop_gate.py",
+      "inputs": ["noop_a"],
+      "reads": ["export/approved/noop_a.json"]
+    }
+  ]
+}
