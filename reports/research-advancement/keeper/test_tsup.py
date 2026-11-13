@@ -21,9 +21,9 @@ class StartupTests(unittest.TestCase):
                 "sleep": "#!/bin/bash\nexit 0\n",
                 "tailscale": '''#!/bin/bash
 printf '%s\n' "$*" >> "$HOME/calls"
-if [ "$3" = "up" ]; then exit 0; fi
+if [ "$2" = "up" ]; then exit 0; fi
 [ "$DELAYED" = "yes" ] || exit 0
-[ "${4:-}" = "--json" ] || exit 1
+[ "${3:-}" = "--json" ] || exit 1
 n=$(cat "$HOME/count" 2>/dev/null || echo 0)
 echo $((n + 1)) > "$HOME/count"
 [ "$n" -ge 2 ]
