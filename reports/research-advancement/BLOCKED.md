@@ -22,3 +22,18 @@ resolution here with the date; it is never deleted.
 - Status: CLOSED November 13, 2026, 2:55 AM EST. Daniel confirmed the instruction directly in the
   session; both statements are recorded verbatim in SIGNATURE.md and bound to the addendum's
   SHA-256. GPU work may use 16 GPUs at once, 8 on each of `cai6734` and `cai5724`.
+
+## BLOCKED-002: no independent credentialed cohort for E11 (opened November 13, 2026)
+
+- What waits: E11 only (audit and replay on an independent clinical cohort, specification 12).
+- Why it is blocked: AUTHORIZATION.md section 7 lists no other credentialed cohort, and launch
+  check 7.4f found only `mimic-iv-ext-cdm` among the dataset directories in approved private
+  storage (names only were read). The agent never requests or acquires credentialed data.
+- Request, one step: if you hold credentialed access to another diagnostic cohort that already sits
+  in approved private storage on HiPerGator, add it in a new authorization naming the dataset,
+  version, path and its data use agreement. E11 would then run audit and replay only, with its card
+  frozen before any access. If you hold none, no action is needed; the paper states the gap.
+- Meanwhile: E7 (four public complete-record datasets) and the E2 reader panel are the study's
+  evidence beyond its own agent and environment, as specification 12 states; they are breadth, not
+  clinical validation.
+- Status: OPEN.
