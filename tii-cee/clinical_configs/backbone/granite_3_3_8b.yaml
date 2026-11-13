@@ -1,0 +1,18 @@
+# @package _global_
+#
+# E9 backbone overlay (reports/research-advancement/EXPERIMENT_CARDS/E9.md), in the form of
+# lacdm/configs/backbone/nemotron_nano_8b.yaml. tiicee.clinical.backbone.compose merges it onto the
+# replication's composed "primary" configuration, so the backbone and the system message are the
+# only differences from the E8 recipe. Every hyperparameter, reward and loss setting stays the
+# replication's.
+
+model:
+  model_name: ibm-granite/granite-3.3-8b-instruct
+  revision: 51dd4bc2ade4059a6bd87649d68aa11e4fb2529b
+
+environment:
+  # The fixed system message sent on every agent turn (decision, hypothesis, confidence) in place
+  # of Nemotron's "detailed thinking off". Supplying one keeps Granite's chat template from writing
+  # its default system prompt, which carries today's date. The text is that default without its
+  # date line; the bench reports whether that still holds for the pinned revision's template.
+  system_prompt: "Knowledge Cutoff Date: April 2024.\nYou are Granite, developed by IBM. You are a helpful AI assistant."

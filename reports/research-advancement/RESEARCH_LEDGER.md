@@ -234,3 +234,45 @@ tests 1-6 and 8 pass. Not yet verified on HiPerGator or under launchd.
    without a reset; per design step 8 the watcher disables its own entry when everything left is
    blocked, and the agent reinstalls it when an item clears.
 6. The addendum's pools count only while its SHA-256 equals f59cd6fa…5658 and SIGNATURE.md quotes it.
+
+### D-CLIN, November 13, 2026: training-track adapters (tii-cee/tiicee/clinical)
+
+55 tests under the project's CPU environments (tim's and the replication's), driving the real Hydra
+composition, the upstream environment and tim's V0 evaluator on tim's synthetic fixture with
+stand-ins only for gpu.train and gpu.evaluate; 25 of 25 planted breaks caught. Not yet run on a
+GPU, a real tokenizer, or real data. The replication, tim, lacdm and the synthetic study are
+unchanged; their functions are wrapped by module-global replacement inside the stage process.
+
+1. Stages: clinical_data (E8, E9 copy), clinical_folds (E10), clinical_train, clinical_rollout,
+   clinical_bench, clinical_acceptance (launch check 7.4a). test.csv is never opened or listed,
+   checked by an audit hook against a planted file.
+2. Rollouts run tim's own V0 evaluator, so rows are tim's V0 rows and generation_digest is tim's;
+   every role's prompt text, its SHA-256, the generated ids and a digest of the prompt token ids
+   are logged privately per step. V1 comes from tim's v1_rows.
+3. A held-out fold is evaluated as the split named "val" inside a private directory, so "val" is the
+   split name in its evaluation seed stream.
+4. Resume risk found (unverified): TRL's RepeatRandomSampler is seeded once at construction, so a
+   process resuming inside epoch 2 may replay epoch 1's order and change how often each admission
+   is visited. The replication's trainings ran uninterrupted. Every training records the admission
+   of every optimizer step and reports whether visits match the recipe; the bench forces a pause.
+   Resolution: see D-CLIN-RESUME below.
+5. Granite's fixed system message (E9): Granite's default system message without its date line,
+   "Knowledge Cutoff Date: April 2024. You are Granite, developed by IBM. You are a helpful AI
+   assistant.", checked against the real template in the bench.
+6. Environment per stage kind: training jobs run with the replication's launcher environment
+   (PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True, no CUBLAS_WORKSPACE_CONFIG), because the
+   primary policy was trained that way; rollouts, replays and probes set
+   CUBLAS_WORKSPACE_CONFIG=:4096:8 as tim did for every evaluation.
+7. The integration tests need hydra, omegaconf, pandas, pyyaml and torch; they run under the
+   project's existing CPU environment (cdm-extension/daniel-escalante/.venv) rather than adding
+   those to tii-cee's numpy-only environment.
+
+### D-CLIN-RESUME, November 13, 2026
+
+Every training, interrupted or not, must consume exactly the admission sequence an uninterrupted
+run with the same seed would. The training records the planned sequence before its first step,
+checks every optimizer step against it, and on resume makes the sampler continue the plan; the bench
+compares a paused-and-resumed run with an uninterrupted run of the same seed and requires identical
+step-by-step sequences and visit counts. Parts are also scheduled to end at the epoch boundary where
+the time limit allows. A training whose sequence departs from the plan is refused, not published.
+This is a repair of resume behavior, not of the recipe.
