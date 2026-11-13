@@ -1,0 +1,6 @@
+{
+ "agentType": "demo-reviewer",
+ "name": "demo-reviewer",
+ "description": "Fictional worker: review round one",
+ "model": "demo"
+}

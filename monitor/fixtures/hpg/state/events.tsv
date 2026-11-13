@@ -1,0 +1,6 @@
+2026-11-23T01:45:00-05:00	gate decided	G2a met; G2b met; G2c not met
+2026-11-23T08:45:00-05:00	failure	e7-ddxplus failed after 2 attempts
+2026-11-23T15:10:00-05:00	stage completed	e7-ckd
+2026-11-24T07:05:00-05:00	stage completed	e2-reader-03
+2026-11-24T09:46:00-05:00	blocked	BLOCKED-004 e4-probe-bench refused, exit 20
+2026-11-24T13:40:00-05:00	stage completed	2 stages queued: e2-reader-08, e2-reader-09

@@ -1,0 +1,6 @@
+{
+ "agentType": "demo-e2-analysis",
+ "name": "demo-e2-analysis",
+ "description": "Fictional worker: analyse the E2 reader panel",
+ "model": "demo"
+}

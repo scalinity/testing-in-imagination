@@ -1,0 +1,14 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "gate": "G2a",
+ "decided_at": "2026-11-23T01:45:00-05:00",
+ "rule": "see specification 14.1",
+ "result": "met",
+ "path_taken": "The measurement tier runs: E2, E4, E7",
+ "inputs": [
+  {
+   "name": "demo-input",
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ]
+}

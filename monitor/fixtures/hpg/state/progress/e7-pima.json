@@ -1,0 +1,8 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "stage": "e7-pima",
+ "unit": "patient",
+ "done": 301,
+ "total": 768,
+ "updated_at": "2026-11-24T14:03:00-05:00"
+}

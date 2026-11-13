@@ -1,0 +1,39 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "schema": "tii-fig1-regret/1",
+ "generated_at": "2026-11-24T11:30:00-05:00",
+ "agents": [
+  {
+   "id": "drift",
+   "label": "drift",
+   "variant": "raw",
+   "selection": 0.22,
+   "reading": 0.61,
+   "commitment": 0.17
+  },
+  {
+   "id": "drift",
+   "label": "drift",
+   "variant": "repaired",
+   "selection": 0.48,
+   "reading": 0.2,
+   "commitment": 0.32
+  },
+  {
+   "id": "scale",
+   "label": "scale",
+   "variant": "raw",
+   "selection": 0.18,
+   "reading": 0.52,
+   "commitment": 0.3
+  },
+  {
+   "id": "scale",
+   "label": "scale",
+   "variant": "repaired",
+   "selection": 0.31,
+   "reading": 0.4,
+   "commitment": 0.29
+  }
+ ]
+}

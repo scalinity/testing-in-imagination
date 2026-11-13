@@ -1,0 +1,13 @@
+gui/501/com.tii.local-loop = {
+	active count = 0
+	path = /Users/demo/Library/LaunchAgents/com.tii.local-loop.plist
+	type = LaunchAgent
+	state = not running
+
+	runs = 1571
+	last exit code = 0
+	run interval = 600 seconds
+	resource coalition = {
+		state = active
+	}
+}

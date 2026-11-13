@@ -1,0 +1,151 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "schema": "tii-fig1-gain/1",
+ "generated_at": "2026-11-24T11:30:00-05:00",
+ "cells": [
+  {
+   "id": "sim-entrenching-drift",
+   "reader": "sim-entrenching-drift",
+   "setting": "twin, W2",
+   "experiment": "E1",
+   "predicted_gain": 0.164,
+   "predicted_lo": 0.14400000000000002,
+   "predicted_hi": 0.184,
+   "realized_gain": 0.204,
+   "realized_lo": 0.174,
+   "realized_hi": 0.23399999999999999
+  },
+  {
+   "id": "sim-fixed-class-drift",
+   "reader": "sim-fixed-class-drift",
+   "setting": "twin, W2",
+   "experiment": "E1",
+   "predicted_gain": 0.113,
+   "predicted_lo": 0.093,
+   "predicted_hi": 0.133,
+   "realized_gain": 0.142,
+   "realized_lo": 0.11199999999999999,
+   "realized_hi": 0.172
+  },
+  {
+   "id": "sim-over-reactive",
+   "reader": "sim-over-reactive",
+   "setting": "twin, W2",
+   "experiment": "E1",
+   "predicted_gain": -0.003,
+   "predicted_lo": -0.023,
+   "predicted_hi": 0.017,
+   "realized_gain": -0.083,
+   "realized_lo": -0.113,
+   "realized_hi": -0.053000000000000005
+  },
+  {
+   "id": "sim-under-reactive",
+   "reader": "sim-under-reactive",
+   "setting": "twin, W2",
+   "experiment": "E1",
+   "predicted_gain": -0.025,
+   "predicted_lo": -0.045,
+   "predicted_hi": -0.005000000000000001,
+   "realized_gain": -0.035,
+   "realized_lo": -0.065,
+   "realized_hi": -0.0050000000000000044
+  },
+  {
+   "id": "sim-double-counting",
+   "reader": "sim-double-counting",
+   "setting": "twin, W2",
+   "experiment": "E1",
+   "predicted_gain": 0.04,
+   "predicted_lo": 0.02,
+   "predicted_hi": 0.06,
+   "realized_gain": -0.051,
+   "realized_lo": -0.08099999999999999,
+   "realized_hi": -0.020999999999999998
+  },
+  {
+   "id": "demo-lm-1b",
+   "reader": "demo-lm-1b",
+   "setting": "twin text",
+   "experiment": "E2",
+   "predicted_gain": 0.021,
+   "predicted_lo": 0.0010000000000000009,
+   "predicted_hi": 0.041,
+   "realized_gain": -0.039,
+   "realized_lo": -0.069,
+   "realized_hi": -0.009000000000000001
+  },
+  {
+   "id": "demo-lm-3b",
+   "reader": "demo-lm-3b",
+   "setting": "twin text",
+   "experiment": "E2",
+   "predicted_gain": 0.056,
+   "predicted_lo": 0.036000000000000004,
+   "predicted_hi": 0.076,
+   "realized_gain": -0.018,
+   "realized_lo": -0.048,
+   "realized_hi": 0.012
+  },
+  {
+   "id": "demo-lm-8b",
+   "reader": "demo-lm-8b",
+   "setting": "twin text",
+   "experiment": "E2",
+   "predicted_gain": 0.098,
+   "predicted_lo": 0.078,
+   "predicted_hi": 0.11800000000000001,
+   "realized_gain": 0.061,
+   "realized_lo": 0.031,
+   "realized_hi": 0.091
+  },
+  {
+   "id": "demo-lm-14b",
+   "reader": "demo-lm-14b",
+   "setting": "twin text",
+   "experiment": "E2",
+   "predicted_gain": 0.127,
+   "predicted_lo": 0.107,
+   "predicted_hi": 0.147,
+   "realized_gain": 0.109,
+   "realized_lo": 0.079,
+   "realized_hi": 0.139
+  },
+  {
+   "id": "demo-policy-seed1",
+   "reader": "demo-policy-seed1",
+   "setting": "twin text",
+   "experiment": "E8",
+   "predicted_gain": 0.07,
+   "predicted_lo": 0.05,
+   "predicted_hi": 0.09000000000000001,
+   "realized_gain": 0.069,
+   "realized_lo": 0.03900000000000001,
+   "realized_hi": 0.099
+  },
+  {
+   "id": "demo-policy-seed2",
+   "reader": "demo-policy-seed2",
+   "setting": "twin text",
+   "experiment": "E8",
+   "predicted_gain": 0.045,
+   "predicted_lo": 0.024999999999999998,
+   "predicted_hi": 0.065,
+   "realized_gain": 0.036,
+   "realized_lo": 0.005999999999999998,
+   "realized_hi": 0.066
+  },
+  {
+   "id": "demo-backbone-2",
+   "reader": "demo-backbone-2",
+   "setting": "twin text",
+   "experiment": "E9",
+   "predicted_gain": 0.018,
+   "predicted_lo": -0.0020000000000000018,
+   "predicted_hi": 0.038,
+   "realized_gain": 0.018,
+   "realized_lo": -0.012,
+   "realized_hi": 0.048
+  }
+ ]
+}

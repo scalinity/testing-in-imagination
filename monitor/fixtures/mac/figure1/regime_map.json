@@ -1,0 +1,189 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "schema": "tii-fig1-regime/1",
+ "generated_at": "2026-11-24T11:30:00-05:00",
+ "harmful_region": [
+  {
+   "tau_b": 2.1,
+   "kl_inc": 0
+  },
+  {
+   "tau_b": 9,
+   "kl_inc": 0
+  },
+  {
+   "tau_b": 9,
+   "kl_inc": 0.12
+  },
+  {
+   "tau_b": 4,
+   "kl_inc": 0.1
+  },
+  {
+   "tau_b": 2.6,
+   "kl_inc": 0.05
+  }
+ ],
+ "markers": [
+  {
+   "id": "sim-entrenching-drift",
+   "label": "sim-entrenching-drift",
+   "experiment": "E1",
+   "kind": "simulated",
+   "tau_b": 1.05,
+   "tau_b_lo": 0.938,
+   "tau_b_hi": 1.176,
+   "kl_inc": 0.21,
+   "kl_inc_lo": 0.168,
+   "kl_inc_hi": 0.252,
+   "delta_log_loss": -0.19
+  },
+  {
+   "id": "sim-fixed-class-drift",
+   "label": "sim-fixed-class-drift",
+   "experiment": "E1",
+   "kind": "simulated",
+   "tau_b": 0.96,
+   "tau_b_lo": 0.857,
+   "tau_b_hi": 1.075,
+   "kl_inc": 0.15,
+   "kl_inc_lo": 0.12,
+   "kl_inc_hi": 0.18,
+   "delta_log_loss": -0.13
+  },
+  {
+   "id": "sim-over-reactive",
+   "label": "sim-over-reactive",
+   "experiment": "E1",
+   "kind": "simulated",
+   "tau_b": 3.4,
+   "tau_b_lo": 3.036,
+   "tau_b_hi": 3.808,
+   "kl_inc": 0.03,
+   "kl_inc_lo": 0.024,
+   "kl_inc_hi": 0.036,
+   "delta_log_loss": 0.09
+  },
+  {
+   "id": "sim-under-reactive",
+   "label": "sim-under-reactive",
+   "experiment": "E1",
+   "kind": "simulated",
+   "tau_b": 0.36,
+   "tau_b_lo": 0.321,
+   "tau_b_hi": 0.403,
+   "kl_inc": 0.02,
+   "kl_inc_lo": 0.016,
+   "kl_inc_hi": 0.024,
+   "delta_log_loss": 0.04
+  },
+  {
+   "id": "sim-double-counting",
+   "label": "sim-double-counting",
+   "experiment": "E1",
+   "kind": "simulated",
+   "tau_b": 2.3,
+   "tau_b_lo": 2.054,
+   "tau_b_hi": 2.576,
+   "kl_inc": 0.08,
+   "kl_inc_lo": 0.064,
+   "kl_inc_hi": 0.096,
+   "delta_log_loss": 0.06
+  },
+  {
+   "id": "demo-lm-1b",
+   "label": "demo-lm-1b",
+   "experiment": "E2",
+   "kind": "language_model",
+   "tau_b": 4.6,
+   "tau_b_lo": 4.107,
+   "tau_b_hi": 5.152,
+   "kl_inc": 0.07,
+   "kl_inc_lo": 0.056,
+   "kl_inc_hi": 0.084,
+   "params_b": 1,
+   "delta_log_loss": 0.05
+  },
+  {
+   "id": "demo-lm-3b",
+   "label": "demo-lm-3b",
+   "experiment": "E2",
+   "kind": "language_model",
+   "tau_b": 3.1,
+   "tau_b_lo": 2.768,
+   "tau_b_hi": 3.472,
+   "kl_inc": 0.1,
+   "kl_inc_lo": 0.08,
+   "kl_inc_hi": 0.12,
+   "params_b": 3,
+   "delta_log_loss": 0.02
+  },
+  {
+   "id": "demo-lm-8b",
+   "label": "demo-lm-8b",
+   "experiment": "E2",
+   "kind": "language_model",
+   "tau_b": 1.9,
+   "tau_b_lo": 1.696,
+   "tau_b_hi": 2.128,
+   "kl_inc": 0.13,
+   "kl_inc_lo": 0.104,
+   "kl_inc_hi": 0.156,
+   "params_b": 8,
+   "delta_log_loss": -0.06
+  },
+  {
+   "id": "demo-lm-14b",
+   "label": "demo-lm-14b",
+   "experiment": "E2",
+   "kind": "language_model",
+   "tau_b": 1.4,
+   "tau_b_lo": 1.25,
+   "tau_b_hi": 1.568,
+   "kl_inc": 0.16,
+   "kl_inc_lo": 0.128,
+   "kl_inc_hi": 0.192,
+   "params_b": 14,
+   "delta_log_loss": -0.11
+  },
+  {
+   "id": "demo-policy-seed1",
+   "label": "demo-policy-seed1",
+   "experiment": "E8",
+   "kind": "trained_policy",
+   "tau_b": 1.6,
+   "tau_b_lo": 1.429,
+   "tau_b_hi": 1.792,
+   "kl_inc": 0.11,
+   "kl_inc_lo": 0.088,
+   "kl_inc_hi": 0.132,
+   "delta_log_loss": -0.07
+  },
+  {
+   "id": "demo-policy-seed2",
+   "label": "demo-policy-seed2",
+   "experiment": "E8",
+   "kind": "trained_policy",
+   "tau_b": 1.75,
+   "tau_b_lo": 1.562,
+   "tau_b_hi": 1.96,
+   "kl_inc": 0.09,
+   "kl_inc_lo": 0.072,
+   "kl_inc_hi": 0.108,
+   "delta_log_loss": -0.05
+  },
+  {
+   "id": "demo-backbone-2",
+   "label": "demo-backbone-2",
+   "experiment": "E9",
+   "kind": "second_backbone",
+   "tau_b": 2.2,
+   "tau_b_lo": 1.964,
+   "tau_b_hi": 2.464,
+   "kl_inc": 0.06,
+   "kl_inc_lo": 0.048,
+   "kl_inc_hi": 0.072,
+   "delta_log_loss": -0.01
+  }
+ ]
+}

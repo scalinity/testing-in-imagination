@@ -1,0 +1,13 @@
+gui/501/com.tii.hpg-keeper = {
+	active count = 0
+	path = /Users/demo/Library/LaunchAgents/com.tii.hpg-keeper.plist
+	type = LaunchAgent
+	state = not running
+
+	runs = 3140
+	last exit code = 0
+	run interval = 300 seconds
+	resource coalition = {
+		state = active
+	}
+}

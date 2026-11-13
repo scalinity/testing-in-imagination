@@ -1,0 +1,6 @@
+{
+ "agentType": "demo-paper-figures",
+ "name": "demo-paper-figures",
+ "description": "Fictional worker: build Figure 1 from manifests",
+ "model": "demo"
+}

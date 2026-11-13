@@ -1,0 +1,6 @@
+{
+ "agentType": "demo-ledger",
+ "name": "demo-ledger",
+ "description": "Fictional worker: keep the ledger in step with the run log",
+ "model": "demo"
+}

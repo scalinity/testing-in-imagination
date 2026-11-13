@@ -1,0 +1,14 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "gate": "G0",
+ "decided_at": "2026-11-18T16:30:00-05:00",
+ "rule": "see specification 14.1",
+ "result": "met",
+ "path_taken": "M1 and M2 proceed",
+ "inputs": [
+  {
+   "name": "demo-input",
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ]
+}

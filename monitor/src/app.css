@@ -1,0 +1,179 @@
+/* Tokens. Dark values are the project site's own (site/meeting/index.html); light values are
+   their counterparts. Hue is used for state only: live, wait, retry, fail. */
+:root {
+  color-scheme: dark;
+  --ground: #16181b;
+  --raised: #1e2125;
+  --raised-2: #272b30;
+  --line: #2d3137;
+  --line-2: #3e434b;
+  --ink: #eceef0;
+  --ink-2: #b4bac2;
+  --ink-3: #8f969f;
+  --live: #3987e5;
+  --live-text: #7fb2f2;
+  --wait: #fab219;
+  --wait-text: #fab219;
+  --retry: #e87ba4;
+  --retry-text: #f2a3c1;
+  --fail: #d03b3b;
+  --fail-text: #ee7b7b;
+  --done: #4b515a;
+  --hatch: rgba(180, 186, 194, 0.16);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+
+  --sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --code: "Atkinson Hyperlegible Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-1: 11px;
+  --fs-2: 12px;
+  --fs-3: 13px;
+  --fs-4: 15px;
+  --fs-5: 18px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --ground: #f3f4f6;
+    --raised: #ffffff;
+    --raised-2: #e9ebee;
+    --line: #dfe2e6;
+    --line-2: #c3c8cf;
+    --ink: #16181b;
+    --ink-2: #4a5059;
+    --ink-3: #6b727c;
+    --live: #2a78d6;
+    --live-text: #1c5cab;
+    --wait: #e09a00;
+    --wait-text: #8a5a00;
+    --retry: #e87ba4;
+    --retry-text: #a3386a;
+    --fail: #d03b3b;
+    --fail-text: #b02a2a;
+    --done: #c9ced5;
+    --hatch: rgba(74, 80, 89, 0.16);
+    --shadow: 0 8px 28px rgba(22, 24, 27, 0.18);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--fs-3);
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  height: 100%;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+  font-weight: 400;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+svg {
+  display: block;
+  overflow: visible;
+}
+
+svg text {
+  font-family: var(--sans);
+  fill: var(--ink-2);
+}
+
+.code {
+  font-family: var(--code);
+  font-size: 0.94em;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus is always visible; pointer focus is not ringed. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* The one motion on the page: running things breathe. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.breathe {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+  }
+}
+
+/* Region headings and the small live-age label every panel carries. */
+.region-name {
+  font-size: var(--fs-4);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.panel-name {
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.muted {
+  color: var(--ink-3);
+}
+.empty {
+  color: var(--ink-2);
+  font-size: var(--fs-2);
+  max-width: 62ch;
+  line-height: 1.45;
+}
+.empty strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Thin scrollbars inside panels. */
+.scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}

@@ -1,0 +1,12 @@
+gui/501/com.tii.caffeinate = {
+	active count = 1
+	path = /Users/demo/Library/LaunchAgents/com.tii.caffeinate.plist
+	type = LaunchAgent
+	state = running
+
+	pid = 4343
+	runs = 1
+	resource coalition = {
+		state = active
+	}
+}

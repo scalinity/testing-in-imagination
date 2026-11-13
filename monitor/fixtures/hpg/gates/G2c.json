@@ -1,0 +1,14 @@
+{
+ "_demo": "FICTIONAL demo fixture for the TII monitor. Not study data.",
+ "gate": "G2c",
+ "decided_at": "2026-11-23T01:45:00-05:00",
+ "rule": "see specification 14.1",
+ "result": "not met",
+ "path_taken": "CEE-Scale is reported from the twin as found and not applied elsewhere",
+ "inputs": [
+  {
+   "name": "demo-input",
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ]
+}
