@@ -6,7 +6,7 @@
     python -m tiicee.experiments.e1.run part-a      --out DIR
     python -m tiicee.experiments.e1.run harm        --out DIR
     python -m tiicee.experiments.e1.run figure      --out DIR --figure DIR
-    python -m tiicee.experiments.e1.run manifest    --out DIR --phase NAME
+    python -m tiicee.experiments.e1.run manifest    --out DIR --figure DIR --phase NAME
 
 Order of a full run: cells, c-intervals, rules, part-a (needs the selected layer), harm, rules again,
 figure, manifest. Common options: --config card|tiny, --seeds, --variants, --jobs, --force.
@@ -15,6 +15,7 @@ A finished cell leaves a marker and is skipped on a later call unless --force is
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import sys
@@ -27,7 +28,43 @@ import numpy as np
 from tiicee.experiments.e1 import cells, config, figure1, heldout, intervals, manifest, part_a, rules, tables
 from tiicee.experiments.e1.context import Context
 
-RULE_TABLES = ("B_reduced_horizon", "B_points", "B_sandbox", "D_horizon", "D_heldout", "A_values")
+# table on disk -> the name rules.evaluate knows it by. Part D's rules read the final horizon only, which D_final holds.
+RULE_TABLES = {"B_reduced_horizon": "B_reduced_horizon", "B_points": "B_points", "B_sandbox": "B_sandbox",
+               "D_final": "D_horizon", "D_heldout": "D_heldout", "A_values": "A_values"}
+PENDING = "pending interval: part C's bootstrap (c-intervals) has not been run"
+
+
+def _outcome(found: dict):
+    """What a rule decided: its verdict, or for the selected layer its label."""
+    return found.get("verdict", found.get("label"))
+
+
+def load_rule_tables(out: Path) -> dict:
+    loaded = {name: tables.read_table(out, source) for source, name in RULE_TABLES.items()}
+    return {name: rows for name, rows in loaded.items() if rows}
+
+
+def evaluate_rules(out: Path, cfg: config.Config) -> dict:
+    """The card's rules on the primary variant, and the same rules on each other variant (reading R5 of the card)."""
+    loaded = load_rule_tables(out)
+    path = Path(out) / "c_intervals.json"
+    verdicts = rules.evaluate(loaded, cfg, c_intervals=json.loads(path.read_text()) if path.exists() else None)
+    if verdicts["e1c_supported"]["status"] != "evaluated":
+        verdicts["e1c_supported"]["note"] = PENDING
+    others = {}
+    for variant in (v for v in cfg.variants if v != cfg.primary_variant):
+        per_variant = {name: rows for name, rows in loaded.items() if name not in ("A_values", "B_sandbox")}
+        found = rules.evaluate(per_variant, dataclasses.replace(cfg, primary_variant=variant))
+        found.pop("e1c_supported", None)                        # part C's interval is defined on the primary variant
+        others[variant] = found
+    verdicts["other_variants"] = {
+        "note": "The same rules evaluated on each other method-choice variant. Reported, not decided on.",
+        "verdicts": others,
+        "differs_from_primary": {variant: sorted(name for name, found in per.items() if name in verdicts and _outcome(found) != _outcome(verdicts[name]))
+                                 for variant, per in others.items()},
+    }
+    return verdicts
+
 
 
 def _marker(out: Path, stage: str, seed: int, variant: str) -> Path:
@@ -147,13 +184,13 @@ def main(argv=None) -> int:
         (out / "c_intervals.json").write_text(json.dumps(found, indent=1) + "\n")
         print(json.dumps({k: found[k] for k in ("rows",)}))
     elif args.stage == "rules":
-        loaded = {name: tables.read_table(out, name) for name in RULE_TABLES}
-        loaded = {name: rows for name, rows in loaded.items() if rows}
-        path = out / "c_intervals.json"
-        verdicts = rules.evaluate(loaded, cfg, c_intervals=json.loads(path.read_text()) if path.exists() else None)
+        verdicts = evaluate_rules(out, cfg)
         (out / "verdicts.json").write_text(json.dumps(verdicts, indent=1) + "\n")
         for name, verdict in verdicts.items():
-            print(f"  {name}: {verdict.get('verdict', verdict.get('label'))}" + ("" if verdict.get("status", "evaluated") == "evaluated" else "  (not evaluated)"))
+            if name == "other_variants":
+                print(f"  verdicts that differ on another variant: {verdict['differs_from_primary']}")
+            else:
+                print(f"  {name}: {_outcome(verdict)}" + ("" if verdict.get("status", "evaluated") == "evaluated" else f"  ({verdict.get('note', 'not evaluated')})"))
     elif args.stage == "part-a":
         layer = json.loads((out / "verdicts.json").read_text())["selected_layer"]
         chosen = (layer["track"], layer["scale"], layer["budget"])
@@ -165,7 +202,11 @@ def main(argv=None) -> int:
             print(f"  wrote {path}")
     elif args.stage == "manifest":
         timings = [json.loads(p.read_text()) for p in sorted((out / "tables" / "_done").glob("*.json"))] if (out / "tables" / "_done").exists() else []
-        extra = {"cell_seconds": {}, "verdicts_sha256": manifest.sha256(out / "verdicts.json") if (out / "verdicts.json").exists() else None}
+        others = [out / name for name in ("verdicts.json", "c_intervals.json", "figure1_notes.json")]
+        if args.figure:
+            others += sorted(Path(args.figure).glob("*.json"))
+        extra = {"cell_seconds": {}, "files": {p.name: manifest.sha256(p) for p in others if p.exists()},
+                 "pending": [] if (out / "c_intervals.json").exists() else [PENDING]}
         for item in timings:
             for part, seconds in item["seconds"].items():
                 extra["cell_seconds"][part] = extra["cell_seconds"].get(part, 0.0) + seconds

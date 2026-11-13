@@ -188,7 +188,8 @@ def write(out: Path, figure: Path, cfg: Config) -> list:
     """Write the Figure 1 files that the tables under `out` support. Returns the paths written."""
     out, figure = Path(out), Path(figure)
     verdicts = json.loads((out / "verdicts.json").read_text())
-    table = {name: tables.read_table(out, name) for name in ("B_points", "B_reduced_horizon", "D_horizon", "F_harmful_grid")}
+    table = {name: tables.read_table(out, name) for name in ("B_points", "B_reduced_horizon", "F_harmful_grid")}
+    table["D_horizon"] = tables.read_table(out, "D_final")        # the final-horizon rows are all the markers need
     figure.mkdir(parents=True, exist_ok=True)
     written = []
     if "selected_layer" in verdicts and table["B_points"]:

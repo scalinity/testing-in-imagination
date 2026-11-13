@@ -25,10 +25,6 @@ def finished(tmp_path_factory):
     return root, out, scratch, intervals
 
 
-def load(out):
-    return {name: rows for name in run.RULE_TABLES if (rows := tables.read_table(out, name))}
-
-
 def test_every_table_of_parts_b_c_and_d_is_written_for_every_cell(finished):
     _, out, scratch, _ = finished
     n_readers, n_r4 = len(SMALL.readers), len(SMALL.readers) - 1
@@ -41,6 +37,7 @@ def test_every_table_of_parts_b_c_and_d_is_written_for_every_cell(finished):
         "B_sandbox": 5,                                         # the sandbox's five reported cells
         "C_summary": 2 * n_readers * (7 + 1),                   # controlled errors, and the row across them
         "D_horizon": 2 * n_r4 * 2 * (3 + 2 * 2 * 7) * 3,        # arms: raw, two projections, tracks x variants x budgets
+        "D_final": 2 * n_r4 * 2 * (3 + 2 * 2 * 7),              # the same arms at the final horizon only
         "D_commit": 2 * n_r4 * 2 * (3 + 28) * 2,                # threshold 0.8 and the step limit
         "D_tau": 2 * n_r4 * 2 * 28,
         "D_heldout": 3 * 6,                                     # tests x strata
@@ -52,6 +49,12 @@ def test_every_table_of_parts_b_c_and_d_is_written_for_every_cell(finished):
     assert len(list((scratch / "C_rows").glob("*.npz"))) == len(SMALL.seeds) * 2 * n_readers
     d = tables.read_table(out, "D_horizon")
     assert max(abs(r["residual"]) for r in d) < 1e-8            # the identity of 5.12 (iii) holds for every arm at every horizon
+    # layout: the large table is kept apart, everything else sits under tables/, and all of it is gzipped
+    assert sorted(p.name for p in (out / "large").iterdir()) == ["D_horizon"]
+    assert "D_horizon" not in {p.name for p in (out / "tables").iterdir()} and "D_final" in {p.name for p in (out / "tables").iterdir()}
+    assert all(p.name.endswith(".csv.gz") for p in tables.files(out)) and len(tables.files(out)) == len(expected) * len(SMALL.seeds)
+    final = [r for r in d if r["horizon"] == SMALL.horizon_reduced]
+    assert tables.read_table(out, "D_final") == final          # D_final is D_horizon at the final horizon, row for row
     b = tables.read_table(out, "B_points")
     assert max(r["identity_error"] for r in b) < 1e-9           # and the gain identity at every decision point
 
@@ -64,9 +67,20 @@ def test_tables_round_trip_and_cells_are_reproducible(finished, tmp_path):
         first, second = tables.cell_file(out, name, 1, "base"), tables.cell_file(again, name, 1, "base")
         assert hashlib.sha256(first.read_bytes()).hexdigest() == hashlib.sha256(second.read_bytes()).hexdigest()
     rows = [{"a": 1, "b": 0.1 + 0.2, "c": None, "d": "text", "e": True}, {"a": 2, "b": 1e-300, "c": 3.5, "d": "x", "e": False, "f": -1}]
-    tables.write(tmp_path / "t.csv", rows)
-    back = tables.read(tmp_path / "t.csv")
-    assert back[0] == {"a": 1, "b": 0.1 + 0.2, "c": None, "d": "text", "e": True, "f": None} and back[1]["b"] == 1e-300 and back[1]["f"] == -1
+    for name in ("t.csv", "t.csv.gz"):
+        tables.write(tmp_path / name, rows)
+        back = tables.read(tmp_path / name)
+        assert back[0] == {"a": 1, "b": 0.1 + 0.2, "c": None, "d": "text", "e": True, "f": None} and back[1]["b"] == 1e-300 and back[1]["f"] == -1
+    import gzip
+    import time
+
+    packed = (tmp_path / "t.csv.gz").read_bytes()
+    assert gzip.decompress(packed) == (tmp_path / "t.csv").read_bytes()
+    time.sleep(1.1)                                             # a gzip header normally carries the time; these do not
+    tables.write(tmp_path / "later.csv.gz", rows)
+    assert (tmp_path / "later.csv.gz").read_bytes() == packed
+    assert tables.cell_file(tmp_path, "B_points", 3, "base") == tmp_path / "tables" / "B_points" / "seed03_base.csv.gz"
+    assert tables.cell_file(tmp_path, "D_horizon", 3, "base") == tmp_path / "large" / "D_horizon" / "seed03_base.csv.gz"
 
 
 def test_part_c_intervals_use_every_row_and_resample_patients_within_seeds(finished):
@@ -91,7 +105,9 @@ def test_part_c_intervals_use_every_row_and_resample_patients_within_seeds(finis
 
 def test_rules_part_a_figure_and_manifest_run_from_the_tables(finished, monkeypatch):
     _, out, _, intervals = finished
-    verdicts = rules.evaluate(load(out), SMALL, c_intervals=intervals)
+    verdicts = run.evaluate_rules(out, SMALL)
+    assert verdicts.pop("other_variants")["verdicts"] == {}     # one variant in this run
+    assert verdicts == rules.evaluate(run.load_rule_tables(out), SMALL, c_intervals=intervals)
     assert all(v.get("status", "evaluated") == "evaluated" for v in verdicts.values())
     assert {"track_selection", "repair_present", "negative_controls", "no_harm", "gate_valid", "sandbox_cross_check", "e1c_supported",
             "variant_selection", "scale_present", "usable_outside", "selected_layer"} == set(verdicts)
@@ -119,7 +135,7 @@ def test_rules_part_a_figure_and_manifest_run_from_the_tables(finished, monkeypa
     assert plain["log_tau_b"] == pytest.approx(np.mean([r["log_tau_b"] for r in marker_source]), abs=1e-12)   # same coordinates as a marker
     assert plain["kl_inc_at_tau_b"] == pytest.approx(np.mean([r["kl_inc_at_tau_b"] for r in marker_source]), abs=1e-12)
 
-    verdicts = rules.evaluate(load(out), SMALL, c_intervals=intervals)
+    verdicts = run.evaluate_rules(out, SMALL)
     assert verdicts["attribution"]["status"] == "evaluated"
     (out / "verdicts.json").write_text(json.dumps(verdicts))
     written = figure1.write(out, out.parent / "figure1", SMALL)
@@ -151,9 +167,43 @@ def test_rules_part_a_figure_and_manifest_run_from_the_tables(finished, monkeypa
     assert {"generation", "fitting", "behavior", "corruption", "montecarlo"} <= set(record["seeds_by_purpose"])
     assert "tiicee/experiments/e1/rules.py" in record["bound_files"] and "tiicee/cee/core.py" in record["bound_files"]
     assert "vendor/synthetic_df467ea/SHA256SUMS" in record["bound_files"]
-    name = "tables/B_points/seed00_base.csv"
+    name = "tables/B_points/seed00_base.csv.gz"
     assert record["tables"][name]["sha256"] == hashlib.sha256((out / name).read_bytes()).hexdigest() and record["tables"][name]["rows"] == 36
+    assert record["tables"][name]["committed"] is True and record["tables"][name]["bytes"] == (out / name).stat().st_size
+    large = "large/D_horizon/seed01_base.csv.gz"
+    assert record["tables"][large]["committed"] is False
+    assert record["tables"][large]["sha256"] == hashlib.sha256((out / large).read_bytes()).hexdigest()
+    assert set(record["tables"]) == {p.relative_to(out).as_posix() for p in tables.files(out)}
     assert record["code"]["commit"] is None or len(record["code"]["commit"]) == 40
+    assert record["code"]["bound_paths_commit"] is None or len(record["code"]["bound_paths_commit"]) == 40
+    run.main(["manifest", "--config", "tiny", "--out", str(out), "--figure", str(out.parent / "figure1"), "--phase", "test"])
+    written_manifest = json.loads((out / "manifest.json").read_text())
+    assert set(written_manifest["files"]) == {"verdicts.json", "c_intervals.json", "figure1_notes.json", "regime_map.json", "regret_attribution.json"}
+    assert written_manifest["files"]["verdicts.json"] == hashlib.sha256((out / "verdicts.json").read_bytes()).hexdigest()
+    assert written_manifest["pending"] == [] and set(written_manifest["cell_seconds"]) == set()
+
+
+def test_rules_are_also_evaluated_on_the_other_variants_and_part_c_is_marked_pending(tmp_path):
+    """Reading R5 of the card: the other variants are reported, and a verdict that differs there is named."""
+    cfg = config.tiny(seeds=(0, 1), variants=("base", "duplicated_panel"))
+    for seed in cfg.seeds:
+        for variant in cfg.variants:
+            rows = []
+            for selector in ("rand", "ig"):
+                for reader in cfg.readers:
+                    for world in ("W0", "W1", "W2"):
+                        for arm, loss in (("raw", 0.60), ("stateless", 0.55), ("stateful", 0.50 if variant == "base" else 0.58)):
+                            rows.append({"seed": seed, "variant": variant, "selector": selector, "reader": reader, "world_model": world,
+                                         "arm": arm, "horizon": 3, "log_loss": loss + 0.001 * seed, "accuracy": 0.5})
+            tables.write(tables.cell_file(tmp_path, "B_reduced_horizon", seed, variant), rows)
+    verdicts = run.evaluate_rules(tmp_path, cfg)
+    assert verdicts["track_selection"]["verdict"] == "stateful"
+    other = verdicts["other_variants"]
+    assert other["verdicts"]["duplicated_panel"]["track_selection"]["verdict"] == "stateless"       # stateful is worse there
+    assert other["differs_from_primary"] == {"duplicated_panel": ["selected_layer", "track_selection"]}
+    assert "e1c_supported" not in other["verdicts"]["duplicated_panel"]
+    assert verdicts["e1c_supported"]["status"] == "incomplete" and verdicts["e1c_supported"]["note"] == run.PENDING
+    assert "pending interval" in run.PENDING
 
 
 def test_harmful_polygon_traces_the_boundary_of_the_harmful_grid_readers():

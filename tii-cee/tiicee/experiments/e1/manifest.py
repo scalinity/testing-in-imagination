@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 
+from tiicee.experiments.e1 import tables as table_files
 from tiicee.experiments.e1.config import Config
 from tiicee.twin import source
 
@@ -66,17 +67,19 @@ def bound_files() -> dict:
 def code_identity() -> dict:
     """The commit, and whether the bound paths differ from it (read-only git)."""
     status = _git("status", "--porcelain", "--", *[f"tii-cee/{entry}" for entry in BOUND])
-    return {"commit": _git("rev-parse", "HEAD"), "bound_paths_clean": status == "" if status is not None else None,
+    paths = [f"tii-cee/{entry}" for entry in BOUND]
+    return {"commit": _git("rev-parse", "HEAD"), "bound_paths_commit": _git("log", "-1", "--format=%H", "--", *paths),
+            "bound_paths_clean": status == "" if status is not None else None,
             "uncommitted": status.splitlines() if status else []}
 
 
 def build(cfg: Config, out: Path, phase: str, command: str, extra: dict = None) -> dict:
     out = Path(out)
     tables = {}
-    for path in sorted((out / "tables").rglob("*.csv")) if (out / "tables").exists() else []:
-        with open(path) as handle:
-            rows = sum(1 for _ in handle) - 1
-        tables[path.relative_to(out).as_posix()] = {"sha256": sha256(path), "rows": rows}
+    for path in table_files.files(out):
+        relative = path.relative_to(out).as_posix()
+        tables[relative] = {"sha256": sha256(path), "rows": len(table_files.read(path)), "bytes": path.stat().st_size,
+                            "committed": not relative.startswith("large/")}
     manifest = {
         "study_id": "TII-CEE-1",
         "experiment_id": "E1",
@@ -97,6 +100,8 @@ def build(cfg: Config, out: Path, phase: str, command: str, extra: dict = None) 
             "W2-cc is W2's fitted model read class-conditionally; its predictive is W2's, so part B's W2 rows are also its rows.",
             "Evaluation patients are the validation split: E1 selects the track and the scale variant.",
             "Full-twin episode log loss (mc_log_loss_*) is Monte Carlo over the evaluation patients; everything else is exact.",
+            "Tables are gzipped CSV. Those under large/ are not committed; their SHA-256 is recorded here. D_final holds the "
+            "final-horizon rows of D_horizon, which is what the rules and the figure step read of part D.",
         ],
     }
     manifest.update(extra or {})

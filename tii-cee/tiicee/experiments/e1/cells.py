@@ -43,7 +43,7 @@ def run_cell(cfg: Config, seed: int, variant: str, out: Path, scratch: Optional[
     ctx = Context(cfg, seed, variant)
     common = {"seed": seed, "variant": variant}
     written = {name: [] for name in ("B_reduced_horizon", "B_reduced_commit", "B_reduced_fallback", "B_points", "B_sandbox", "C_summary",
-                                     "D_horizon", "D_commit", "D_tau", "D_heldout")}
+                                     "D_horizon", "D_final", "D_commit", "D_tau", "D_heldout")}
     seconds = dict.fromkeys(parts, 0.0)
 
     if "B_reduced" in parts or "D" in parts:
@@ -103,6 +103,8 @@ def run_cell(cfg: Config, seed: int, variant: str, out: Path, scratch: Optional[
                                             **{f: part_c[f] for f in ("regret", "e_w", "kl", "calibration", "log_loss_change", "e_w_taken", "kl_taken")})
                 seconds["C"] += time.perf_counter() - start
 
+    final = ctx.horizon("reduced")                                  # what the rules and the figure read of part D
+    written["D_final"] = [row for row in written["D_horizon"] if row["horizon"] == final]
     for table, rows in written.items():
         if rows:
             tables.write(tables.cell_file(out, table, seed, variant), rows)

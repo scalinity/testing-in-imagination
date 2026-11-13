@@ -16,7 +16,7 @@ The twin is Edwin Salcedo's synthetic study (PR #1, commit df467ea), reached thr
     python -m tiicee.experiments.e1.run harm        --out results/E1 --jobs N
     python -m tiicee.experiments.e1.run rules       --out results/E1               # now with part A
     python -m tiicee.experiments.e1.run figure      --out results/E1 --figure results/figure1
-    python -m tiicee.experiments.e1.run manifest    --out results/E1
+    python -m tiicee.experiments.e1.run manifest    --out results/E1 --figure results/figure1
 
 `--config tiny` is for tests and timing and never produces a result. A finished cell leaves a marker
 under `tables/_done` and is skipped on a later call unless `--force` is given. Part C's per-history
@@ -38,7 +38,13 @@ The CEE library handles one decision point at a time, and E1 has tens of million
 `tests/test_e1_reduced.py`, `test_e1_points.py` and `test_e1_part_a.py` hold the runners to a
 point-by-point recursion through the library's public functions.
 
-## Tables (`results/E1/tables/<name>/seedNN_<variant>.csv`)
+## Tables (`results/E1/tables/<name>/seedNN_<variant>.csv.gz`)
+
+Gzipped CSV, written with a fixed header so that the same rows give the same bytes. `D_horizon` is
+large and goes to `results/E1/large/`, which git ignores; the manifest records the SHA-256 of every
+table file, committed or not. `D_final` holds its final-horizon rows, which is all that the rules and
+the figure step read of part D, so the committed tables are enough to re-evaluate every verdict.
+`verdicts.json` also holds the same rules evaluated on each other variant (`other_variants`).
 
 | Table | One row per |
 |---|---|
@@ -48,7 +54,7 @@ point-by-point recursion through the library's public functions.
 | `B_points` | acquisition rule, reader, world model: means over the full twin's decision points |
 | `B_sandbox` | seed and sandbox cell: Monte Carlo episode log loss in the sandbox's configuration |
 | `C_summary` | acquisition rule, reader, controlled error; and one row across errors with the rank correlations |
-| `D_horizon`, `D_commit`, `D_tau` | acquisition rule, reader, world model (W0, W2), track, scale variant, budget source |
+| `D_horizon` (large), `D_final`, `D_commit`, `D_tau` | acquisition rule, reader, world model (W0, W2), track, scale variant, budget source |
 | `D_heldout` | test and stratum: the held-out budget, its bound, the eligibility test, the stress cases |
 | `A_values` | lambda, reader, agent (raw, repaired): V of the eight component combinations and V* |
 | `F_harmful_grid` | grid reader: Figure 1 coordinates and exact harm of projection alone |
