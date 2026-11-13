@@ -1,0 +1,2470 @@
+{
+ "track_selection": {
+  "status": "evaluated",
+  "verdict": "stateful",
+  "stateful_minus_stateless": {
+   "estimate": -0.15385166968145986,
+   "lo": -0.16728619132450553,
+   "hi": -0.14164284088108497
+  },
+  "tie": false,
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "repair_present": {
+  "status": "evaluated",
+  "verdict": true,
+  "track": "stateful",
+  "raw_minus_corrected": {
+   "entrench|W0": {
+    "estimate": 0.19146234474321427,
+    "lo": 0.18757439479823712,
+    "hi": 0.19534874049500286,
+    "improves": true
+   },
+   "fixed|W0": {
+    "estimate": 0.17896661177347123,
+    "lo": 0.1784128457793837,
+    "hi": 0.17951953670953094,
+    "improves": true
+   },
+   "entrench|W2": {
+    "estimate": 0.18996045364608338,
+    "lo": 0.18615741259399368,
+    "hi": 0.1938799555792342,
+    "improves": true
+   },
+   "fixed|W2": {
+    "estimate": 0.17746472422446158,
+    "lo": 0.1770500396012832,
+    "hi": 0.17786352118346258,
+    "improves": true
+   }
+  },
+  "killed": false,
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "negative_controls": {
+  "status": "evaluated",
+  "verdict": true,
+  "track": "stateful",
+  "corrected_minus_raw": {
+   "over|W0": {
+    "estimate": 0.4751385097703052,
+    "lo": 0.44951423348452924,
+    "hi": 0.5004604048928661,
+    "worsens": true
+   },
+   "under|W0": {
+    "estimate": 0.11101091183972907,
+    "lo": 0.11031084009513543,
+    "hi": 0.11177137435150007,
+    "worsens": true
+   },
+   "over|W2": {
+    "estimate": 0.4858420370096647,
+    "lo": 0.4582845888433041,
+    "hi": 0.5130286099232654,
+    "worsens": true
+   },
+   "under|W2": {
+    "estimate": 0.10847006882022976,
+    "lo": 0.10718336489220814,
+    "hi": 0.10969804021049724,
+    "worsens": true
+   }
+  },
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "no_harm": {
+  "status": "evaluated",
+  "verdict": true,
+  "largest_change": 2.220446049250313e-16,
+  "limit": 1e-09
+ },
+ "gate_valid": {
+  "status": "evaluated",
+  "verdict": false,
+  "cells": {
+   "independence|W0": {
+    "allowed_share": 0.0047984375,
+    "mean_gain_allowed": -0.011239227441523992,
+    "mean_gain_ungated": 0.0006601740658674673,
+    "harmful_share_gated": 0.0020765625,
+    "harmful_share_ungated": 0.273621875
+   },
+   "independence|W1": {
+    "allowed_share": 0.00200625,
+    "mean_gain_allowed": -0.008605468521690281,
+    "mean_gain_ungated": -0.00020980378154215445,
+    "harmful_share_gated": 0.0017234375,
+    "harmful_share_ungated": 0.7113265625
+   },
+   "independence|W2": {
+    "allowed_share": 0.00631875,
+    "mean_gain_allowed": -0.01208255221315676,
+    "mean_gain_ungated": 0.00048443681875491064,
+    "harmful_share_gated": 0.0048703125,
+    "harmful_share_ungated": 0.4572296875
+   },
+   "entrench|W0": {
+    "allowed_share": 0.1032640625,
+    "mean_gain_allowed": 0.0028827695809013247,
+    "mean_gain_ungated": 0.0356506452524586,
+    "harmful_share_gated": 0.0235640625,
+    "harmful_share_ungated": 0.0949828125
+   },
+   "entrench|W1": {
+    "allowed_share": 0.071590625,
+    "mean_gain_allowed": 0.009407975209586613,
+    "mean_gain_ungated": 0.035106496673865235,
+    "harmful_share_gated": 0.0101828125,
+    "harmful_share_ungated": 0.0880609375
+   },
+   "entrench|W2": {
+    "allowed_share": 0.0970046875,
+    "mean_gain_allowed": 0.0033805940372135944,
+    "mean_gain_ungated": 0.03549932824945857,
+    "harmful_share_gated": 0.0190578125,
+    "harmful_share_ungated": 0.0914046875
+   },
+   "fixed|W0": {
+    "allowed_share": 0.0408890625,
+    "mean_gain_allowed": 0.015403289617287718,
+    "mean_gain_ungated": 0.03469467531070857,
+    "harmful_share_gated": 0.0002546875,
+    "harmful_share_ungated": 0.1543078125
+   },
+   "fixed|W1": {
+    "allowed_share": 0.0375765625,
+    "mean_gain_allowed": 0.016099627957167736,
+    "mean_gain_ungated": 0.03552183267610302,
+    "harmful_share_gated": 6.40625e-05,
+    "harmful_share_ungated": 0.153709375
+   },
+   "fixed|W2": {
+    "allowed_share": 0.037721875,
+    "mean_gain_allowed": 0.015467054491225422,
+    "mean_gain_ungated": 0.034796422374624346,
+    "harmful_share_gated": 0.0002140625,
+    "harmful_share_ungated": 0.1564265625
+   },
+   "over|W0": {
+    "allowed_share": 0.0019703125,
+    "mean_gain_allowed": -0.33470830354633924,
+    "mean_gain_ungated": -0.05279039761400439,
+    "harmful_share_gated": 0.0019703125,
+    "harmful_share_ungated": 0.7930171875
+   },
+   "over|W1": {
+    "allowed_share": 0.0027375,
+    "mean_gain_allowed": -0.3920883754013441,
+    "mean_gain_ungated": -0.06706736790716647,
+    "harmful_share_gated": 0.0027375,
+    "harmful_share_ungated": 0.8202421875
+   },
+   "over|W2": {
+    "allowed_share": 0.0019265625,
+    "mean_gain_allowed": -0.3622496478389596,
+    "mean_gain_ungated": -0.05503852603080846,
+    "harmful_share_gated": 0.0019265625,
+    "harmful_share_ungated": 0.8157203125
+   },
+   "under|W0": {
+    "allowed_share": 0.000684375,
+    "mean_gain_allowed": -0.08444308691625675,
+    "mean_gain_ungated": -0.012390439802823708,
+    "harmful_share_gated": 0.000684375,
+    "harmful_share_ungated": 0.757375
+   },
+   "under|W1": {
+    "allowed_share": 0.000278125,
+    "mean_gain_allowed": -0.058589627748700586,
+    "mean_gain_ungated": -0.00879010244188616,
+    "harmful_share_gated": 0.000278125,
+    "harmful_share_ungated": 0.770521875
+   },
+   "under|W2": {
+    "allowed_share": 0.0006203125,
+    "mean_gain_allowed": -0.07088962636338593,
+    "mean_gain_ungated": -0.012001788400180088,
+    "harmful_share_gated": 0.0006203125,
+    "harmful_share_ungated": 0.7814515625
+   },
+   "entrench+over|W0": {
+    "allowed_share": 0.0452484375,
+    "mean_gain_allowed": 0.01359032262013103,
+    "mean_gain_ungated": -0.03147691109315256,
+    "harmful_share_gated": 0.0011671875,
+    "harmful_share_ungated": 0.4622109375
+   },
+   "entrench+over|W1": {
+    "allowed_share": 0.0395078125,
+    "mean_gain_allowed": 0.013029782160787002,
+    "mean_gain_ungated": -0.04494494062888322,
+    "harmful_share_gated": 0.0013640625,
+    "harmful_share_ungated": 0.4707109375
+   },
+   "entrench+over|W2": {
+    "allowed_share": 0.0420234375,
+    "mean_gain_allowed": 0.01333545498619411,
+    "mean_gain_ungated": -0.03361582318860851,
+    "harmful_share_gated": 0.0010359375,
+    "harmful_share_ungated": 0.4608125
+   },
+   "fixed+under|W0": {
+    "allowed_share": 0.1181359375,
+    "mean_gain_allowed": 0.008695835416146993,
+    "mean_gain_ungated": 0.07132898805895277,
+    "harmful_share_gated": 0.02348125,
+    "harmful_share_ungated": 0.109621875
+   },
+   "fixed+under|W1": {
+    "allowed_share": 0.0940171875,
+    "mean_gain_allowed": 0.007419513272779066,
+    "mean_gain_ungated": 0.07563448611472498,
+    "harmful_share_gated": 0.014384375,
+    "harmful_share_ungated": 0.0735359375
+   },
+   "fixed+under|W2": {
+    "allowed_share": 0.1126859375,
+    "mean_gain_allowed": 0.008562825014930477,
+    "mean_gain_ungated": 0.07180604285349038,
+    "harmful_share_gated": 0.021565625,
+    "harmful_share_ungated": 0.103996875
+   }
+  }
+ },
+ "sandbox_cross_check": {
+  "status": "evaluated",
+  "label": "Monte Carlo",
+  "cells": {
+   "base|independence": {
+    "mc_log_loss_raw": {
+     "ours": 0.5437446950450593,
+     "sandbox": 0.543,
+     "z": 0.021396203542320566,
+     "agrees": true
+    },
+    "mc_log_loss_stateful": {
+     "ours": 0.5178300731439369,
+     "sandbox": 0.524,
+     "z": -0.21065574586928185,
+     "agrees": true
+    },
+    "mc_accuracy_raw": {
+     "ours": 0.8788750000000001,
+     "sandbox": 0.882,
+     "z": -0.4881164403671985,
+     "agrees": true
+    },
+    "mc_accuracy_stateful": {
+     "ours": 0.8696249999999999,
+     "sandbox": 0.868,
+     "z": 0.24244414890754598,
+     "agrees": true
+    }
+   },
+   "base|entrench": {
+    "mc_log_loss_raw": {
+     "ours": 0.7628275532926491,
+     "sandbox": 0.761,
+     "z": 0.04064425738282675,
+     "agrees": true
+    },
+    "mc_log_loss_stateful": {
+     "ours": 0.517330471736871,
+     "sandbox": 0.524,
+     "z": -0.22910693568573692,
+     "agrees": true
+    },
+    "mc_accuracy_raw": {
+     "ours": 0.8421499999999998,
+     "sandbox": 0.842,
+     "z": 0.0212979755498749,
+     "agrees": true
+    },
+    "mc_accuracy_stateful": {
+     "ours": 0.8696249999999999,
+     "sandbox": 0.868,
+     "z": 0.24244414890754598,
+     "agrees": true
+    }
+   },
+   "base|fixed": {
+    "mc_log_loss_raw": {
+     "ours": 0.7203919095778135,
+     "sandbox": 0.695,
+     "z": 0.6776342596011802,
+     "agrees": true
+    },
+    "mc_log_loss_stateful": {
+     "ours": 0.5176722455978215,
+     "sandbox": 0.524,
+     "z": -0.21639609632009196,
+     "agrees": true
+    },
+    "mc_accuracy_raw": {
+     "ours": 0.817325,
+     "sandbox": 0.817,
+     "z": 0.04545985484138528,
+     "agrees": true
+    },
+    "mc_accuracy_stateful": {
+     "ours": 0.8696249999999999,
+     "sandbox": 0.868,
+     "z": 0.24244414890754598,
+     "agrees": true
+    }
+   },
+   "base|over": {
+    "mc_log_loss_raw": {
+     "ours": 0.8741132852618879,
+     "sandbox": 0.947,
+     "z": -1.1650297199805435,
+     "agrees": true
+    },
+    "mc_log_loss_stateful": {
+     "ours": 1.527701474142922,
+     "sandbox": 1.6,
+     "z": -0.9150007749143536,
+     "agrees": true
+    },
+    "mc_accuracy_raw": {
+     "ours": 0.8780749999999999,
+     "sandbox": 0.882,
+     "z": -0.6288847681689277,
+     "agrees": true
+    },
+    "mc_accuracy_stateful": {
+     "ours": 0.794925,
+     "sandbox": 0.796,
+     "z": -0.17583999894283175,
+     "agrees": true
+    }
+   },
+   "strong_correlation|independence": {
+    "mc_log_loss_raw": {
+     "ours": 1.0161215961180405,
+     "sandbox": 1.038,
+     "z": -0.6788915705443502,
+     "agrees": true
+    },
+    "mc_log_loss_stateful": {
+     "ours": 0.8779734014089426,
+     "sandbox": 0.903,
+     "z": -1.0754965551626157,
+     "agrees": true
+    },
+    "mc_accuracy_raw": {
+     "ours": 0.7586999999999999,
+     "sandbox": 0.756,
+     "z": 0.4013765047173514,
+     "agrees": true
+    },
+    "mc_accuracy_stateful": {
+     "ours": 0.7333749999999999,
+     "sandbox": 0.723,
+     "z": 1.398068214870454,
+     "agrees": true
+    }
+   }
+  },
+  "verdict": true
+ },
+ "e1c_supported": {
+  "status": "incomplete",
+  "verdict": null,
+  "note": "pending interval: part C's bootstrap (c-intervals) has not been run"
+ },
+ "variant_selection": {
+  "status": "evaluated",
+  "verdict": "shrink-only",
+  "two_sided_minus_shrink_only": {
+   "estimate": 6.463447616427767,
+   "lo": 6.1764007802393,
+   "hi": 6.785679605221892
+  },
+  "tie": false,
+  "track": "stateful",
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "scale_present": {
+  "status": "evaluated",
+  "verdict": true,
+  "track": "stateful",
+  "comparator_minus_scaled": {
+   "two-sided": {
+    "over|raw": {
+     "estimate": 0.3461395614726325,
+     "lo": 0.34533561000724355,
+     "hi": 0.34689944576873943,
+     "improves": true
+    },
+    "over|projection": {
+     "estimate": 0.8212780712429376,
+     "lo": 0.7966373049444699,
+     "hi": 0.8463726034738174,
+     "improves": true
+    },
+    "under|raw": {
+     "estimate": 0.060813390521109525,
+     "lo": 0.0599859968107042,
+     "hi": 0.061586877620563654,
+     "improves": true
+    },
+    "under|projection": {
+     "estimate": 0.17182430236083857,
+     "lo": 0.17130991849864408,
+     "hi": 0.1723092546684117,
+     "improves": true
+    },
+    "independence|raw": {
+     "estimate": 0.041161625391807136,
+     "lo": 0.040331566896781725,
+     "hi": 0.041974745563483726,
+     "improves": true
+    },
+    "independence|projection": {
+     "estimate": 0.03658779782105421,
+     "lo": 0.03520044355022017,
+     "hi": 0.03791237006669625,
+     "improves": true
+    }
+   },
+   "shrink-only": {
+    "over|raw": {
+     "estimate": 0.34626376812964454,
+     "lo": 0.34549763481384327,
+     "hi": 0.346981904139963,
+     "improves": true
+    },
+    "over|projection": {
+     "estimate": 0.8214022778999496,
+     "lo": 0.7965335883571321,
+     "hi": 0.84638700953545,
+     "improves": true
+    },
+    "under|raw": {
+     "estimate": -0.10151404831733797,
+     "lo": -0.10272203095192438,
+     "hi": -0.10036883448637265,
+     "improves": false
+    },
+    "under|projection": {
+     "estimate": 0.009496863522391097,
+     "lo": 0.00895481356610636,
+     "hi": 0.010022177932477708,
+     "improves": true
+    },
+    "independence|raw": {
+     "estimate": 0.041323922374750015,
+     "lo": 0.04053087707020693,
+     "hi": 0.04210636570463059,
+     "improves": true
+    },
+    "independence|projection": {
+     "estimate": 0.03675009480399709,
+     "lo": 0.03539022981716017,
+     "hi": 0.03803106027155424,
+     "improves": true
+    }
+   }
+  },
+  "killed": false,
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "usable_outside": {
+  "status": "evaluated",
+  "verdict": false,
+  "track": "stateful",
+  "scale": "shrink-only",
+  "improves": false,
+  "comparator_minus_scaled": {
+   "over|raw": {
+    "estimate": 0.06408998688200851,
+    "lo": 0.004860687719896262,
+    "hi": 0.1200204799711849,
+    "improves": true
+   },
+   "over|projection": {
+    "estimate": 0.5499320238916732,
+    "lo": 0.4956325737084427,
+    "hi": 0.5983715521843394,
+    "improves": true
+   },
+   "under|raw": {
+    "estimate": -0.11071470857464227,
+    "lo": -0.11266339079975973,
+    "hi": -0.10873287192181619,
+    "improves": false
+   },
+   "under|projection": {
+    "estimate": -0.0022446397544125195,
+    "lo": -0.003387912718517241,
+    "hi": -0.0011571278619123093,
+    "improves": false
+   },
+   "independence|raw": {
+    "estimate": 0.0016878699849302236,
+    "lo": -0.0017281489523904689,
+    "hi": 0.0050126585995880785,
+    "improves": false
+   },
+   "independence|projection": {
+    "estimate": -0.0013840708423548177,
+    "lo": -0.004881969121867734,
+    "hi": 0.0020308931032282174,
+    "improves": false
+   }
+  },
+  "admission": {
+   "status": "evaluated",
+   "verdict": true,
+   "rate": 0.015442404006677797,
+   "limit": 0.1,
+   "cases": 2396,
+   "overestimated": 461,
+   "admitted_and_overestimated": 37,
+   "rate_among_overestimated": 0.08026030368763558,
+   "eligible_share": 0.7262103505843072
+  },
+  "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+ },
+ "selected_layer": {
+  "track": "stateful",
+  "scale": null,
+  "budget": null,
+  "label": "stateful",
+  "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"
+ },
+ "attribution": {
+  "status": "evaluated",
+  "verdict": false,
+  "killed_for": [
+   "entrench|raw",
+   "entrench+over|raw",
+   "entrench+over|repaired",
+   "fixed|raw",
+   "fixed+under|raw",
+   "fixed+under|repaired",
+   "independence|raw",
+   "over|raw",
+   "over|repaired",
+   "under|raw",
+   "under|repaired"
+  ],
+  "agents": {
+   "entrench|raw": {
+    "regret": 0.027145600397813663,
+    "v": 0.6547874291920447,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.6119287711123106,
+     "reading": 0.009089507874912944,
+     "commitment": 0.3789817210127805
+    },
+    "spread": {
+     "selection": 0.6246019432487451,
+     "reading": 0.698062750883824,
+     "commitment": 0.32540152442197423
+    },
+    "unstable_components": [
+     "selection",
+     "reading"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.6119287711123106,
+      "reading": 0.009089507874912944,
+      "commitment": 0.3789817210127805
+     },
+     "selection > commitment > reading": {
+      "selection": 0.6119287711123106,
+      "commitment": 0.05358019659080629,
+      "reading": 0.33449103229688715
+     },
+     "reading > selection > commitment": {
+      "reading": 0.6336914511236581,
+      "selection": -0.012673172136434489,
+      "commitment": 0.3789817210127805
+     },
+     "reading > commitment > selection": {
+      "reading": 0.6336914511236581,
+      "commitment": 0.2591051354269221,
+      "selection": 0.10720341344942395
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.18564432779184326,
+      "selection": 0.47986463991127365,
+      "reading": 0.33449103229688715
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.18564432779184326,
+      "reading": 0.7071522587587369,
+      "selection": 0.10720341344942395
+     }
+    }
+   },
+   "entrench|repaired": {
+    "regret": 0.0017674047994284958,
+    "v": 0.6801656247904299,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.310147571178606,
+     "reading": 0.1232592218200569,
+     "commitment": 0.5665932070013999
+    },
+    "spread": {
+     "selection": 0.2353206993739399,
+     "reading": 0.05110842167053621,
+     "commitment": 0.21356822869138392
+    },
+    "unstable_components": [],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.310147571178606,
+      "reading": 0.1232592218200569,
+      "commitment": 0.5665932070013999
+     },
+     "selection > commitment > reading": {
+      "selection": 0.310147571178606,
+      "commitment": 0.5744744547260692,
+      "reading": 0.11537797409538765
+     },
+     "reading > selection > commitment": {
+      "reading": 0.14501169250261284,
+      "selection": 0.28839510049605005,
+      "commitment": 0.5665932070013999
+     },
+     "reading > commitment > selection": {
+      "reading": 0.14501169250261284,
+      "commitment": 0.3823809292979963,
+      "selection": 0.4726073781994537
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.36090622603468525,
+      "selection": 0.52371579986999,
+      "reading": 0.11537797409538765
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.36090622603468525,
+      "reading": 0.16648639576592386,
+      "selection": 0.4726073781994537
+     }
+    }
+   },
+   "entrench+over|raw": {
+    "regret": 0.010036507666379979,
+    "v": 0.6718965219234784,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.5969478713538595,
+     "reading": -0.6219743744621012,
+     "commitment": 1.0250265031082528
+    },
+    "spread": {
+     "selection": 0.4135644248529849,
+     "reading": 1.0359191470762217,
+     "commitment": 0.8638618214794928
+    },
+    "unstable_components": [
+     "reading"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.5969478713538595,
+      "reading": -0.6219743744621012,
+      "commitment": 1.0250265031082528
+     },
+     "selection > commitment > reading": {
+      "selection": 0.5969478713538595,
+      "commitment": 0.18957178878592795,
+      "reading": 0.2134803398602236
+     },
+     "reading > selection > commitment": {
+      "reading": -0.23681705676628417,
+      "selection": 0.2117905536580424,
+      "commitment": 1.0250265031082528
+     },
+     "reading > commitment > selection": {
+      "reading": -0.23681705676628417,
+      "commitment": 1.0534336102654207,
+      "selection": 0.18338344650087463
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.4026717808850161,
+      "selection": 0.3838478792547713,
+      "reading": 0.2134803398602236
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.4026717808850161,
+      "reading": 0.4139447726141203,
+      "selection": 0.18338344650087463
+     }
+    }
+   },
+   "entrench+over|repaired": {
+    "regret": 0.014601560074970155,
+    "v": 0.6673314695148882,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.29395313788958133,
+     "reading": 0.4936463414185817,
+     "commitment": 0.21240052069184454
+    },
+    "spread": {
+     "selection": 0.32565937789184213,
+     "reading": 0.5463311318242601,
+     "commitment": 0.5918515578678317
+    },
+    "unstable_components": [
+     "selection",
+     "reading",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.29395313788958133,
+      "reading": 0.4936463414185817,
+      "commitment": 0.21240052069184454
+     },
+     "selection > commitment > reading": {
+      "selection": 0.29395313788958133,
+      "commitment": -0.05379165928414506,
+      "reading": 0.7598385213945713
+     },
+     "reading > selection > commitment": {
+      "reading": 0.3134759503919022,
+      "selection": 0.4741235289162609,
+      "commitment": 0.21240052069184454
+     },
+     "reading > commitment > selection": {
+      "reading": 0.3134759503919022,
+      "commitment": 0.5380598985836866,
+      "selection": 0.1484641510244188
+     },
+     "commitment > selection > reading": {
+      "commitment": -0.008271233240573323,
+      "selection": 0.2484327118460096,
+      "reading": 0.7598385213945713
+     },
+     "commitment > reading > selection": {
+      "commitment": -0.008271233240573323,
+      "reading": 0.8598070822161622,
+      "selection": 0.1484641510244188
+     }
+    }
+   },
+   "fixed|raw": {
+    "regret": 0.05424035575379604,
+    "v": 0.6276926738360623,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": -0.024044388663023282,
+     "reading": 0.8343758989616344,
+     "commitment": 0.18966848970139086
+    },
+    "spread": {
+     "selection": 0.16541995964044148,
+     "reading": 0.4263266203959844,
+     "commitment": 0.4388958675243459
+    },
+    "unstable_components": [
+     "selection",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": -0.024044388663023282,
+      "reading": 0.8343758989616344,
+      "commitment": 0.18966848970139086
+     },
+     "selection > commitment > reading": {
+      "selection": -0.024044388663023282,
+      "commitment": 0.6159951100973753,
+      "reading": 0.40804927856565004
+     },
+     "reading > selection > commitment": {
+      "reading": 0.789292125018956,
+      "selection": 0.02103938527965523,
+      "commitment": 0.18966848970139086
+     },
+     "reading > commitment > selection": {
+      "reading": 0.789292125018956,
+      "commitment": 0.1770992425730294,
+      "selection": 0.033608632408016696
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.4505751504569338,
+      "selection": 0.1413755709774182,
+      "reading": 0.40804927856565004
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.4505751504569338,
+      "reading": 0.5158162171350515,
+      "selection": 0.033608632408016696
+     }
+    }
+   },
+   "fixed|repaired": {
+    "regret": 0.0017674047994284958,
+    "v": 0.6801656247904299,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.310147571178606,
+     "reading": 0.1232592218200569,
+     "commitment": 0.5665932070013999
+    },
+    "spread": {
+     "selection": 0.2353206993739399,
+     "reading": 0.05110842167053621,
+     "commitment": 0.21356822869138392
+    },
+    "unstable_components": [],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.310147571178606,
+      "reading": 0.1232592218200569,
+      "commitment": 0.5665932070013999
+     },
+     "selection > commitment > reading": {
+      "selection": 0.310147571178606,
+      "commitment": 0.5744744547260692,
+      "reading": 0.11537797409538765
+     },
+     "reading > selection > commitment": {
+      "reading": 0.14501169250261284,
+      "selection": 0.28839510049605005,
+      "commitment": 0.5665932070013999
+     },
+     "reading > commitment > selection": {
+      "reading": 0.14501169250261284,
+      "commitment": 0.3823809292979963,
+      "selection": 0.4726073781994537
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.36090622603468525,
+      "selection": 0.52371579986999,
+      "reading": 0.11537797409538765
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.36090622603468525,
+      "reading": 0.16648639576592386,
+      "selection": 0.4726073781994537
+     }
+    }
+   },
+   "fixed+under|raw": {
+    "regret": 0.3079635319930295,
+    "v": 0.37396949759682885,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": -0.041033761168164186,
+     "reading": 1.0076282267852121,
+     "commitment": 0.033405534382952504
+    },
+    "spread": {
+     "selection": 0.12668976275781527,
+     "reading": 0.8320983445624418,
+     "commitment": 0.8339586816897996
+    },
+    "unstable_components": [
+     "selection",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": -0.041033761168164186,
+      "reading": 1.0076282267852121,
+      "commitment": 0.033405534382952504
+     },
+     "selection > commitment > reading": {
+      "selection": -0.041033761168164186,
+      "commitment": 0.8655038789453942,
+      "reading": 0.17552988222277036
+     },
+     "reading > selection > commitment": {
+      "reading": 0.9642252251115707,
+      "selection": 0.0023692405054771505,
+      "commitment": 0.033405534382952504
+     },
+     "reading > commitment > selection": {
+      "reading": 0.9642252251115707,
+      "commitment": 0.03154519725559457,
+      "selection": 0.0042295776328350855
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.7388141161875789,
+      "selection": 0.08565600158965109,
+      "reading": 0.17552988222277036
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.7388141161875789,
+      "reading": 0.25695630617958637,
+      "selection": 0.0042295776328350855
+     }
+    }
+   },
+   "fixed+under|repaired": {
+    "regret": 0.023993908396377273,
+    "v": 0.6579391211934811,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.1961015873741024,
+     "reading": 0.5425275950734465,
+     "commitment": 0.26137081755245567
+    },
+    "spread": {
+     "selection": 0.2707398955632151,
+     "reading": 0.35986440838992245,
+     "commitment": 0.5257304104369438
+    },
+    "unstable_components": [
+     "selection",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.1961015873741024,
+      "reading": 0.5425275950734465,
+      "commitment": 0.26137081755245567
+     },
+     "selection > commitment > reading": {
+      "selection": 0.1961015873741024,
+      "commitment": 0.5796810794050197,
+      "reading": 0.2242173332208825
+     },
+     "reading > selection > commitment": {
+      "reading": 0.47920784809461126,
+      "selection": 0.2594213343529377,
+      "commitment": 0.26137081755245567
+     },
+     "reading > commitment > selection": {
+      "reading": 0.47920784809461126,
+      "commitment": 0.4905565665783123,
+      "selection": 0.030235585327081035
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.7871012279893995,
+      "selection": -0.01131856121027742,
+      "reading": 0.2242173332208825
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.7871012279893995,
+      "reading": 0.18266318668352405,
+      "selection": 0.030235585327081035
+     }
+    }
+   },
+   "independence|raw": {
+    "regret": 0.011827970678253918,
+    "v": 0.6701050589116044,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.36904047592194567,
+     "reading": -0.23881658853970456,
+     "commitment": 0.8697761126177683
+    },
+    "spread": {
+     "selection": 0.2378589816908872,
+     "reading": 0.2446710293096764,
+     "commitment": 0.2401228339956355
+    },
+    "unstable_components": [
+     "reading"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.36904047592194567,
+      "reading": -0.23881658853970456,
+      "commitment": 0.8697761126177683
+     },
+     "selection > commitment > reading": {
+      "selection": 0.36904047592194567,
+      "commitment": 0.6296532786221328,
+      "reading": 0.0013062454559308774
+     },
+     "reading > selection > commitment": {
+      "reading": -0.0009576068488173493,
+      "selection": 0.13118149423105846,
+      "commitment": 0.8697761126177683
+     },
+     "reading > commitment > selection": {
+      "reading": -0.0009576068488173493,
+      "commitment": 0.8225992102503886,
+      "selection": 0.17835839659843813
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.8157871626315993,
+      "selection": 0.18290659191247913,
+      "reading": 0.0013062454559308774
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.8157871626315993,
+      "reading": 0.005854440769971862,
+      "selection": 0.17835839659843813
+     }
+    }
+   },
+   "independence|repaired": {
+    "regret": 0.0017674047994284958,
+    "v": 0.6801656247904299,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.310147571178606,
+     "reading": 0.1232592218200569,
+     "commitment": 0.5665932070013999
+    },
+    "spread": {
+     "selection": 0.2353206993739399,
+     "reading": 0.05110842167053621,
+     "commitment": 0.21356822869138392
+    },
+    "unstable_components": [],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.310147571178606,
+      "reading": 0.1232592218200569,
+      "commitment": 0.5665932070013999
+     },
+     "selection > commitment > reading": {
+      "selection": 0.310147571178606,
+      "commitment": 0.5744744547260692,
+      "reading": 0.11537797409538765
+     },
+     "reading > selection > commitment": {
+      "reading": 0.14501169250261284,
+      "selection": 0.28839510049605005,
+      "commitment": 0.5665932070013999
+     },
+     "reading > commitment > selection": {
+      "reading": 0.14501169250261284,
+      "commitment": 0.3823809292979963,
+      "selection": 0.4726073781994537
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.36090622603468525,
+      "selection": 0.52371579986999,
+      "reading": 0.11537797409538765
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.36090622603468525,
+      "reading": 0.16648639576592386,
+      "selection": 0.4726073781994537
+     }
+    }
+   },
+   "over|raw": {
+    "regret": 0.01636651412424972,
+    "v": 0.6655665154656086,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": -0.00023677026575331413,
+     "reading": 0.37165537055000036,
+     "commitment": 0.6285813997157598
+    },
+    "spread": {
+     "selection": 0.10754932559570911,
+     "reading": 0.32778580040555594,
+     "commitment": 0.3277858004055558
+    },
+    "unstable_components": [
+     "selection"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": -0.00023677026575331413,
+      "reading": 0.37165537055000036,
+      "commitment": 0.6285813997157598
+     },
+     "selection > commitment > reading": {
+      "selection": -0.00023677026575331413,
+      "commitment": 0.9563672001213156,
+      "reading": 0.043869570144444446
+     },
+     "reading > selection > commitment": {
+      "reading": 0.26410604495429124,
+      "selection": 0.10731255532995579,
+      "commitment": 0.6285813997157598
+     },
+     "reading > commitment > selection": {
+      "reading": 0.26410604495429124,
+      "commitment": 0.6469916261495,
+      "selection": 0.08890232889621554
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.863308522603269,
+      "selection": 0.09282190725229332,
+      "reading": 0.043869570144444446
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.863308522603269,
+      "reading": 0.04778914850052224,
+      "selection": 0.08890232889621554
+     }
+    }
+   },
+   "over|repaired": {
+    "regret": 0.014601560074970155,
+    "v": 0.6673314695148882,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.29395313788958133,
+     "reading": 0.4936463414185817,
+     "commitment": 0.21240052069184454
+    },
+    "spread": {
+     "selection": 0.32565937789184213,
+     "reading": 0.5463311318242601,
+     "commitment": 0.5918515578678317
+    },
+    "unstable_components": [
+     "selection",
+     "reading",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.29395313788958133,
+      "reading": 0.4936463414185817,
+      "commitment": 0.21240052069184454
+     },
+     "selection > commitment > reading": {
+      "selection": 0.29395313788958133,
+      "commitment": -0.05379165928414506,
+      "reading": 0.7598385213945713
+     },
+     "reading > selection > commitment": {
+      "reading": 0.3134759503919022,
+      "selection": 0.4741235289162609,
+      "commitment": 0.21240052069184454
+     },
+     "reading > commitment > selection": {
+      "reading": 0.3134759503919022,
+      "commitment": 0.5380598985836866,
+      "selection": 0.1484641510244188
+     },
+     "commitment > selection > reading": {
+      "commitment": -0.008271233240573323,
+      "selection": 0.2484327118460096,
+      "reading": 0.7598385213945713
+     },
+     "commitment > reading > selection": {
+      "commitment": -0.008271233240573323,
+      "reading": 0.8598070822161622,
+      "selection": 0.1484641510244188
+     }
+    }
+   },
+   "under|raw": {
+    "regret": 0.0749916223642183,
+    "v": 0.60694140722564,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": -0.0015358743697313005,
+     "reading": 0.8643513991929784,
+     "commitment": 0.13718447517675433
+    },
+    "spread": {
+     "selection": 0.02521588641421405,
+     "reading": 0.8053935139097004,
+     "commitment": 0.8084424197175093
+    },
+    "unstable_components": [
+     "selection",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": -0.0015358743697313005,
+      "reading": 0.8643513991929784,
+      "commitment": 0.13718447517675433
+     },
+     "selection > commitment > reading": {
+      "selection": -0.0015358743697313005,
+      "commitment": 0.9425779890864547,
+      "reading": 0.05895788528327805
+     },
+     "reading > selection > commitment": {
+      "reading": 0.8487284937653914,
+      "selection": 0.014087031057855791,
+      "commitment": 0.13718447517675433
+     },
+     "reading > commitment > selection": {
+      "reading": 0.8487284937653914,
+      "commitment": 0.13413556936894547,
+      "selection": 0.017135936865664655
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.9173621026722407,
+      "selection": 0.023680012044482748,
+      "reading": 0.05895788528327805
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.9173621026722407,
+      "reading": 0.06550196046209614,
+      "selection": 0.017135936865664655
+     }
+    }
+   },
+   "under|repaired": {
+    "regret": 0.023993908396377273,
+    "v": 0.6579391211934811,
+    "v_star": 0.6819330295898584,
+    "shares": {
+     "selection": 0.1961015873741024,
+     "reading": 0.5425275950734465,
+     "commitment": 0.26137081755245567
+    },
+    "spread": {
+     "selection": 0.2707398955632151,
+     "reading": 0.35986440838992245,
+     "commitment": 0.5257304104369438
+    },
+    "unstable_components": [
+     "selection",
+     "commitment"
+    ],
+    "orders": {
+     "selection > reading > commitment": {
+      "selection": 0.1961015873741024,
+      "reading": 0.5425275950734465,
+      "commitment": 0.26137081755245567
+     },
+     "selection > commitment > reading": {
+      "selection": 0.1961015873741024,
+      "commitment": 0.5796810794050197,
+      "reading": 0.2242173332208825
+     },
+     "reading > selection > commitment": {
+      "reading": 0.47920784809461126,
+      "selection": 0.2594213343529377,
+      "commitment": 0.26137081755245567
+     },
+     "reading > commitment > selection": {
+      "reading": 0.47920784809461126,
+      "commitment": 0.4905565665783123,
+      "selection": 0.030235585327081035
+     },
+     "commitment > selection > reading": {
+      "commitment": 0.7871012279893995,
+      "selection": -0.01131856121027742,
+      "reading": 0.2242173332208825
+     },
+     "commitment > reading > selection": {
+      "commitment": 0.7871012279893995,
+      "reading": 0.18266318668352405,
+      "selection": 0.030235585327081035
+     }
+    }
+   }
+  },
+  "lam": 1.0
+ },
+ "other_variants": {
+  "note": "The same rules evaluated on each other method-choice variant. Reported, not decided on.",
+  "verdicts": {
+   "no_correlation": {
+    "track_selection": {
+     "status": "evaluated",
+     "verdict": "stateful",
+     "stateful_minus_stateless": {
+      "estimate": -0.14673690368263104,
+      "lo": -0.16131940552041996,
+      "hi": -0.13331104764174723
+     },
+     "tie": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "repair_present": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "raw_minus_corrected": {
+      "entrench|W0": {
+       "estimate": 0.15725513446788425,
+       "lo": 0.15288538482227323,
+       "hi": 0.16166955843296915,
+       "improves": true
+      },
+      "fixed|W0": {
+       "estimate": 0.19250725290923976,
+       "lo": 0.19250725290923956,
+       "hi": 0.19250725290923992,
+       "improves": true
+      },
+      "entrench|W2": {
+       "estimate": 0.1558127977593625,
+       "lo": 0.15159884547335878,
+       "hi": 0.16018338441518226,
+       "improves": true
+      },
+      "fixed|W2": {
+       "estimate": 0.19106491675922105,
+       "lo": 0.19078474784852958,
+       "hi": 0.19132197058055625,
+       "improves": true
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "negative_controls": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "corrected_minus_raw": {
+      "over|W0": {
+       "estimate": 0.5236925512032631,
+       "lo": 0.5001356836330612,
+       "hi": 0.5470791516380331,
+       "worsens": true
+      },
+      "under|W0": {
+       "estimate": 0.0934276338383847,
+       "lo": 0.09239744318598685,
+       "hi": 0.0945194568883452,
+       "worsens": true
+      },
+      "over|W2": {
+       "estimate": 0.5277997675412629,
+       "lo": 0.5027946172561601,
+       "hi": 0.5527101168132093,
+       "worsens": true
+      },
+      "under|W2": {
+       "estimate": 0.09418697878130708,
+       "lo": 0.09264031885795547,
+       "hi": 0.09567839446503629,
+       "worsens": true
+      }
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "no_harm": {
+     "status": "evaluated",
+     "verdict": true,
+     "largest_change": 2.220446049250313e-16,
+     "limit": 1e-09
+    },
+    "gate_valid": {
+     "status": "evaluated",
+     "verdict": false,
+     "cells": {
+      "independence|W0": {
+       "allowed_share": 0.226753125,
+       "mean_gain_allowed": 8.706614949950372e-13,
+       "mean_gain_ungated": 1.982650175589636e-13,
+       "harmful_share_gated": 0.0493171875,
+       "harmful_share_ungated": 0.4951796875
+      },
+      "independence|W1": {
+       "allowed_share": 0.00245625,
+       "mean_gain_allowed": -0.005981160134190991,
+       "mean_gain_ungated": -0.00011037313318544772,
+       "harmful_share_gated": 0.00245625,
+       "harmful_share_ungated": 0.9999671875
+      },
+      "independence|W2": {
+       "allowed_share": 0.002684375,
+       "mean_gain_allowed": -0.005773022044423183,
+       "mean_gain_ungated": -0.0001123242619005742,
+       "harmful_share_gated": 0.002684375,
+       "harmful_share_ungated": 0.999965625
+      },
+      "entrench|W0": {
+       "allowed_share": 0.08339375,
+       "mean_gain_allowed": 0.0050390874428356425,
+       "mean_gain_ungated": 0.030409177882203476,
+       "harmful_share_gated": 0.0246140625,
+       "harmful_share_ungated": 0.129315625
+      },
+      "entrench|W1": {
+       "allowed_share": 0.08025,
+       "mean_gain_allowed": 0.004995042718129687,
+       "mean_gain_ungated": 0.030282140036818794,
+       "harmful_share_gated": 0.024265625,
+       "harmful_share_ungated": 0.1297046875
+      },
+      "entrench|W2": {
+       "allowed_share": 0.080653125,
+       "mean_gain_allowed": 0.004776987698523506,
+       "mean_gain_ungated": 0.030262366582410223,
+       "harmful_share_gated": 0.0249296875,
+       "harmful_share_ungated": 0.1299609375
+      },
+      "fixed|W0": {
+       "allowed_share": 0.040728125,
+       "mean_gain_allowed": 0.015971271169944432,
+       "mean_gain_ungated": 0.0372997588479025,
+       "harmful_share_gated": 9.53125e-05,
+       "harmful_share_ungated": 0.067971875
+      },
+      "fixed|W1": {
+       "allowed_share": 0.0376453125,
+       "mean_gain_allowed": 0.015692952869908593,
+       "mean_gain_ungated": 0.03742194951330104,
+       "harmful_share_gated": 0.000134375,
+       "harmful_share_ungated": 0.0674390625
+      },
+      "fixed|W2": {
+       "allowed_share": 0.0376671875,
+       "mean_gain_allowed": 0.015645320298658033,
+       "mean_gain_ungated": 0.03732740007313962,
+       "harmful_share_gated": 0.0001578125,
+       "harmful_share_ungated": 0.0679671875
+      },
+      "over|W0": {
+       "allowed_share": 0.0028734375,
+       "mean_gain_allowed": -0.35677575478881535,
+       "mean_gain_ungated": -0.05552352043962028,
+       "harmful_share_gated": 0.0028734375,
+       "harmful_share_ungated": 0.79520625
+      },
+      "over|W1": {
+       "allowed_share": 0.0032296875,
+       "mean_gain_allowed": -0.37647500269748113,
+       "mean_gain_ungated": -0.05670631899974221,
+       "harmful_share_gated": 0.0032296875,
+       "harmful_share_ungated": 0.8171796875
+      },
+      "over|W2": {
+       "allowed_share": 0.0031625,
+       "mean_gain_allowed": -0.36998257164494897,
+       "mean_gain_ungated": -0.05614877880726783,
+       "harmful_share_gated": 0.0031625,
+       "harmful_share_ungated": 0.817203125
+      },
+      "under|W0": {
+       "allowed_share": 0.000246875,
+       "mean_gain_allowed": -0.05127308476037409,
+       "mean_gain_ungated": -0.010531573525796917,
+       "harmful_share_gated": 0.000246875,
+       "harmful_share_ungated": 0.774640625
+      },
+      "under|W1": {
+       "allowed_share": 0.00025,
+       "mean_gain_allowed": -0.05196585754583638,
+       "mean_gain_ungated": -0.010213638795765256,
+       "harmful_share_gated": 0.00025,
+       "harmful_share_ungated": 0.7947
+      },
+      "under|W2": {
+       "allowed_share": 0.00025,
+       "mean_gain_allowed": -0.053454634001034715,
+       "mean_gain_ungated": -0.01041920015367393,
+       "harmful_share_gated": 0.00025,
+       "harmful_share_ungated": 0.795140625
+      },
+      "entrench+over|W0": {
+       "allowed_share": 0.0430203125,
+       "mean_gain_allowed": 0.012243974780735958,
+       "mean_gain_ungated": -0.0396125438845907,
+       "harmful_share_gated": 0.001559375,
+       "harmful_share_ungated": 0.4676875
+      },
+      "entrench+over|W1": {
+       "allowed_share": 0.040346875,
+       "mean_gain_allowed": 0.010053019693067397,
+       "mean_gain_ungated": -0.04082758657187757,
+       "harmful_share_gated": 0.0019265625,
+       "harmful_share_ungated": 0.4642859375
+      },
+      "entrench+over|W2": {
+       "allowed_share": 0.0400921875,
+       "mean_gain_allowed": 0.010003579265884261,
+       "mean_gain_ungated": -0.04030552552937041,
+       "harmful_share_gated": 0.0017203125,
+       "harmful_share_ungated": 0.46364375
+      },
+      "fixed+under|W0": {
+       "allowed_share": 0.10214375,
+       "mean_gain_allowed": 0.005913308899886977,
+       "mean_gain_ungated": 0.07616693745691358,
+       "harmful_share_gated": 0.0221109375,
+       "harmful_share_ungated": 0.1381875
+      },
+      "fixed+under|W1": {
+       "allowed_share": 0.1007015625,
+       "mean_gain_allowed": 0.006721090126539962,
+       "mean_gain_ungated": 0.07654883609517124,
+       "harmful_share_gated": 0.019053125,
+       "harmful_share_ungated": 0.1183546875
+      },
+      "fixed+under|W2": {
+       "allowed_share": 0.1022640625,
+       "mean_gain_allowed": 0.006539120169054116,
+       "mean_gain_ungated": 0.0763050236959814,
+       "harmful_share_gated": 0.0204609375,
+       "harmful_share_ungated": 0.12245625
+      }
+     }
+    },
+    "variant_selection": {
+     "status": "evaluated",
+     "verdict": "shrink-only",
+     "two_sided_minus_shrink_only": {
+      "estimate": 5.554679289513575,
+      "lo": 5.252509928543439,
+      "hi": 5.898542368376108
+     },
+     "tie": false,
+     "track": "stateful",
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "scale_present": {
+     "status": "evaluated",
+     "verdict": false,
+     "track": "stateful",
+     "comparator_minus_scaled": {
+      "two-sided": {
+       "over|raw": {
+        "estimate": 0.13653496613393093,
+        "lo": 0.136534133717633,
+        "hi": 0.1365358102652331,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.6602275173371941,
+        "lo": 0.6371318212488777,
+        "hi": 0.6840633848412772,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": 0.11183087669114893,
+        "lo": 0.11183073595001013,
+        "hi": 0.1118310177976388,
+        "improves": true
+       },
+       "under|projection": {
+        "estimate": 0.20525851052953362,
+        "lo": 0.20423893472503934,
+        "hi": 0.20635335748442954,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": -7.074370525864126e-06,
+        "lo": -7.211599232650051e-06,
+        "hi": -6.932458791950729e-06,
+        "improves": false
+       },
+       "independence|projection": {
+        "estimate": -7.074370525872453e-06,
+        "lo": -7.213951766996684e-06,
+        "hi": -6.9337191346178355e-06,
+        "improves": false
+       }
+      },
+      "shrink-only": {
+       "over|raw": {
+        "estimate": 0.13653516607479715,
+        "lo": 0.13653435856821644,
+        "hi": 0.13653596591901365,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.6602277172780604,
+        "lo": 0.6367060497210711,
+        "hi": 0.6838583132607616,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": -0.09259601222444773,
+        "lo": -0.09368309261764109,
+        "hi": -0.09155736914158125,
+        "improves": false
+       },
+       "under|projection": {
+        "estimate": 0.0008316216139369781,
+        "lo": 0.000792014227462297,
+        "hi": 0.0008729158644776262,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": -5.959732197963196e-06,
+        "lo": -6.330183953595775e-06,
+        "hi": -5.566138890850738e-06,
+        "improves": false
+       },
+       "independence|projection": {
+        "estimate": -5.959732197971524e-06,
+        "lo": -6.321829969134912e-06,
+        "hi": -5.56618393872145e-06,
+        "improves": false
+       }
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "usable_outside": {
+     "status": "evaluated",
+     "verdict": false,
+     "track": "stateful",
+     "scale": "shrink-only",
+     "improves": false,
+     "comparator_minus_scaled": {
+      "over|raw": {
+       "estimate": -0.08518723993821815,
+       "lo": -0.14383952578706044,
+       "hi": -0.034082102164479454,
+       "improves": false
+      },
+      "over|projection": {
+       "estimate": 0.4426125276030447,
+       "lo": 0.38283656186906584,
+       "hi": 0.49444328360752954,
+       "improves": true
+      },
+      "under|raw": {
+       "estimate": -0.10331360936687436,
+       "lo": -0.10559584880500558,
+       "hi": -0.1011887002464627,
+       "improves": false
+      },
+      "under|projection": {
+       "estimate": -0.009126630585567291,
+       "lo": -0.011292066012033608,
+       "hi": -0.007192273913445893,
+       "improves": false
+      },
+      "independence|raw": {
+       "estimate": -0.03259058474217438,
+       "lo": -0.03673499202109378,
+       "hi": -0.028782080330233245,
+       "improves": false
+      },
+      "independence|projection": {
+       "estimate": -0.03114824987489583,
+       "lo": -0.035304102399885004,
+       "hi": -0.02738750781758839,
+       "improves": false
+      }
+     },
+     "admission": {
+      "status": "evaluated",
+      "verdict": true,
+      "rate": 0.02666666666666667,
+      "limit": 0.1,
+      "cases": 2400,
+      "overestimated": 605,
+      "admitted_and_overestimated": 64,
+      "rate_among_overestimated": 0.10578512396694215,
+      "eligible_share": 0.7316666666666667
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "selected_layer": {
+     "track": "stateful",
+     "scale": null,
+     "budget": null,
+     "label": "stateful",
+     "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"
+    }
+   },
+   "strong_correlation": {
+    "track_selection": {
+     "status": "evaluated",
+     "verdict": "stateful",
+     "stateful_minus_stateless": {
+      "estimate": -0.24553125199193276,
+      "lo": -0.254275507986153,
+      "hi": -0.2375207118049154
+     },
+     "tie": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "repair_present": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "raw_minus_corrected": {
+      "entrench|W0": {
+       "estimate": 0.35189107852891816,
+       "lo": 0.34632026208256916,
+       "hi": 0.3573291572714518,
+       "improves": true
+      },
+      "fixed|W0": {
+       "estimate": 0.2821318119530447,
+       "lo": 0.2803280495216291,
+       "hi": 0.2839514689172983,
+       "improves": true
+      },
+      "entrench|W2": {
+       "estimate": 0.35118388397652117,
+       "lo": 0.3457201381843595,
+       "hi": 0.3565480190993201,
+       "improves": true
+      },
+      "fixed|W2": {
+       "estimate": 0.2814246176206908,
+       "lo": 0.27970561173884284,
+       "hi": 0.2831661352750776,
+       "improves": true
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "negative_controls": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "corrected_minus_raw": {
+      "over|W0": {
+       "estimate": 0.24439108075991195,
+       "lo": 0.23488386325406715,
+       "hi": 0.2537093144329854,
+       "worsens": true
+      },
+      "under|W0": {
+       "estimate": 0.08162988698316759,
+       "lo": 0.08095426403710315,
+       "hi": 0.08228554287555373,
+       "worsens": true
+      },
+      "over|W2": {
+       "estimate": 0.25809261628109426,
+       "lo": 0.24636360531916413,
+       "hi": 0.26970743444305234,
+       "worsens": true
+      },
+      "under|W2": {
+       "estimate": 0.07953208479143122,
+       "lo": 0.07837855146006034,
+       "hi": 0.08064527007326344,
+       "worsens": true
+      }
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "no_harm": {
+     "status": "evaluated",
+     "verdict": true,
+     "largest_change": 2.220446049250313e-16,
+     "limit": 1e-09
+    },
+    "gate_valid": {
+     "status": "evaluated",
+     "verdict": false,
+     "cells": {
+      "independence|W0": {
+       "allowed_share": 0.0304609375,
+       "mean_gain_allowed": 0.0158155468633354,
+       "mean_gain_ungated": 0.003615104778748938,
+       "harmful_share_gated": 0.0016609375,
+       "harmful_share_ungated": 0.17818125
+      },
+      "independence|W1": {
+       "allowed_share": 0.000678125,
+       "mean_gain_allowed": -0.005405473525121611,
+       "mean_gain_ungated": -0.00012656093651962065,
+       "harmful_share_gated": 0.0005140625,
+       "harmful_share_ungated": 0.6419375
+      },
+      "independence|W2": {
+       "allowed_share": 0.026665625,
+       "mean_gain_allowed": 0.015275486215943414,
+       "mean_gain_ungated": 0.0034624796310431783,
+       "harmful_share_gated": 0.002184375,
+       "harmful_share_ungated": 0.356371875
+      },
+      "entrench|W0": {
+       "allowed_share": 0.106578125,
+       "mean_gain_allowed": 0.013027933038419258,
+       "mean_gain_ungated": 0.06702087057830157,
+       "harmful_share_gated": 0.010590625,
+       "harmful_share_ungated": 0.0540578125
+      },
+      "entrench|W1": {
+       "allowed_share": 0.062109375,
+       "mean_gain_allowed": 0.01802833408402331,
+       "mean_gain_ungated": 0.06381573610589608,
+       "harmful_share_gated": 0.0030546875,
+       "harmful_share_ungated": 0.0485265625
+      },
+      "entrench|W2": {
+       "allowed_share": 0.1059890625,
+       "mean_gain_allowed": 0.013366085167899028,
+       "mean_gain_ungated": 0.0668566047017453,
+       "harmful_share_gated": 0.0102828125,
+       "harmful_share_ungated": 0.0543171875
+      },
+      "fixed|W0": {
+       "allowed_share": 0.0501015625,
+       "mean_gain_allowed": 0.023775344286302853,
+       "mean_gain_ungated": 0.059369766061199605,
+       "harmful_share_gated": 0.000503125,
+       "harmful_share_ungated": 0.09454375
+      },
+      "fixed|W1": {
+       "allowed_share": 0.0406609375,
+       "mean_gain_allowed": 0.01644278922445576,
+       "mean_gain_ungated": 0.05939148394979273,
+       "harmful_share_gated": 3.59375e-05,
+       "harmful_share_ungated": 0.0952921875
+      },
+      "fixed|W2": {
+       "allowed_share": 0.0465875,
+       "mean_gain_allowed": 0.02327756810145704,
+       "mean_gain_ungated": 0.05942294113887233,
+       "harmful_share_gated": 0.0005625,
+       "harmful_share_ungated": 0.0948984375
+      },
+      "over|W0": {
+       "allowed_share": 0.0005546875,
+       "mean_gain_allowed": -0.265406188320303,
+       "mean_gain_ungated": -0.029099476281967473,
+       "harmful_share_gated": 0.0005546875,
+       "harmful_share_ungated": 0.7854890625
+      },
+      "over|W1": {
+       "allowed_share": 0.0016765625,
+       "mean_gain_allowed": -0.23090414302041518,
+       "mean_gain_ungated": -0.06537959932028266,
+       "harmful_share_gated": 0.0016765625,
+       "harmful_share_ungated": 0.816340625
+      },
+      "over|W2": {
+       "allowed_share": 0.0008734375,
+       "mean_gain_allowed": -0.13452444374123537,
+       "mean_gain_ungated": -0.03131912776629957,
+       "harmful_share_gated": 0.0008734375,
+       "harmful_share_ungated": 0.8001203125
+      },
+      "under|W0": {
+       "allowed_share": 0.000684375,
+       "mean_gain_allowed": -0.05012623382694721,
+       "mean_gain_ungated": -0.009277836160945343,
+       "harmful_share_gated": 0.000684375,
+       "harmful_share_ungated": 0.7432890625
+      },
+      "under|W1": {
+       "allowed_share": 2.96875e-05,
+       "mean_gain_allowed": -0.029882616927148952,
+       "mean_gain_ungated": -0.0038327024907195348,
+       "harmful_share_gated": 2.96875e-05,
+       "harmful_share_ungated": 0.74041875
+      },
+      "under|W2": {
+       "allowed_share": 0.0006546875,
+       "mean_gain_allowed": -0.0432803823490335,
+       "mean_gain_ungated": -0.00902422320797456,
+       "harmful_share_gated": 0.0006546875,
+       "harmful_share_ungated": 0.7674921875
+      },
+      "entrench+over|W0": {
+       "allowed_share": 0.0539171875,
+       "mean_gain_allowed": 0.011297990963220421,
+       "mean_gain_ungated": 0.0228758076864958,
+       "harmful_share_gated": 0.0032296875,
+       "harmful_share_ungated": 0.2308859375
+      },
+      "entrench+over|W1": {
+       "allowed_share": 0.052684375,
+       "mean_gain_allowed": 0.018076958236700632,
+       "mean_gain_ungated": -0.011335464572414269,
+       "harmful_share_gated": 0.0003625,
+       "harmful_share_ungated": 0.3949359375
+      },
+      "entrench+over|W2": {
+       "allowed_share": 0.0546765625,
+       "mean_gain_allowed": 0.012001043229002622,
+       "mean_gain_ungated": 0.020762813967363708,
+       "harmful_share_gated": 0.003353125,
+       "harmful_share_ungated": 0.2420578125
+      },
+      "fixed+under|W0": {
+       "allowed_share": 0.1144109375,
+       "mean_gain_allowed": 0.011487321327486873,
+       "mean_gain_ungated": 0.09449985687534436,
+       "harmful_share_gated": 0.009984375,
+       "harmful_share_ungated": 0.03845
+      },
+      "fixed+under|W1": {
+       "allowed_share": 0.099765625,
+       "mean_gain_allowed": 0.013328694503388163,
+       "mean_gain_ungated": 0.10135811452084087,
+       "harmful_share_gated": 0.0084484375,
+       "harmful_share_ungated": 0.0131375
+      },
+      "fixed+under|W2": {
+       "allowed_share": 0.111290625,
+       "mean_gain_allowed": 0.011792511198717479,
+       "mean_gain_ungated": 0.09481510886299896,
+       "harmful_share_gated": 0.01000625,
+       "harmful_share_ungated": 0.03268125
+      }
+     }
+    },
+    "variant_selection": {
+     "status": "evaluated",
+     "verdict": "shrink-only",
+     "two_sided_minus_shrink_only": {
+      "estimate": 1.0797389240721398,
+      "lo": 0.41981606455888026,
+      "hi": 1.9295004421407806
+     },
+     "tie": false,
+     "track": "stateful",
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "scale_present": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "comparator_minus_scaled": {
+      "two-sided": {
+       "over|raw": {
+        "estimate": 0.6521867381063127,
+        "lo": 0.6509665322486993,
+        "hi": 0.6533440038372406,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.8965778188662246,
+        "lo": 0.8881942109429216,
+        "hi": 0.904860292299691,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": 0.03578913869640791,
+        "lo": 0.034598689741991505,
+        "hi": 0.03691287772693314,
+        "improves": true
+       },
+       "under|projection": {
+        "estimate": 0.11741902567957549,
+        "lo": 0.11558549503897743,
+        "hi": 0.11920858721588354,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": 0.10511010545158048,
+        "lo": 0.10392248866241646,
+        "hi": 0.10628330891096323,
+        "improves": true
+       },
+       "independence|projection": {
+        "estimate": 0.07533280793393786,
+        "lo": 0.07229066430693658,
+        "hi": 0.07829139150990226,
+        "improves": true
+       }
+      },
+      "shrink-only": {
+       "over|raw": {
+        "estimate": 0.6522463448345108,
+        "lo": 0.6510396702681548,
+        "hi": 0.65336653365867,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.8966374255944229,
+        "lo": 0.8883433196680686,
+        "hi": 0.9049892030641844,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": -0.0678353715958574,
+        "lo": -0.06814095960636578,
+        "hi": -0.06755584911830485,
+        "improves": false
+       },
+       "under|projection": {
+        "estimate": 0.013794515387310186,
+        "lo": 0.012904551877988103,
+        "hi": 0.014662644504957979,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": 0.10520113657505555,
+        "lo": 0.1040494281288151,
+        "hi": 0.10634866585774709,
+        "improves": true
+       },
+       "independence|projection": {
+        "estimate": 0.0754238390574129,
+        "lo": 0.07237327516320406,
+        "hi": 0.07829548744074839,
+        "improves": true
+       }
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "usable_outside": {
+     "status": "evaluated",
+     "verdict": false,
+     "track": "stateful",
+     "scale": "shrink-only",
+     "improves": false,
+     "comparator_minus_scaled": {
+      "over|raw": {
+       "estimate": 0.4087806592658473,
+       "lo": 0.3411615272067486,
+       "hi": 0.46714940775001446,
+       "improves": true
+      },
+      "over|projection": {
+       "estimate": 0.6668732755469416,
+       "lo": 0.5976872705073694,
+       "hi": 0.7244887580172198,
+       "improves": true
+      },
+      "under|raw": {
+       "estimate": -0.07594629066484945,
+       "lo": -0.07723125346655144,
+       "hi": -0.07470647117617615,
+       "improves": false
+      },
+      "under|projection": {
+       "estimate": 0.0035857941265817596,
+       "lo": 0.0025506545086445118,
+       "hi": 0.004628310890322732,
+       "improves": true
+      },
+      "independence|raw": {
+       "estimate": 0.05833741469739495,
+       "lo": 0.05400423300905549,
+       "hi": 0.06240536192202343,
+       "improves": true
+      },
+      "independence|projection": {
+       "estimate": 0.029267311889666952,
+       "lo": 0.024565883250705814,
+       "hi": 0.03381830517811292,
+       "improves": true
+      }
+     },
+     "admission": {
+      "status": "evaluated",
+      "verdict": true,
+      "rate": 0.026292335115864526,
+      "limit": 0.1,
+      "cases": 2244,
+      "overestimated": 433,
+      "admitted_and_overestimated": 59,
+      "rate_among_overestimated": 0.13625866050808313,
+      "eligible_share": 0.7593582887700535
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "selected_layer": {
+     "track": "stateful",
+     "scale": null,
+     "budget": null,
+     "label": "stateful",
+     "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"
+    }
+   },
+   "duplicated_panel": {
+    "track_selection": {
+     "status": "evaluated",
+     "verdict": "stateful",
+     "stateful_minus_stateless": {
+      "estimate": -0.17969095685773856,
+      "lo": -0.19963615204789528,
+      "hi": -0.16215920473341833
+     },
+     "tie": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "repair_present": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "raw_minus_corrected": {
+      "entrench|W0": {
+       "estimate": 0.24517516745580714,
+       "lo": 0.2278308338220553,
+       "hi": 0.26292229684351215,
+       "improves": true
+      },
+      "fixed|W0": {
+       "estimate": 0.20436749642878924,
+       "lo": 0.19643224751777097,
+       "hi": 0.21228660502647564,
+       "improves": true
+      },
+      "entrench|W2": {
+       "estimate": 0.2438364265602849,
+       "lo": 0.22629816262874117,
+       "hi": 0.26163251532149934,
+       "improves": true
+      },
+      "fixed|W2": {
+       "estimate": 0.2030285924744099,
+       "lo": 0.19511183307592828,
+       "hi": 0.21142220174139598,
+       "improves": true
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "negative_controls": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "corrected_minus_raw": {
+      "over|W0": {
+       "estimate": 0.36661732177077916,
+       "lo": 0.3263124745976579,
+       "hi": 0.4108782914674193,
+       "worsens": true
+      },
+      "under|W0": {
+       "estimate": 0.09920105604096119,
+       "lo": 0.09510054355326955,
+       "hi": 0.10335495522956283,
+       "worsens": true
+      },
+      "over|W2": {
+       "estimate": 0.3747438444252949,
+       "lo": 0.33445233338453617,
+       "hi": 0.4200560937967135,
+       "worsens": true
+      },
+      "under|W2": {
+       "estimate": 0.0973011847110601,
+       "lo": 0.09314881987926235,
+       "hi": 0.101487644861392,
+       "worsens": true
+      }
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "no_harm": {
+     "status": "evaluated",
+     "verdict": true,
+     "largest_change": 2.220446049250313e-16,
+     "limit": 1e-09
+    },
+    "gate_valid": {
+     "status": "evaluated",
+     "verdict": false,
+     "cells": {
+      "independence|W0": {
+       "allowed_share": 0.0135421875,
+       "mean_gain_allowed": 0.09535312281442965,
+       "mean_gain_ungated": 0.0017660961027808793,
+       "harmful_share_gated": 0.0020609375,
+       "harmful_share_ungated": 0.2970671875
+      },
+      "independence|W1": {
+       "allowed_share": 0.001778125,
+       "mean_gain_allowed": -0.010405296969509571,
+       "mean_gain_ungated": -0.0002286598061075671,
+       "harmful_share_gated": 0.001478125,
+       "harmful_share_ungated": 0.7064921875
+      },
+      "independence|W2": {
+       "allowed_share": 0.0154359375,
+       "mean_gain_allowed": 0.08218171957865385,
+       "mean_gain_ungated": 0.0015784290672171374,
+       "harmful_share_gated": 0.004290625,
+       "harmful_share_ungated": 0.4662296875
+      },
+      "entrench|W0": {
+       "allowed_share": 0.0953234375,
+       "mean_gain_allowed": 0.016046643480862266,
+       "mean_gain_ungated": 0.041819045661143465,
+       "harmful_share_gated": 0.01995625,
+       "harmful_share_ungated": 0.0805015625
+      },
+      "entrench|W1": {
+       "allowed_share": 0.06675,
+       "mean_gain_allowed": 0.010518158190812879,
+       "mean_gain_ungated": 0.03858800685115941,
+       "harmful_share_gated": 0.0073796875,
+       "harmful_share_ungated": 0.0735578125
+      },
+      "entrench|W2": {
+       "allowed_share": 0.095896875,
+       "mean_gain_allowed": 0.016631032709933893,
+       "mean_gain_ungated": 0.041762414959746065,
+       "harmful_share_gated": 0.0166640625,
+       "harmful_share_ungated": 0.07844375
+      },
+      "fixed|W0": {
+       "allowed_share": 0.0266203125,
+       "mean_gain_allowed": 0.05652457882004309,
+       "mean_gain_ungated": 0.03606925069514296,
+       "harmful_share_gated": 0.0016265625,
+       "harmful_share_ungated": 0.1459546875
+      },
+      "fixed|W1": {
+       "allowed_share": 0.022134375,
+       "mean_gain_allowed": 0.014922557119231156,
+       "mean_gain_ungated": 0.03531241868848124,
+       "harmful_share_gated": 0.00025,
+       "harmful_share_ungated": 0.14603125
+      },
+      "fixed|W2": {
+       "allowed_share": 0.0265828125,
+       "mean_gain_allowed": 0.0563502564797619,
+       "mean_gain_ungated": 0.036070151250533845,
+       "harmful_share_gated": 0.0016171875,
+       "harmful_share_ungated": 0.1493046875
+      },
+      "over|W0": {
+       "allowed_share": 0.0027328125,
+       "mean_gain_allowed": 0.30589121024566707,
+       "mean_gain_ungated": -0.04763522479653666,
+       "harmful_share_gated": 0.0012875,
+       "harmful_share_ungated": 0.778996875
+      },
+      "over|W1": {
+       "allowed_share": 0.00174375,
+       "mean_gain_allowed": -0.5060002053114157,
+       "mean_gain_ungated": -0.06806097253369515,
+       "harmful_share_gated": 0.00174375,
+       "harmful_share_ungated": 0.8012359375
+      },
+      "over|W2": {
+       "allowed_share": 0.0030125,
+       "mean_gain_allowed": 0.22194680179987683,
+       "mean_gain_ungated": -0.049626173842284696,
+       "harmful_share_gated": 0.0015671875,
+       "harmful_share_ungated": 0.786084375
+      },
+      "under|W0": {
+       "allowed_share": 0.0055390625,
+       "mean_gain_allowed": -0.08202871517783486,
+       "mean_gain_ungated": -0.01209195490859769,
+       "harmful_share_gated": 0.0050515625,
+       "harmful_share_ungated": 0.7419484375
+      },
+      "under|W1": {
+       "allowed_share": 0.0008625,
+       "mean_gain_allowed": -0.03605866873116944,
+       "mean_gain_ungated": -0.008375881109880481,
+       "harmful_share_gated": 0.0006421875,
+       "harmful_share_ungated": 0.7462734375
+      },
+      "under|W2": {
+       "allowed_share": 0.00548125,
+       "mean_gain_allowed": -0.0810524777406767,
+       "mean_gain_ungated": -0.011765430682026208,
+       "harmful_share_gated": 0.00499375,
+       "harmful_share_ungated": 0.753875
+      },
+      "entrench+over|W0": {
+       "allowed_share": 0.0287953125,
+       "mean_gain_allowed": 0.04012115435074274,
+       "mean_gain_ungated": -0.02417828966498083,
+       "harmful_share_gated": 0.00149375,
+       "harmful_share_ungated": 0.4357375
+      },
+      "entrench+over|W1": {
+       "allowed_share": 0.0235484375,
+       "mean_gain_allowed": 0.00923946816535298,
+       "mean_gain_ungated": -0.04625078689446467,
+       "harmful_share_gated": 0.001053125,
+       "harmful_share_ungated": 0.4611609375
+      },
+      "entrench+over|W2": {
+       "allowed_share": 0.0253046875,
+       "mean_gain_allowed": 0.04261363474041616,
+       "mean_gain_ungated": -0.025936914487798078,
+       "harmful_share_gated": 0.001453125,
+       "harmful_share_ungated": 0.4352015625
+      },
+      "fixed+under|W0": {
+       "allowed_share": 0.1100765625,
+       "mean_gain_allowed": 0.010032562780560373,
+       "mean_gain_ungated": 0.07107611252335057,
+       "harmful_share_gated": 0.024040625,
+       "harmful_share_ungated": 0.117221875
+      },
+      "fixed+under|W1": {
+       "allowed_share": 0.0864140625,
+       "mean_gain_allowed": 0.005975620070650314,
+       "mean_gain_ungated": 0.07529276328305086,
+       "harmful_share_gated": 0.0150796875,
+       "harmful_share_ungated": 0.07686875
+      },
+      "fixed+under|W2": {
+       "allowed_share": 0.1055875,
+       "mean_gain_allowed": 0.010099145887329776,
+       "mean_gain_ungated": 0.0714537076204224,
+       "harmful_share_gated": 0.0222859375,
+       "harmful_share_ungated": 0.1136484375
+      }
+     }
+    },
+    "variant_selection": {
+     "status": "evaluated",
+     "verdict": "shrink-only",
+     "two_sided_minus_shrink_only": {
+      "estimate": 5.8195966378959465,
+      "lo": 5.4170248296878665,
+      "hi": 6.1942337288606
+     },
+     "tie": false,
+     "track": "stateful",
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "scale_present": {
+     "status": "evaluated",
+     "verdict": true,
+     "track": "stateful",
+     "comparator_minus_scaled": {
+      "two-sided": {
+       "over|raw": {
+        "estimate": 0.3975744060717477,
+        "lo": 0.38557388849849406,
+        "hi": 0.40782152949911454,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.7641917278425269,
+        "lo": 0.7300454307352733,
+        "hi": 0.8005073433925065,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": 0.06454960796407147,
+        "lo": 0.06304470710596687,
+        "hi": 0.06602384325483511,
+        "improves": true
+       },
+       "under|projection": {
+        "estimate": 0.16375066400503266,
+        "lo": 0.1594649457668751,
+        "hi": 0.16759999909653897,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": 0.06468808931374484,
+        "lo": 0.059276363755668346,
+        "hi": 0.06943358744730493,
+        "improves": true
+       },
+       "independence|projection": {
+        "estimate": 0.030410147452116343,
+        "lo": 0.027773500047264785,
+        "hi": 0.03305895693925527,
+        "improves": true
+       }
+      },
+      "shrink-only": {
+       "over|raw": {
+        "estimate": 0.39762318711388644,
+        "lo": 0.3854796194092799,
+        "hi": 0.4078123332339677,
+        "improves": true
+       },
+       "over|projection": {
+        "estimate": 0.7642405088846654,
+        "lo": 0.7305449999534039,
+        "hi": 0.8004891428241043,
+        "improves": true
+       },
+       "under|raw": {
+        "estimate": -0.09149084552702476,
+        "lo": -0.09496613013347983,
+        "hi": -0.08801440872907014,
+        "improves": false
+       },
+       "under|projection": {
+        "estimate": 0.0077102105139364215,
+        "lo": 0.006894599207657015,
+        "hi": 0.008538909900812753,
+        "improves": true
+       },
+       "independence|raw": {
+        "estimate": 0.06480611141888357,
+        "lo": 0.059343871532208235,
+        "hi": 0.06962494790700212,
+        "improves": true
+       },
+       "independence|projection": {
+        "estimate": 0.030528169557255087,
+        "lo": 0.027972519353545666,
+        "hi": 0.0331369113513494,
+        "improves": true
+       }
+      }
+     },
+     "killed": false,
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "usable_outside": {
+     "status": "evaluated",
+     "verdict": false,
+     "track": "stateful",
+     "scale": "shrink-only",
+     "improves": false,
+     "comparator_minus_scaled": {
+      "over|raw": {
+       "estimate": 0.0661567216832186,
+       "lo": 0.008981245059318079,
+       "hi": 0.123257995489876,
+       "improves": true
+      },
+      "over|projection": {
+       "estimate": 0.4409005661085136,
+       "lo": 0.38218454523805173,
+       "hi": 0.5017423987322284,
+       "improves": true
+      },
+      "under|raw": {
+       "estimate": -0.10297526990150793,
+       "lo": -0.10746083076335923,
+       "hi": -0.09860490326530688,
+       "improves": false
+      },
+      "under|projection": {
+       "estimate": -0.005674085190447836,
+       "lo": -0.007476239486357644,
+       "hi": -0.003967608614465146,
+       "improves": false
+      },
+      "independence|raw": {
+       "estimate": 0.01712658372731312,
+       "lo": 0.006843534125173974,
+       "hi": 0.02668091394722393,
+       "improves": true
+      },
+      "independence|projection": {
+       "estimate": -0.015812739414163356,
+       "lo": -0.02321125537732234,
+       "hi": -0.00852999919452346,
+       "improves": false
+      }
+     },
+     "admission": {
+      "status": "evaluated",
+      "verdict": true,
+      "rate": 0.023605150214592276,
+      "limit": 0.1,
+      "cases": 2796,
+      "overestimated": 569,
+      "admitted_and_overestimated": 66,
+      "rate_among_overestimated": 0.11599297012302284,
+      "eligible_share": 0.703862660944206
+     },
+     "interval_caveat": "The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the card's and is not changed."
+    },
+    "selected_layer": {
+     "track": "stateful",
+     "scale": null,
+     "budget": null,
+     "label": "stateful",
+     "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"
+    }
+   }
+  },
+  "differs_from_primary": {
+   "no_correlation": [
+    "scale_present"
+   ],
+   "strong_correlation": [],
+   "duplicated_panel": []
+  }
+ }
+}

@@ -1,0 +1,118 @@
+{
+ "schema": "tii-fig1-regret/1",
+ "generated_at": "2026-11-13T05:57:06-05:00",
+ "agents": [
+  {
+   "id": "E1:entrench:raw",
+   "label": "Entrenching drift, raw",
+   "variant": "raw",
+   "selection": 0.6119287711123106,
+   "reading": 0.009089507874912944,
+   "commitment": 0.3789817210127805
+  },
+  {
+   "id": "E1:entrench:repaired",
+   "label": "Entrenching drift, repaired",
+   "variant": "repaired",
+   "selection": 0.310147571178606,
+   "reading": 0.1232592218200569,
+   "commitment": 0.5665932070013999
+  },
+  {
+   "id": "E1:entrench+over:raw",
+   "label": "Entrenching + over-reactive, raw",
+   "variant": "raw",
+   "selection": 0.5969478713538595,
+   "reading": -0.6219743744621012,
+   "commitment": 1.0250265031082528
+  },
+  {
+   "id": "E1:entrench+over:repaired",
+   "label": "Entrenching + over-reactive, repaired",
+   "variant": "repaired",
+   "selection": 0.29395313788958133,
+   "reading": 0.4936463414185817,
+   "commitment": 0.21240052069184454
+  },
+  {
+   "id": "E1:fixed:raw",
+   "label": "Fixed-class drift, raw",
+   "variant": "raw",
+   "selection": -0.024044388663023282,
+   "reading": 0.8343758989616344,
+   "commitment": 0.18966848970139086
+  },
+  {
+   "id": "E1:fixed:repaired",
+   "label": "Fixed-class drift, repaired",
+   "variant": "repaired",
+   "selection": 0.310147571178606,
+   "reading": 0.1232592218200569,
+   "commitment": 0.5665932070013999
+  },
+  {
+   "id": "E1:fixed+under:raw",
+   "label": "Fixed-class + under-reactive, raw",
+   "variant": "raw",
+   "selection": -0.041033761168164186,
+   "reading": 1.0076282267852121,
+   "commitment": 0.033405534382952504
+  },
+  {
+   "id": "E1:fixed+under:repaired",
+   "label": "Fixed-class + under-reactive, repaired",
+   "variant": "repaired",
+   "selection": 0.1961015873741024,
+   "reading": 0.5425275950734465,
+   "commitment": 0.26137081755245567
+  },
+  {
+   "id": "E1:independence:raw",
+   "label": "Independence, raw",
+   "variant": "raw",
+   "selection": 0.36904047592194567,
+   "reading": -0.23881658853970456,
+   "commitment": 0.8697761126177683
+  },
+  {
+   "id": "E1:independence:repaired",
+   "label": "Independence, repaired",
+   "variant": "repaired",
+   "selection": 0.310147571178606,
+   "reading": 0.1232592218200569,
+   "commitment": 0.5665932070013999
+  },
+  {
+   "id": "E1:over:raw",
+   "label": "Over-reactive, raw",
+   "variant": "raw",
+   "selection": -0.00023677026575331413,
+   "reading": 0.37165537055000036,
+   "commitment": 0.6285813997157598
+  },
+  {
+   "id": "E1:over:repaired",
+   "label": "Over-reactive, repaired",
+   "variant": "repaired",
+   "selection": 0.29395313788958133,
+   "reading": 0.4936463414185817,
+   "commitment": 0.21240052069184454
+  },
+  {
+   "id": "E1:under:raw",
+   "label": "Under-reactive, raw",
+   "variant": "raw",
+   "selection": -0.0015358743697313005,
+   "reading": 0.8643513991929784,
+   "commitment": 0.13718447517675433
+  },
+  {
+   "id": "E1:under:repaired",
+   "label": "Under-reactive, repaired",
+   "variant": "repaired",
+   "selection": 0.1961015873741024,
+   "reading": 0.5425275950734465,
+   "commitment": 0.26137081755245567
+  }
+ ]
+}
