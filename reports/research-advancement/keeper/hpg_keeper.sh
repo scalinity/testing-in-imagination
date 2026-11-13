@@ -14,6 +14,7 @@ CONF="$HOME/.tii/keeper/keeper.conf"
 HOST="${TII_HPG_HOST:-hpg}"
 REMOTE_EVENTS="${TII_REMOTE_EVENTS:-}"
 REMIND_HOURS="${TII_REMIND_HOURS:-0}"
+RECOVERY_HINT="${TII_RECOVERY_HINT:-}"
 SSH_BIN="${TII_SSH_BIN:-/usr/bin/ssh}"                 # override only for testing
 OSA_BIN="${TII_OSASCRIPT_BIN:-/usr/bin/osascript}"     # override only for testing
 STATE="${TII_KEEPER_STATE:-$HOME/Library/Application Support/tii-keeper}"
@@ -105,7 +106,7 @@ now_s=$(date +%s)
 last=$(num "$(cat "$STATE/down.notified" 2>/dev/null)")
 REMIND_HOURS=$(num "$REMIND_HOURS")
 if [ "$last" -eq 0 ] || { [ "$REMIND_HOURS" -gt 0 ] && [ $((now_s - last)) -ge $((REMIND_HOURS * 3600)) ]; }; then
-    notify "HiPerGator sign-in needed" "In Terminal run: ssh -fN $HOST   Your jobs on HiPerGator keep running meanwhile."
+    notify "HiPerGator sign-in needed" "In Terminal run: ssh -fN $HOST   Your jobs on HiPerGator keep running meanwhile.${RECOVERY_HINT:+ $RECOVERY_HINT}"
     echo "$now_s" > "$STATE/down.notified"
     log "notified: sign-in needed"
 else

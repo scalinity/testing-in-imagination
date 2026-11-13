@@ -9,3 +9,6 @@ TII_REMOTE_EVENTS=""
 
 # 0 = tell me once when the session drops. N > 0 = remind me every N hours until I sign in.
 TII_REMIND_HOURS=0
+
+# Optional recovery instructions when a Tailscale endpoint is offline.
+TII_RECOVERY_HINT=""
