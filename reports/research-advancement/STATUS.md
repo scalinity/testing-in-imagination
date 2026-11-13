@@ -1,22 +1,21 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 5:00 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
-- Milestone: M0 IN PROGRESS. M1 IN PROGRESS. M2 IN PROGRESS. M3 to M5 NOT STARTED.
-- M0: gate G0 met except the live part of launch check 7.4c (GATE_DECISIONS/G0.md). The watcher
-  was installed on HiPerGator at 4:42 AM with the three-stage no-op graph from code export 462600e;
-  its first cycle (4:46 AM, compute node) passed the authorization check, called sacct and squeue,
-  and submitted a stage through sbatch, so scrontab jobs can call the scheduler. Completion, the
-  gate record and the watcher's self-disable are expected by about 5:30 AM.
+- Milestone: M0 COMPLETE. M1 IN PROGRESS. M2 IN PROGRESS. M3 to M5 NOT STARTED.
+- M0: CLOSED (MILESTONES/M0.md). The live no-op graph ran end to end on HiPerGator and the watcher
+  removed its own entry at 5:45 AM; launch check 7.4c is answered and G0 is met in full.
 - M1: the twin repairs (REVIEW-002, -006, -011) are verified (GATE_DECISIONS/G1-twin.md); the
   section 8.3 preflight and manifests are built (tii-cee/tiicee/pipeline); the training-track
   adapters, the resume guarantee (D-CLIN-RESUME) and gate G_resume are committed. REVIEW-001 (for
   E3) and REVIEW-008 (for E5) are not started.
-- M2: E0 COMPLETED, PASS (runs 1 and 2). E1 runners are being pre-registered; no E1 result exists.
-- Experiments: E0 COMPLETED; E11 BLOCKED (BLOCKED-002); all others PLANNED. Only the no-op test
-  stages have been submitted.
+- M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
+  (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
+  charts get projection only, stateful track). G2a waits for E1-C.
+- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E11 BLOCKED (BLOCKED-002); all others
+  PLANNED. Only the no-op test stages have been submitted to the cluster.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: BLOCKED-002 (no independent cohort for E11). BLOCKED-001 is closed.
 - Interruption: from about 4:47 AM the AI worker sessions fail with "Please run /login · API Error:
