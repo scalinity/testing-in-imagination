@@ -123,7 +123,9 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 8:05 AM EST. Times are EST, from the runlog's started events.
+Mirrored November 13, 2026, about 9:25 AM EST. Times are EST, from the runlog's started events. Exit 10
+is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
+retry.
 
 | Stage | Attempt | Job ID | Account | Started | State | Exit | Elapsed | GPU-hours |
 |---|---|---|---|---|---|---|---|---|
@@ -132,7 +134,8 @@ Mirrored November 13, 2026, about 8:05 AM EST. Times are EST, from the runlog's 
 | noop_c | 1 | 51152783 | cai5724 | 5:35 AM | COMPLETED | 0 | 6 s | 0 |
 | e8-data | 1 | 51157675 | cai5724 | 6:48 AM | COMPLETED | 0 | 6 s | 0 |
 | e10-folds | 1 | 51157681 | cai5724 | 6:48 AM | COMPLETED | 0 | 7 s | 0 |
-| bench-nemotron | 1 | 51161948 | cai6734 | 7:05 AM | RUNNING | | | |
+| bench-nemotron | 1 | 51161948 | cai6734 | 7:05 AM | FAILED (continue: the uninterrupted reference run is recorded) | 10 | 5,847 s | 1.624 |
+| bench-nemotron | 2 | 51171760 | cai6734 | 8:46 AM | RUNNING | | | |
 | p-rollout-val | 1 | 51161967 | cai6734 | 7:06 AM | COMPLETED | 0 | 1,340 s | 0.372 |
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 

@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 8:05 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 9:25 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -94,12 +94,13 @@ Updated November 13, 2026, about 8:05 AM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| bench-nemotron | 51161948 | cai6734 | RUNNING | 7:05 AM EST |
+| bench-nemotron, attempt 2 | 51171760 | cai6734 | RUNNING | 8:46 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 
 ## 6. GPU-hours by experiment
 
-Benches: 1.03 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the rest is
-the running Nemotron bench), as of 8:00 AM EST from state/status.json. E8, E9, E10: none spent.
+Benches: about 2.5 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
+Nemotron bench's reference run 1.624; the rest is its running attempt 2), as of 9:20 AM EST from the
+runlog. E8, E9, E10: none spent.
 Estimates and allowances: AUTHORIZATION.md section 4.
