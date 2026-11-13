@@ -39,16 +39,19 @@ def test_abnormal_is_every_class_pointing_finding(ctx):
     assert [o for o, k in zip(m.outcomes, mask) if not k] == ["nonspecific", UNAVAILABLE]
 
 
-def test_equal_powers_are_the_r4_reader_and_one_is_r0(ctx, first):
+def test_equal_powers_are_the_r4_reader_and_one_is_r0(ctx):
     twin = ctx.twin("full")
     m = twin.model
-    for t, test in first.values():
+    for t, test in enumerate(m.tests):     # every test, so the fallback for an outcome no class allows runs too
         for p in ext.POWERS:
             mine = ext.reactions(m, t, np.full(len(m.outcomes), p))
             theirs = np.array([SimulatedReader(twin, power=p).read((), test, o) for o in m.outcomes])
             assert np.allclose(mine, theirs, atol=1e-12)
         bayes = np.array([BayesReader(twin).read((), test, o) for o in m.outcomes])
         assert np.allclose(ext.reactions(m, t, np.ones(len(m.outcomes))), bayes, atol=1e-12)
+    pe = m.tests.index("Physical Examination")
+    assert (m.class_lik()[pe][:, -1] == 0).all()           # UNAVAILABLE cannot happen there
+    assert np.allclose(ext.reactions(m, pe, np.full(len(m.outcomes), 2.0))[-1], m.prior)
 
 
 def test_slopes_recover_each_readers_powers_and_ignore_drift(ctx, first):
@@ -63,6 +66,18 @@ def test_slopes_recover_each_readers_powers_and_ignore_drift(ctx, first):
             reader = SimulatedReader(twin, power=2.0, drift=drift, delta=0.8)
             post = np.array([reader.read((), test, o) for o in m.outcomes])
             assert ext.slopes(m, t, post, w0, mask) == pytest.approx({"p_abnormal": 2.0, "p_normal": 2.0}, abs=1e-9)
+
+
+def test_a_slope_with_nothing_to_identify_it_is_none(ctx, first):
+    """Without the nonspecific finding, the normal kind keeps only UNAVAILABLE, whose likelihood is the
+    same for every class in the base variant: p_normal is not identified, p_abnormal still is."""
+    m = ctx.twin("full").model
+    mask = ext.abnormal(m)
+    t, test = first["ig"]
+    w0 = ext.weights(ctx, "W0", test)
+    w0[m.outcomes.index("nonspecific")] = 0.0
+    found = ext.slopes(m, t, ext.reactions(m, t, np.where(mask, 2.0, 0.5)), w0, mask)
+    assert found["p_normal"] is None and found["p_abnormal"] == pytest.approx(2.0, abs=1e-9)
 
 
 def test_shifted_world_models_scale_the_class_pointing_findings(ctx, first):
