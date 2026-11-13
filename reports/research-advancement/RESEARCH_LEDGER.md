@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 2:15 PM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 2:50 PM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -142,6 +142,15 @@ retry.
 | p-rollout-val | 1 | 51161967 | cai6734 | 7:06 AM | COMPLETED | 0 | 1,340 s | 0.372 |
 | launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 | e9-bench-granite | 1 | 51202779 | cai6734 | 1:49 PM | RUNNING | | | |
+| e8-train-s270 | 1 | 51208027 | cai6734 | not yet | PENDING (Resources) | | | |
+| e8-train-s271 | 1 | 51208029 | cai6734 | not yet | PENDING (Priority) | | | |
+| e8-train-s272 | 1 | 51208030 | cai6734 | not yet | PENDING (Priority) | | | |
+| e8-train-s273 | 1 | 51208032 | cai6734 | not yet | PENDING (Priority) | | | |
+| e10-train-f0 | 1 | 51208033 | cai6734 | not yet | PENDING (Priority) | | | |
+| e10-train-f1 | 1 | 51208034 | cai6734 | not yet | PENDING (Priority) | | | |
+| e10-train-f2 | 1 | 51208035 | cai6734 | not yet | PENDING (Priority) | | | |
+| e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
+| e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
 
 ## 6. Recorded design decisions
 

@@ -24,15 +24,16 @@ Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
   E2, E4 and E7 are amended. The extension with result-dependent readers is SUPPORTED under W0 and
   W2 ("D-REGIME extension"), with a residual dependence on outcome frequencies reported.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
-  done; G_resume met, training stages wait on a redeploy); E9 IN PROGRESS (Granite bench running); E11 SKIPPED (accepted gap, not run); all others PLANNED.
+  done; G_resume met, trainings submitted 2:46 PM EST); E9 IN PROGRESS (Granite bench running); E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
   (accepted by Daniel November 13, 2026). BLOCKED-001 is closed.
 - AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
   their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
   unaffected.
-- Next executable actions: redeploy with the E8 and E10 training stages (G_resume met); E9's
-  training after the Granite bench; the E1-C interval finishes locally (about 20
+- Next executable actions: the E8 and E10 trainings run (graph_training_m2.json, deployed at
+  e3f98b8; nine jobs submitted 2:46 PM EST; each rolls out after training); E9's training after the
+  Granite bench, with a redeploy that also adds probe conformance and E10's cohort-X integrity check; the E1-C interval finishes locally (about 20
   hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
@@ -103,6 +104,15 @@ Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
 | e9-bench-granite, attempt 1 | 51202779 | cai6734 | RUNNING | 1:49 PM EST |
+| e8-train-s270, attempt 1 | 51208027 | cai6734 | PENDING (Resources) | submitted 2:46 PM EST |
+| e8-train-s271, attempt 1 | 51208029 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e8-train-s272, attempt 1 | 51208030 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e8-train-s273, attempt 1 | 51208032 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e10-train-f0, attempt 1 | 51208033 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e10-train-f1, attempt 1 | 51208034 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (Priority) | submitted 2:46 PM EST |
+| e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
+| e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 
