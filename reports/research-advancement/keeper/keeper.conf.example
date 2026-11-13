@@ -1,0 +1,11 @@
+# ~/.tii/keeper/keeper.conf -- settings for hpg_keeper.sh. Plain shell assignments, no secrets.
+
+# The Host alias in ~/.ssh/config.
+TII_HPG_HOST="hpg"
+
+# Optional: absolute path on HiPerGator of the study's notification queue (events.tsv).
+# Leave empty until the agent tells you the path. The file holds stage names and counts only.
+TII_REMOTE_EVENTS=""
+
+# 0 = tell me once when the session drops. N > 0 = remind me every N hours until I sign in.
+TII_REMIND_HOURS=0

@@ -47,3 +47,7 @@ lacdm/artifacts/*
 .idea/
 .vscode/
 .claude/
+
+# Study TII-CEE-1: local-only files, never committed
+reports/research-advancement/PITCH_PROFESSOR_LIU.txt
+reports/research-advancement/LAUNCH_PROMPT.txt

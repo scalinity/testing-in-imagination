@@ -25,6 +25,7 @@
 | `extension/` | Synthetic env, world model, planners |
 | `extension/envs/synthetic_diagnosis/` | Stage 1 synthetic CDM env + JSONL tuple export |
 | `cdm-extension/daniel-escalante/` | Commit guard and chart-availability reranking on the replication baseline (Daniel); results in `results/credentialed/phase-{a,b}/` |
+| `reports/research-advancement/` | Study TII-CEE-1, version 3.1 (Daniel): specification, kickoff, authorization, watcher design, prior-work matrix, proof and check script |
 | `tools/` | Offline verification scripts |
 | `results/` | Logged metrics only |
 

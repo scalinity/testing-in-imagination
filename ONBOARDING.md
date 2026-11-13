@@ -26,3 +26,7 @@ D-1 (incorrect_reward config ≠ paper), D-2 (physical-exam cost), D-3 (Mixtral 
 ## First coding milestone
 
 Phase E: unit tests for parsers, rewards, unavailable branch, stub metrics — then synthetic env under `extension/envs/`.
+
+## Current study: TII-CEE-1 (from November 13, 2026)
+
+The active study lives in `reports/research-advancement/` on branch `tii-cee-1/2026-11-13`. Start with `KICKOFF_RESEARCH_ADVANCEMENT.txt`, then `SPEC_RESEARCH_ADVANCEMENT.md` (version 3.1) and `AUTHORIZATION.md`. For that study, its authorization and specification govern wherever they differ from the phase order and the ask-before list above.

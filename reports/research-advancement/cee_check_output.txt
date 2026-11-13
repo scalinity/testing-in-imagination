@@ -1,0 +1,52 @@
+Part 1  gain identity on random cases
+  identity, projected weights: max |direct - identity| = 1.89e-15
+  identity, arbitrary weights: max |direct - identity| = 8.47e-16
+  KL_inc equals KL(J'||J):     max difference          = 1.04e-12
+  smallest KL_inc over cases:  1.054e-07   (must be >= 0 up to tolerance)
+  dual optimality: max F(random u) - F(projected u)    = 0.00e+00  (must be <= 0)
+  cases not converged and excluded from (iii)-(iv): 0 of 3000
+Part 2  special cases
+  (a) point-mass predictive returns the prior: max error 3.33e-16
+  (b) Bayes-consistent pair unchanged: max posterior change 2.22e-16, max KL_inc 2.22e-16
+  (c) coherent VOI minimum over cases: -3.979e-13; raw score negative in 729 cases, raw entropy reduction negative in 700 cases of 1500
+  (d) calibrated marginals: max |gain - KL_inc| = 1.55e-15
+  (e) never-updating reader is coherent: max KL_inc at tau=1e7 is 5.00e-14
+Part 3  sequential statements by exact enumeration
+  corrected beliefs are a martingale under the world model, and the implied prior equals c_0: max error 1.60e-13
+  tower property, c_t = M(y | o_1..o_t) for every prefix: max error 1.45e-13
+  T-step identity for the corrected agent: max |lhs - rhs| = 1.55e-15
+  same identity for the raw reader with its drifted implied prior: max |lhs - rhs| = 1.33e-15
+  raw reader, L1 distance between implied prior and c_0 after 3 steps: mean 0.328, max 0.966
+Part 4  reproduction of the November 12 probe (twin parameters from profiles.py)
+  p_atyp=0.07 nb        NLL@8 raw 0.543 -> projected 0.524 | acc@8 raw 0.882 -> projected 0.868 | Bayes NLL 0.429 acc 0.882 | mean KL_inc 0.0034   matches Nov 12
+  p_atyp=0.07 entrench  NLL@8 raw 0.761 -> projected 0.524 | acc@8 raw 0.842 -> projected 0.868 | Bayes NLL 0.429 acc 0.882 | mean KL_inc 0.0154   matches Nov 12
+  p_atyp=0.07 fixed     NLL@8 raw 0.695 -> projected 0.524 | acc@8 raw 0.817 -> projected 0.868 | Bayes NLL 0.429 acc 0.882 | mean KL_inc 0.0102   matches Nov 12
+  p_atyp=0.07 over      NLL@8 raw 0.947 -> projected 1.600 | acc@8 raw 0.882 -> projected 0.796 | Bayes NLL 0.429 acc 0.882 | mean KL_inc 0.0491   matches Nov 12
+  p_atyp=0.20 nb        NLL@8 raw 1.038 -> projected 0.903 | acc@8 raw 0.756 -> projected 0.723 | Bayes NLL 0.757 acc 0.759 | mean KL_inc 0.0107   matches Nov 12
+  control, reader's own predictive as world model: NLL@8 raw 0.542878 projected 0.542878 mean KL_inc 9.00e-18
+Part 5  scale repair by information-budget matching
+  p_atypical = 0.07, n = 3000, 8 steps, oracle world model, stateful track
+    Bayes reference: NLL 0.433, accuracy 0.880
+    variant                                               nb              entrench                 fixed                  over                 under    (NLL / accuracy / geometric-mean tau)
+    raw                                          0.581/0.880           0.797/0.840           0.766/0.808           1.029/0.877           0.498/0.873
+    projection only                              0.545/0.866           0.545/0.866           0.545/0.866           1.705/0.799           0.663/0.814
+    scale+proj, true budget                 0.449/0.878/2.02      0.449/0.878/2.02      0.449/0.878/2.02      0.449/0.878/3.69      0.449/0.878/1.07
+    true budget x2                          3.634/0.817/0.23      3.634/0.817/0.23      3.634/0.817/0.23      3.981/0.817/0.31      2.698/0.820/0.18
+    shrink-only, true budget                0.449/0.878/2.02      0.449/0.878/2.02      0.449/0.878/2.02      0.449/0.878/3.70      0.635/0.851/1.82
+    shrink-only, budget x0.5                0.545/0.875/3.18      0.545/0.875/3.18      0.545/0.875/3.18      0.545/0.875/5.58      0.633/0.861/2.05
+    shrink-only, budget x2                  0.469/0.877/1.65      0.469/0.877/1.65      0.469/0.877/1.65      1.425/0.834/1.17      0.640/0.842/1.66
+    shrink-only, noisy budget               0.499/0.867/2.26      0.499/0.867/2.26      0.499/0.867/2.26      0.842/0.850/2.78      0.638/0.851/1.85
+    shrink-only, independence budget        0.537/0.866/1.01      0.537/0.866/1.01      0.537/0.866/1.01      0.560/0.864/1.99      0.663/0.814/1.00
+  p_atypical = 0.20, n = 3000, 8 steps, oracle world model, stateful track
+    Bayes reference: NLL 0.754, accuracy 0.758
+    variant                                               nb              entrench                 fixed                  over                 under    (NLL / accuracy / geometric-mean tau)
+    raw                                          1.039/0.755           1.456/0.706           1.354/0.650           1.878/0.755           0.808/0.746
+    projection only                              0.893/0.729           0.893/0.729           0.893/0.729           2.184/0.725           0.908/0.687
+    scale+proj, true budget                 0.768/0.754/2.43      0.768/0.754/2.43      0.768/0.754/2.43      0.769/0.754/4.29      0.768/0.754/1.34
+    true budget x2                          2.073/0.749/0.79      2.073/0.749/0.79      2.073/0.749/0.79      2.168/0.749/1.39      1.830/0.749/0.45
+    shrink-only, true budget                0.769/0.755/2.43      0.769/0.755/2.43      0.769/0.755/2.43      0.769/0.754/4.29      0.885/0.720/1.99
+    shrink-only, budget x0.5                0.817/0.751/3.41      0.817/0.751/3.41      0.817/0.751/3.41      0.817/0.751/5.86      0.884/0.729/2.23
+    shrink-only, budget x2                  0.784/0.747/2.06      0.784/0.747/2.06      0.784/0.747/2.06      1.321/0.750/1.98      0.887/0.714/1.80
+    shrink-only, noisy budget               0.797/0.746/2.60      0.797/0.746/2.60      0.797/0.746/2.60      0.927/0.740/3.85      0.886/0.720/2.01
+    shrink-only, independence budget        0.884/0.731/1.02      0.884/0.731/1.02      0.884/0.731/1.02      0.959/0.721/1.93      0.909/0.687/1.00
+ALL ASSERTED CHECKS PASSED in 407 s

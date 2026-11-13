@@ -1,0 +1,15 @@
+# --- TII HiPerGator keeper (begin) ---
+# Connection multiplexing as documented by UF Research Computing (docs.rc.ufl.edu/access/ssh_multiplexing).
+# Replace GATORLINK_USERNAME. If you already have a "Host hpg" entry, keep yours and add only the
+# six option lines below to it instead of appending this whole block.
+Host hpg
+    HostName hpg.rc.ufl.edu
+    User GATORLINK_USERNAME
+    # Port 2222              # only if you log in with SSH keys, per UF Research Computing's SSH keys page
+    ControlMaster auto
+    ControlPath ~/.ssh/control/%C
+    ControlPersist 12h
+    ServerAliveInterval 60
+    ServerAliveCountMax 5
+    TCPKeepAlive yes
+# --- TII HiPerGator keeper (end) ---
