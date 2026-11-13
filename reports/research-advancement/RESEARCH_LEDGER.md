@@ -105,7 +105,7 @@ df467ea, all unchanged since the review.
 
 | ID | Status | Card | Notes |
 |---|---|---|---|
-| E0 | COMPLETED (VERIFIED_CODE, PASS) | EXPERIMENT_CARDS/E0.md | 166 fixtures pass at ef7c4ac; tii-cee/results/E0/manifest.json |
+| E0 | COMPLETED (VERIFIED_CODE, PASS) | EXPERIMENT_CARDS/E0.md | Run 1: 166 fixtures at ef7c4ac. Run 2 after the tracks extension: 185 fixtures at 714feb2. tii-cee/results/E0/runs/ |
 | E1 (A to D) | PLANNED | EXPERIMENT_CARDS/E1.md | Twin in construction |
 | E2 | PLANNED | EXPERIMENT_CARDS/E2.md | Waits on G2a |
 | E3 | PLANNED | EXPERIMENT_CARDS/E3.md | Waits on REVIEW-001 repair and G1 |
