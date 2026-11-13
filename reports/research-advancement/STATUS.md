@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 4:10 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 5:25 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -24,16 +24,20 @@ Updated November 13, 2026, about 4:10 PM EST. Times are US Eastern.
   E2, E4 and E7 are amended. The extension with result-dependent readers is SUPPORTED under W0 and
   W2 ("D-REGIME extension"), with a residual dependence on outcome frequencies reported.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
-  done; G_resume met, trainings submitted 2:46 PM EST); E9 IN PROGRESS (Granite bench running); E11 SKIPPED (accepted gap, not run); all others PLANNED.
+  done; G_resume met; eight of the nine trainings running, E10 fold 2 waiting on the class CPU
+  limit); E9 IN PROGRESS (the Granite bench completed 4:35 PM EST with outcome ok and no recipe
+  repair; its three trainings deployed in graph_training_m3.json at 87799de, installed 5:09 PM EST);
+  E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
   (accepted by Daniel November 13, 2026). BLOCKED-001 is closed.
 - AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
   their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
   unaffected.
-- Next executable actions: the E8 and E10 trainings run (graph_training_m2.json, deployed at
-  e3f98b8; nine jobs submitted 2:46 PM EST; each rolls out after training); E9's training after the
-  Granite bench, with a redeploy that also adds probe conformance and E10's cohort-X integrity check; the E1-C interval finishes locally (about 20
+- Next executable actions: the E8, E9 and E10 trainings run, each in two parts of about 14 hours,
+  and each rolls out on its validation or held-out admissions after; the per-policy probe
+  conformance of section 10.1 and E10's cohort-X integrity check are built before those rollouts
+  finish; the E1-C interval finishes locally (about 20
   hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
@@ -103,25 +107,31 @@ Updated November 13, 2026, about 4:10 PM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| e9-bench-granite, attempt 3 | 51213951 | cai5724 | RUNNING | 3:47 PM EST |
-| e8-train-s270, attempt 1 | 51208027 | cai6734 | PENDING (Resources) | submitted 2:46 PM EST |
-| e8-train-s271, attempt 1 | 51208029 | cai6734 | RUNNING | about 3:12 PM EST |
+| e8-train-s270, attempt 1 | 51208027 | cai6734 | RUNNING | 2:47 PM EST |
+| e8-train-s271, attempt 1 | 51208029 | cai6734 | RUNNING | 3:04 PM EST |
 | e8-train-s272, attempt 1 | 51208030 | cai6734 | RUNNING | 3:13 PM EST |
 | e8-train-s273, attempt 1 | 51208032 | cai6734 | RUNNING | 3:28 PM EST |
-| e10-train-f0, attempt 1 | 51208033 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
-| e10-train-f1, attempt 1 | 51208034 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
+| e10-train-f0, attempt 1 | 51208033 | cai6734 | RUNNING | 4:39 PM EST |
+| e10-train-f1, attempt 1 | 51208034 | cai6734 | RUNNING | 4:39 PM EST |
 | e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
 | e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
 | e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
+| e9-train-s269, attempt 1 | 51225455 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
+| e9-train-s270, attempt 1 | 51225464 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
+| e9-train-s271, attempt 1 | 51225466 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
-Waiting trainings are held by the class QOS's shared CPU and memory (250 GB per account); their
-request was lowered from 40 to 16 GB at about 3:12 PM EST (RESEARCH_LEDGER.md, "Operations").
+Waiting trainings are held by the class QOS's shared limits of 32 CPUs and 250 GB per account. At
+5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
+(ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
+time) and 6.4 to 6.8 GB, against a request of 4 CPUs and 16 GB (40 for the four first parts that
+started before the memory change).
 
 ## 6. GPU-hours by experiment
 
 Benches: 3.707 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
-Nemotron bench's five attempts, 1.624, 0.854, 0.410, 0.396 and 0.051), complete. E9: 0.238 so far
-on the running Granite bench. E8, E10: none spent. As of 2:15 PM EST from the runlog and the
-watcher's status.json.
+Nemotron bench's five attempts, 1.624, 0.854, 0.410, 0.396 and 0.051), complete. E9: 2.306 on the
+Granite bench's four attempts (1.393, 0.325, 0.545, 0.043), complete; E9's trainings are estimated
+at 28.2 GPU-hours each. E8, E10: none charged yet (a training is charged as each part ends). As of
+5:10 PM EST from the runlog.
 Estimates and allowances: AUTHORIZATION.md section 4.

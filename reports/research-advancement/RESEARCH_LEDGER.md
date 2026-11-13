@@ -154,6 +154,9 @@ retry.
 | e10-train-f2 | 1 | 51208035 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
+| e9-train-s269 | 1 | 51225455 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
+| e9-train-s270 | 1 | 51225464 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
+| e9-train-s271 | 1 | 51225466 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
 
 ## 6. Recorded design decisions
 
