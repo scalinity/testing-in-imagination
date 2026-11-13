@@ -51,35 +51,47 @@ def _read(path):
         return None
 
 
-def check(study_dir, today=None):
-    """Return "ok" or the code of the first failed check: hash, signature, expiry."""
+def inspect(study_dir, today=None):
+    """Each check by itself, and "code": "ok" or the first that failed (hash, signature, expiry)."""
     study_dir = Path(study_dir)
     try:
         found = sha256_file(study_dir / AUTHORIZATION)
     except OSError:
-        return "authorization_missing"
-    if found != AUTHORIZATION_SHA256:
-        return "authorization_changed"
+        found = None
     signature = _read(study_dir / SIGNATURE)
-    if signature is None:
-        return "signature_missing"
-    if AUTHORIZATION_SHA256 not in signature:
-        return "signature_mismatch"
-    if (today or datetime.date.today()) > EXPIRES:
-        return "authorization_expired"
-    return "ok"
+    sha256_ok = found == AUTHORIZATION_SHA256
+    signature_ok = signature is not None and AUTHORIZATION_SHA256 in signature
+    if found is None:
+        code = "authorization_missing"
+    elif not sha256_ok:
+        code = "authorization_changed"
+    elif signature is None:
+        code = "signature_missing"
+    elif not signature_ok:
+        code = "signature_mismatch"
+    elif (today or datetime.date.today()) > EXPIRES:
+        code = "authorization_expired"
+    else:
+        code = "ok"
+    return {"code": code, "sha256_ok": sha256_ok, "signature_ok": signature_ok}
+
+
+def check(study_dir, today=None):
+    """Return "ok" or the code of the first failed check."""
+    return inspect(study_dir, today)["code"]
 
 
 def addenda(study_dir):
-    """What the manifest records about each addendum: its digest and whether it is signed now."""
+    """Each addendum on disk: its digest, whether that is the text these pools mirror, and whether
+    it counts now (SIGNATURE.md contains that digest)."""
     study_dir = Path(study_dir)
     try:
         found = sha256_file(study_dir / ADDENDUM_1)
     except OSError:
         return {}
     signature = _read(study_dir / SIGNATURE) or ""
-    signed = found == ADDENDUM_1_SHA256 and found in signature
-    return {ADDENDUM_1: {"sha256": found, "signed": signed}}
+    sha256_ok = found == ADDENDUM_1_SHA256
+    return {ADDENDUM_1: {"sha256": found, "sha256_ok": sha256_ok, "signed": sha256_ok and found in signature}}
 
 
 def pools(study_dir):

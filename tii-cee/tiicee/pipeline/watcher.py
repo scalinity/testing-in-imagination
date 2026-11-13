@@ -4,9 +4,12 @@ Implements WATCHER_DESIGN.md section 4, steps 1 to 9. Scheduler calls per cycle:
 squeue, one sbatch per submission, and scrontab only when the study has nothing left to run.
 It runs no analysis; the only judgments are the retry table and the committed gate rule scripts.
 
-Everything it writes to events.tsv and STATUS.md is names, counts, numbers and codes, checked by
-export_guard before it is written. Standard library only and Python 3.9 compatible, because it
-runs under the compute node's /usr/bin/python3.
+What it writes for others to read follows monitor/DATA_CONTRACT.md: state/status.json and
+state/STATUS.md every cycle, state/runlog.jsonl (submitted, started, ended, resubmitted, refused,
+gate_decided, blocked) and state/events.tsv. All of it is names, counts, numbers and codes, checked
+by export_guard. Its own diagnostics go to standard output, which scrontab appends to the watcher
+log. Standard library only and Python 3.9 compatible, because it runs under the compute node's
+/usr/bin/python3.
 """
 from __future__ import annotations
 
@@ -22,7 +25,7 @@ from . import authorization, export_guard, sbatch
 from . import graph as graphs
 from . import manifest as manifests
 from .paths import Paths
-from .util import append_line, canonical, now, read_json, sha256_file, write_json, write_new_json, write_text
+from .util import append_line, canonical, iso, now, read_json, sha256_file, write_json, write_new_json, write_text
 
 # Status words of SPEC_RESEARCH_ADVANCEMENT.md section 4, plus REFUSED and BLOCKED.
 PLANNED, QUEUED, RUNNING, INTERRUPTED = "PLANNED", "QUEUED", "RUNNING", "INTERRUPTED"
@@ -30,13 +33,17 @@ FAILED, COMPLETED, SKIPPED, REFUSED, BLOCKED = "FAILED", "COMPLETED", "SKIPPED B
 STATUSES = (PLANNED, BLOCKED, QUEUED, RUNNING, INTERRUPTED, FAILED, REFUSED, COMPLETED, SKIPPED)
 ACTIVE = (QUEUED, RUNNING)
 
+CYCLE_SECONDS = 900  # the scrontab entry runs every 15 minutes
 LOCK_STALE_SECONDS = 20 * 60
 RETRIES = {"interrupt": 3, "oom": 1, "other": 1}  # per stage; "continue" and "done" are not counted
 MISSING_CYCLES = 4  # a submitted job unknown to both squeue and sacct for this long is a failure
 ENDED = ("COMPLETED", "FAILED", "TIMEOUT", "PREEMPTED", "NODE_FAIL", "OUT_OF_MEMORY", "CANCELLED",
          "BOOT_FAIL", "DEADLINE", "REVOKED", "MISSING")
-SACCT_FORMAT = "JobID,JobName,State,ExitCode,ElapsedRaw,AllocTRES,Account,QOS"
+SACCT_FORMAT = "JobID,JobName,State,ExitCode,ElapsedRaw,AllocTRES,Account,QOS,Start,End"
 SQUEUE_FORMAT = "%i|%j|%T|%a|%q|%b|%C"
+# The fields of a runlog.jsonl line, in the order monitor/DATA_CONTRACT.md shows them.
+RUNLOG_FIELDS = ("stage", "experiment", "attempt", "job_id", "account", "state", "exit_code", "elapsed_s",
+                 "gpu_hours", "gate", "result", "path_taken", "item", "title")
 TAG = "# tii-watcher"
 
 
@@ -61,6 +68,14 @@ def gpus_in(tres):
     """GPU count in a Slurm TRES or gres string: gres/gpu=1, gpu:rtx_pro_6000:1, gres:gpu:2."""
     match = re.search(r"gpu(?::[A-Za-z0-9_.-]+)?[:=](\d+)", tres)
     return int(match.group(1)) if match else (1 if "gpu" in tres else 0)
+
+
+def clock(text):
+    """A sacct Start or End (local time, 2026-11-13T03:10:00) with its offset; None for Unknown."""
+    try:
+        return iso(time.mktime(time.strptime(text, "%Y-%m-%dT%H:%M:%S")))
+    except ValueError:
+        return None
 
 
 def remove_tagged(crontab):
@@ -111,6 +126,18 @@ def progress_mark(paths, stage_id):
     return newest
 
 
+def experiment_status(statuses):
+    """One status for an experiment from its stages: what is happening now, else what is left."""
+    for status in (RUNNING, QUEUED, INTERRUPTED, FAILED):
+        if status in statuses:
+            return status
+    if BLOCKED in statuses or REFUSED in statuses:
+        return BLOCKED
+    if PLANNED in statuses:
+        return PLANNED
+    return COMPLETED if COMPLETED in statuses else SKIPPED
+
+
 def take_lock(paths):
     """Step 1. Returns None if another cycle holds the lock, else the age of a stale lock or 0."""
     paths.state.mkdir(parents=True, exist_ok=True)
@@ -135,9 +162,21 @@ def take_lock(paths):
     return int(age)
 
 
+def mark_lock_held(paths):
+    """A cycle that found the lock held says so in status.json and changes nothing else."""
+    try:
+        status = read_json(paths.status_json)
+        if isinstance(status, dict) and isinstance(status.get("watcher"), dict):
+            status["watcher"]["lock"] = "held"
+            write_json(paths.status_json, status)
+    except (OSError, ValueError):
+        pass
+
+
 class Cycle:
-    def __init__(self, paths):
+    def __init__(self, paths, lock="ok"):
         self.paths = paths
+        self.lock = lock  # "ok", or "stale_taken" when this cycle took over a stale lock
         self.started = time.time()
         self.meta = read_json(paths.watcher, {})
         self.python = os.environ.get("TII_PYTHON")
@@ -146,22 +185,32 @@ class Cycle:
 
     # ---- records ---------------------------------------------------------------------------
 
-    def log(self, event, **fields):
-        append_line(self.paths.runlog, json.dumps(dict(fields, time=now(), event=event), sort_keys=True))
+    def note(self, text):
+        """A diagnostic line in the watcher's own log. Names and numbers only."""
+        print("%s %s" % (now(), text), flush=True)
+
+    def record(self, event, time=None, **fields):
+        """One runlog.jsonl line (monitor/DATA_CONTRACT.md). time is when it happened, if known."""
+        if not set(fields) <= set(RUNLOG_FIELDS):
+            raise ValueError("not a runlog field")
+        line = {"time": time or now(), "event": event}
+        line.update((key, fields[key]) for key in RUNLOG_FIELDS if fields.get(key) is not None)
+        append_line(self.paths.runlog, json.dumps(line))
 
     def emit(self, kind, **detail):
         line = "%s\t%s\t%s" % (now(), kind, pairs(detail))
         if not export_guard.event_ok(line):
             raise ValueError("an event must hold names, counts, numbers and codes only")
         append_line(self.paths.events, line)
-        self.log("event", kind=kind, text=pairs(detail))
         self.counts["events"] += 1
 
     def load_state(self, stage):
-        fresh = {"id": stage["id"], "status": PLANNED, "job_id": None, "submitted": None,
-                 "attempts": [], "retries": {"interrupt": 0, "oom": 0, "other": 0},
+        fresh = {"id": stage["id"], "status": PLANNED, "job_id": None, "submitted": None, "job": None,
+                 "attempt": 0, "attempt_count": 0, "attempts": [],
+                 "retries": {"interrupt": 0, "oom": 0, "other": 0},
                  "mem_gb": int(math.ceil(stage["resources"]["mem_gb"])), "checkpoint": None,
-                 "progress_mark": 0, "manifest_id": None, "gpu_hours": 0.0, "missing": 0}
+                 "progress_mark": 0, "manifest_id": None, "gpu_hours": 0.0, "live_gpu_hours": 0.0,
+                 "started_logged": False, "missing": 0}
         return dict(fresh, **read_json(self.paths.stage_state(stage["id"]), {}))
 
     def save(self, state):
@@ -171,17 +220,21 @@ class Cycle:
     def block(self, state, key):
         state.update(blocked_from=state["status"], blocked_by=key, status=BLOCKED)
 
+    def job_fields(self, stage, state, job_id=None, account=None):
+        return {"stage": stage["id"], "experiment": stage["experiment"], "attempt": state["attempt"],
+                "job_id": job_id or state["job_id"], "account": account or state.get("account")}
+
     # ---- the cycle -------------------------------------------------------------------------
 
     def run(self):
         paths = self.paths
         if not self.python:
-            self.log("config_error", code="TII_PYTHON_unset")
+            self.note("config_error code=TII_PYTHON_unset")
             return 2
         try:
             self.graph = graphs.load(paths)
         except graphs.GraphError as error:
-            self.log("graph_invalid", detail=str(error))
+            self.note("graph_invalid %s" % error)
             self.block_keys["graph"] = {"code": "graph_invalid"}
             self.sync_blocks(keep_open=True)
             return 1
@@ -196,13 +249,18 @@ class Cycle:
                 self.gate_records[gate["id"]] = record
 
         # Step 2: authorization. The marking of stages happens with the submissions below.
-        self.auth = authorization.check(paths.study_dir)
+        self.auth = authorization.inspect(paths.study_dir)
         self.pools = authorization.pools(paths.study_dir)
+        self.gpu_in_use = {}
 
         # Step 3: the cycle's only accounting query and only queue query.
         accounting, queue = self.sacct(), self.squeue()
         if accounting is None or queue is None:
-            self.log("scheduler_error", sacct=accounting is not None, squeue=queue is not None)
+            self.note("scheduler_error sacct=%s squeue=%s" % (accounting is not None, queue is not None))
+            for stage in self.graph.stages:  # what this watcher last knew it had in the queue
+                state = self.states[stage["id"]]
+                if state["status"] in ACTIVE and stage["resources"]["gpus"] and state.get("account"):
+                    self.gpu_in_use[state["account"]] = self.gpu_in_use.get(state["account"], 0) + stage["resources"]["gpus"]
             self.sync_blocks(keep_open=True)
             self.write_status(scheduler="error")
             return 1
@@ -211,8 +269,8 @@ class Cycle:
             if state["status"] == BLOCKED:
                 state["status"] = state.pop("blocked_from")
                 state.pop("blocked_by", None)
-        if self.auth != "ok":
-            self.block_keys["authorization"] = {"code": self.auth}
+        if self.auth["code"] != "ok":
+            self.block_keys["authorization"] = {"code": self.auth["code"]}
         final = self.meta.get("final")
         if final and not final["scrontab_disabled"]:
             self.block_keys["scrontab"] = {"code": "entry_not_disabled"}
@@ -253,11 +311,12 @@ class Cycle:
         records = []
         for line in out.splitlines():
             fields = line.split("|")
-            if len(fields) != 8 or not fields[0].isdecimal():
+            if len(fields) != 10 or not fields[0].isdecimal():
                 continue
             records.append({"id": fields[0], "name": fields[1], "state": (fields[2].split() or [""])[0],
                             "exit_code": int(fields[3].split(":")[0] or 0), "elapsed": int(fields[4] or 0),
-                            "gpus": gpus_in(fields[5]), "account": fields[6], "qos": fields[7]})
+                            "gpus": gpus_in(fields[5]), "account": fields[6], "qos": fields[7],
+                            "start": clock(fields[8]), "end": clock(fields[9])})
         return records
 
     def squeue(self):
@@ -277,7 +336,7 @@ class Cycle:
 
     def account(self, accounting, queue):
         in_queue = {row["id"]: row for row in queue}
-        known = {record["id"] for record in accounting}
+        known = {record["id"]: record for record in accounting}
         for stage in self.graph.stages:
             state = self.states[stage["id"]]
             # Every ended job that carries this stage's name is logged and charged exactly once,
@@ -289,41 +348,68 @@ class Cycle:
             job = state["job_id"]
             if job is None:
                 continue
-            if job in in_queue:
-                state["status"] = QUEUED if in_queue[job]["state"] == "PENDING" else RUNNING
+            record = known.get(job)
+            if job in in_queue or record is not None:
+                # In the queue, or ended with accounting not caught up: decide the end next cycle.
                 state["missing"] = 0
-            elif job in known:
-                state["missing"] = 0  # ended, but accounting has not caught up; decide next cycle
+                live = in_queue[job]["state"] if job in in_queue else record["state"]
+                if job in in_queue:
+                    state["status"] = QUEUED if live == "PENDING" else RUNNING
+                seen = record or {}
+                state["job"] = {"state": live, "started_at": seen.get("start"), "elapsed_s": seen.get("elapsed")}
+                if record is not None:
+                    state["live_gpu_hours"] = round(record["gpus"] * record["elapsed"] / 3600.0, 6)
+                    self.log_started(stage, state, record)
             else:
                 state["missing"] += 1
                 if state["missing"] >= MISSING_CYCLES:
                     self.ended(stage, state, {"id": job, "state": "MISSING", "exit_code": 0, "elapsed": 0,
                                               "gpus": 0, "account": state.get("account"),
-                                              "qos": state.get("qos")}, True)
+                                              "qos": state.get("qos"), "start": None, "end": None}, True)
+
+    def log_started(self, stage, state, record):
+        """One "started" line per job, timed by the scheduler, the first time a start is seen."""
+        if record["start"] and not state["started_logged"]:
+            self.record("started", time=record["start"], state="RUNNING",
+                        **self.job_fields(stage, state, record["id"], record["account"]))
+            state["started_logged"] = True
 
     def ended(self, stage, state, record, tracked):
         name = stage["id"]
-        progressed = progress_mark(self.paths, name) > state["progress_mark"]
-        outcome = classify(record["state"], record["exit_code"], progressed) if tracked else "untracked"
-        attempt = {"job_id": record["id"], "state": record["state"], "exit_code": record["exit_code"],
-                   "elapsed_s": record["elapsed"],
+        if tracked:
+            self.log_started(stage, state, record)  # a job that started and ended between two cycles
+            progressed = progress_mark(self.paths, name) > state["progress_mark"]
+            outcome = classify(record["state"], record["exit_code"], progressed)
+        else:
+            state["attempt_count"] += 1
+            outcome = "untracked"
+        number = state["attempt"] if tracked else state["attempt_count"]
+        attempt = {"attempt": number, "job_id": record["id"], "state": record["state"],
+                   "exit_code": record["exit_code"], "elapsed_s": record["elapsed"],
                    "gpu_hours": round(record["gpus"] * record["elapsed"] / 3600.0, 6),
-                   "outcome": outcome, "account": record["account"], "qos": record["qos"]}
-        self.log("attempt", stage=name, experiment=stage["experiment"], **attempt)
+                   "outcome": outcome, "account": record["account"], "qos": record["qos"],
+                   "submitted_at": iso(state["submitted"]) if tracked and state["submitted"] else None,
+                   "started_at": record["start"], "ended_at": record["end"] or now()}
+        described = {"stage": name, "experiment": stage["experiment"], "attempt": number,
+                     "job_id": record["id"], "account": record["account"]}
+        self.record("ended", time=attempt["ended_at"], state=record["state"], exit_code=record["exit_code"],
+                    elapsed_s=record["elapsed"], gpu_hours=attempt["gpu_hours"], **described)
         self.counts["ended"] += 1
         state["attempts"].append(attempt)
         state["gpu_hours"] = round(state["gpu_hours"] + attempt["gpu_hours"], 6)
         if tracked:
-            state.update(job_id=None, submitted=None, missing=0)
+            state.update(job_id=None, submitted=None, job=None, live_gpu_hours=0.0,
+                         started_logged=False, missing=0)
             if outcome == "done":
                 state["status"] = COMPLETED
                 self.emit("stage completed", stage=name, experiment=stage["experiment"],
-                          attempts=len(state["attempts"]), gpu_hours=state["gpu_hours"])
+                          attempts=state["attempt_count"], gpu_hours=state["gpu_hours"])
             elif outcome == "continue":
                 state["status"] = INTERRUPTED
             elif outcome == "refused":
                 state["status"] = REFUSED
                 state["refusal"] = self.refusal(name, record["exit_code"])
+                self.record("refused", time=attempt["ended_at"], exit_code=record["exit_code"], **described)
             elif state["retries"][outcome] < RETRIES[outcome]:
                 state["retries"][outcome] += 1
                 state["status"] = INTERRUPTED
@@ -332,7 +418,7 @@ class Cycle:
             else:
                 state["status"] = FAILED
                 self.emit("failure", stage=name, experiment=stage["experiment"], outcome=outcome,
-                          state=record["state"], exit=record["exit_code"], attempts=len(state["attempts"]))
+                          state=record["state"], exit=record["exit_code"], attempts=state["attempt_count"])
         self.save(state)
 
     def refusal(self, name, exit_code):
@@ -352,11 +438,28 @@ class Cycle:
             return False
         return stage["gate"] is None or self.gate_records.get(stage["gate"], {}).get("result") == "met"
 
+    def used(self, state):
+        """GPU-hours the scheduler shows for a stage so far: ended attempts and the running job."""
+        return state["gpu_hours"] + state["live_gpu_hours"]
+
     def remaining(self, stage):
-        return max(stage["estimate_gpu_hours"] - self.states[stage["id"]]["gpu_hours"], 0.0)
+        return max(stage["estimate_gpu_hours"] - self.used(self.states[stage["id"]]), 0.0)
 
     def spent(self, key):
-        return sum(self.states[s["id"]]["gpu_hours"] for s in self.graph.stages if s["allowance_key"] == key)
+        return round(sum(self.used(self.states[s["id"]]) for s in self.graph.stages if s["allowance_key"] == key), 6)
+
+    def begin(self, stage, state, job_id, account, qos, queued=True):
+        """A job now belongs to this stage: submitted here, or found in the queue and adopted."""
+        state["attempt_count"] += 1
+        state.update(status=QUEUED if queued else RUNNING, job_id=job_id, submitted=self.started,
+                     attempt=state["attempt_count"], account=account, qos=qos,
+                     job={"state": "PENDING" if queued else "RUNNING", "started_at": None, "elapsed_s": None},
+                     live_gpu_hours=0.0, started_logged=False,
+                     checkpoint=str(self.paths.stage_dir(stage["id"])),
+                     progress_mark=progress_mark(self.paths, stage["id"]))
+        self.save(state)
+        self.record("submitted" if state["attempt"] == 1 else "resubmitted", time=iso(self.started),
+                    **self.job_fields(stage, state))
 
     def submit(self, queue):
         tracked = {state["job_id"] for state in self.states.values() if state["job_id"]}
@@ -380,13 +483,10 @@ class Cycle:
             name, state = stage["id"], self.states[stage["id"]]
             stray = strays.pop("tii-" + name, None)
             if stray:  # adopt a job that is already there instead of starting a second
-                state.update(job_id=stray["id"], submitted=self.started, account=stray["account"],
-                             qos=stray["qos"], status=QUEUED if stray["state"] == "PENDING" else RUNNING,
-                             progress_mark=progress_mark(self.paths, name))
-                self.save(state)
-                self.log("adopted", stage=name, job_id=stray["id"])
+                self.begin(stage, state, stray["id"], stray["account"], stray["qos"], stray["state"] == "PENDING")
+                self.note("adopted stage=%s job=%s" % (name, stray["id"]))
                 continue
-            if self.auth != "ok":
+            if self.auth["code"] != "ok":
                 self.block(state, "authorization")
                 continue
             resuming = state["status"] == INTERRUPTED
@@ -415,23 +515,21 @@ class Cycle:
                 self.block(state, "manifest:" + name)
                 self.block_keys["manifest:" + name] = {"stage": name, "code": refusal.code, "role": refusal.role}
                 continue
-            attempt = len(state["attempts"]) + 1
-            job_id, code = sbatch.submit(self.paths, stage, pool, state["mem_gb"], self.python, attempt)
+            job_id, code = sbatch.submit(self.paths, stage, pool, state["mem_gb"], self.python,
+                                         state["attempt_count"] + 1)
             if job_id is None:
                 self.block_keys["submit:" + name] = {"stage": name, "rc": code}
-                self.log("submit_failed", stage=name, rc=code)
+                self.note("submit_failed stage=%s rc=%s" % (name, code))
                 continue
-            state.update(status=QUEUED, job_id=job_id, submitted=self.started, account=pool.account,
-                         qos=pool.qos, manifest_id=manifest["manifest_id"],
-                         checkpoint=str(self.paths.stage_dir(name)),
-                         progress_mark=progress_mark(self.paths, name))
-            self.save(state)
-            self.log("submitted", stage=name, job_id=job_id, account=pool.account, qos=pool.qos,
-                     mem_gb=state["mem_gb"], attempt=attempt)
+            state["manifest_id"] = manifest["manifest_id"]
+            self.begin(stage, state, job_id, pool.account, pool.qos)
             self.counts["submitted"] += 1
             in_use[kind][(pool.account, pool.qos)] = in_use[kind].get((pool.account, pool.qos), 0) + need
             if not resuming:
                 reserved[key] = reserved.get(key, 0.0) + mine
+
+        for (account, _), held in in_use["gpu"].items():
+            self.gpu_in_use[account] = self.gpu_in_use.get(account, 0) + held
 
     # ---- step 6 ----------------------------------------------------------------------------
 
@@ -446,22 +544,24 @@ class Cycle:
             verdict = self.run_rule(gate)
             if verdict is None:
                 self.block_keys["gate:" + name] = {"gate": name, "code": "rule_failed"}
-                self.log("gate_rule_failed", gate=name)
+                self.note("gate_rule_failed gate=%s" % name)
                 continue
             digests = []
             for item in gate["reads"]:
                 path = self.paths.root / item
                 digests.append({"file": item, "sha256": sha256_file(path) if path.is_file() else None})
-            record = {"gate": name, "decided": now(), "rule": gate["rule"],
+            record = {"gate": name, "decided_at": now(), "rule": gate["rule"],
                       "rule_sha256": sha256_file(self.paths.gate_rules / gate["rule"]),
                       "inputs": {s: self.states[s]["status"] for s in gate["inputs"]},
                       "input_digests": digests, "result": verdict["result"],
-                      "path": verdict.get("path", verdict["result"]),
+                      "path_taken": verdict.get("path", verdict["result"]),
                       "evidence": verdict.get("evidence", {})}
             self.gate_records[name] = record
             record["skipped"] = self.skip_by_gate()
-            self.emit("gate decided", gate=name, result=record["result"], path=record["path"],
+            self.emit("gate decided", gate=name, result=record["result"], path=record["path_taken"],
                       skipped=len(record["skipped"]))
+            self.record("gate_decided", time=record["decided_at"], gate=name, result=record["result"],
+                        path_taken=record["path_taken"])
             try:
                 write_new_json(self.paths.gate_record(name), record)
             except FileExistsError:
@@ -508,11 +608,11 @@ class Cycle:
     # ---- surface, BLOCKED items --------------------------------------------------------------
 
     def check_surface(self):
-        """Move anything unguarded out of export/approved/, then check the whole surface."""
-        for path, code in export_guard.approved_violations(self.paths):
+        """Move anything unguarded out of the trees the Mac copies, then check the whole surface."""
+        for path, code in export_guard.file_violations(self.paths):
             self.paths.quarantine.mkdir(parents=True, exist_ok=True)
             os.replace(path, self.paths.quarantine / ("%d-%s" % (time.time_ns(), path.name)))
-            self.log("quarantined", code=code)
+            self.note("quarantined code=%s" % code)
         try:
             quarantined = len(os.listdir(self.paths.quarantine))
         except OSError:
@@ -520,12 +620,14 @@ class Cycle:
         violations = export_guard.surface_check(self.paths)
         if quarantined or violations:
             self.block_keys["surface"] = {"quarantined": quarantined, "violations": len(violations)}
-            self.log("surface", quarantined=quarantined, violations=violations[:20])
+            self.note("surface quarantined=%d violations=%s" % (quarantined, ",".join(violations[:20]) or "none"))
 
     def sync_blocks(self, keep_open=False):
         """Open an item, with one event, for each new condition; close items whose condition is gone.
 
-        keep_open leaves the other items alone, for a cycle that could not evaluate them.
+        keep_open leaves the other items alone, for a cycle that could not evaluate them. Items are
+        numbered BLOCKED-W001 onward: the W keeps them apart from the items the agent numbers in
+        the repository's BLOCKED.md, where an open one can be recorded under the same id.
         """
         book = read_json(self.paths.blocked, {"next": 1, "items": []})
         open_items = {item["key"]: item for item in book["items"] if item["closed"] is None}
@@ -533,16 +635,18 @@ class Cycle:
             if key in open_items:
                 open_items[key]["detail"] = detail
                 continue
-            item = {"id": "W-%03d" % book["next"], "key": key, "detail": detail, "opened": now(), "closed": None}
+            item = {"id": "BLOCKED-W%03d" % book["next"], "key": key, "detail": detail, "opened": now(), "closed": None}
             book["next"] += 1
             book["items"].append(item)
             self.emit("blocked", item=item["id"], key=key, **detail)
+            self.record("blocked", time=item["opened"], item=item["id"], title=key,
+                        stage=detail.get("stage"), experiment=detail.get("experiment"))
         for key, item in open_items.items():
             if key not in self.block_keys and not keep_open:
                 item["closed"] = now()
-                self.log("blocked_closed", item=item["id"], key=key)
+                self.note("blocked_closed item=%s key=%s" % (item["id"], key))
         write_json(self.paths.blocked, book)
-        self.open_items = [item for item in book["items"] if item["closed"] is None]
+        self.items = book["items"]
         lines = ["# BLOCKED items raised by the watcher, study TII-CEE-1", "",
                  "Conditions the watcher cannot resolve by itself. Open items are copied into the",
                  "repository's BLOCKED.md with the exact request. Items are closed, never deleted.", ""]
@@ -585,35 +689,86 @@ class Cycle:
                       refused=statuses.count(REFUSED), blocked=statuses.count(BLOCKED),
                       waiting=statuses.count(PLANNED))
             final = self.meta["final"] = {"kind": kind, "time": now(), "scrontab_disabled": False}
-            self.log("final", kind=kind)
+            self.note("final kind=%s" % kind.replace(" ", "_"))
         return final
 
     def disable_scrontab(self):
         """Remove only the tagged entry; every other line is reinstalled as it was. True if verified."""
         code, before = call(["scrontab", "-l"])
         if code == 127:  # the command itself could not be run: nothing is known
-            self.log("scrontab", action="scrontab_unavailable")
+            self.note("scrontab unavailable")
             return False
         if code != 0 or TAG not in before:
-            self.log("scrontab", action="nothing_to_disable")
+            self.note("scrontab nothing_to_disable")
             return True
         kept = remove_tagged(before)
         path = write_text(self.paths.state / "scrontab.new", kept)
         code, _ = call(["scrontab", str(path)])
         check, after = call(["scrontab", "-l"])
         verified = code == 0 and TAG not in after and after.strip() == kept.strip()
-        self.log("scrontab", action="disabled" if verified else "disable_not_verified",
-                 kept_lines=len(kept.splitlines()))
+        self.note("scrontab %s kept_lines=%d" % ("disabled" if verified else "disable_not_verified",
+                                                 len(kept.splitlines())))
         return verified
 
     def write_status(self, scheduler="ok"):
+        """STATUS.md for people and status.json for the monitor, from the same numbers."""
         final = self.meta.get("final")
         addendum = authorization.addenda(self.paths.study_dir).get(authorization.ADDENDUM_1)
+        statuses = [state["status"] for state in self.states.values()]
+        counts = {status: statuses.count(status) for status in STATUSES}
+        keys = []
+        for stage in self.graph.stages:
+            if stage["allowance_key"] not in keys:
+                keys.append(stage["allowance_key"])
+        experiments = [{
+            "id": key,
+            "status": experiment_status([self.states[s["id"]]["status"] for s in self.graph.stages
+                                         if s["allowance_key"] == key]),
+            "estimate_gpu_hours": self.graph.allowances[key]["estimate_gpu_hours"],
+            "allowance_gpu_hours": self.graph.allowances[key]["allowance_gpu_hours"],
+            "spent_gpu_hours": self.spent(key)} for key in keys]
+        gates = [{"id": gate["id"], "decided": gate["id"] in self.gate_records,
+                  "result": self.gate_records.get(gate["id"], {}).get("result"),
+                  "path_taken": self.gate_records.get(gate["id"], {}).get("path_taken"),
+                  "decided_at": self.gate_records.get(gate["id"], {}).get("decided_at")}
+                 for gate in self.graph.gates]
+        try:
+            events = [line.split("\t") for line in self.paths.events.read_text().splitlines()[-30:]
+                      if export_guard.event_ok(line)]
+        except OSError:
+            events = []
+
+        status = {
+            "schema": export_guard.STATUS_SCHEMA,
+            "generated_at": now(),
+            "milestone": self.graph.milestone,
+            "watcher": {"cycle": self.meta.get("cycle", 0), "started_at": iso(self.started),
+                        "finished_at": now(), "interval_s": CYCLE_SECONDS, "lock": self.lock,
+                        "completed": final is not None},
+            "authorization": {
+                "ok": self.auth["code"] == "ok", "sha256_ok": self.auth["sha256_ok"],
+                "signature_ok": self.auth["signature_ok"], "expires": authorization.EXPIRES.isoformat(),
+                "addenda": [{"name": authorization.ADDENDUM_1,
+                             "sha256_ok": bool(addendum and addendum["sha256_ok"]),
+                             "signed": bool(addendum and addendum["signed"])}]},
+            "gpu": {"limit_by_account": {pool.account: pool.limit for pool in self.pools if pool.kind == "gpu"},
+                    "in_use_by_account": {pool.account: self.gpu_in_use.get(pool.account, 0)
+                                          for pool in self.pools if pool.kind == "gpu"}},
+            "counts": counts,
+            "experiments": experiments,
+            "stages": [self.stage_row(stage) for stage in self.graph.stages],
+            "gates": gates,
+            "blocked": [{"id": item["id"], "title": item["key"], "opened_at": item["opened"],
+                         "status": "CLOSED" if item["closed"] else "OPEN"} for item in self.items],
+        }
+        export_guard.check_status_json(status)
+        write_json(self.paths.status_json, status)
+
         lines = [export_guard.STATUS_TITLE, "",
-                 "updated: " + now(),
+                 "updated: " + status["generated_at"],
                  "milestone: " + self.graph.milestone,
                  "cycle: %d" % self.meta.get("cycle", 0),
-                 "authorization: " + self.auth,
+                 "authorization: " + self.auth["code"],
                  "addendum_1: " + ("absent" if addendum is None else "signed" if addendum["signed"] else "unsigned"),
                  "scheduler: " + scheduler,
                  "final: " + (final["kind"].replace(" ", "_") if final else "none")]
@@ -623,47 +778,64 @@ class Cycle:
                           "|" + "---|" * len(header)])
             lines.extend("| " + " | ".join(show(cell) for cell in row) + " |" for row in rows)
 
-        statuses = [state["status"] for state in self.states.values()]
-        table("Stages by status", ("status", "count"), [(s, statuses.count(s)) for s in STATUSES])
+        table("Stages by status", ("status", "count"), counts.items())
         table("Running and queued jobs", ("stage", "status", "job", "account", "qos", "gpus", "attempt"),
               [(name, state["status"], state["job_id"], state.get("account"), state.get("qos"),
-                self.graph.by_id[name]["resources"]["gpus"], len(state["attempts"]) + 1)
+                self.graph.by_id[name]["resources"]["gpus"], state["attempt"])
                for name, state in self.states.items() if state["status"] in ACTIVE])
-        keys = sorted({stage["allowance_key"] for stage in self.graph.stages})
         table("GPU-hours by experiment", ("experiment", "spent", "estimate", "allowance"),
-              [(key, self.spent(key), float(self.graph.allowances[key]["estimate_gpu_hours"]),
-                float(self.graph.allowances[key]["allowance_gpu_hours"])) for key in keys])
+              [(e["id"], e["spent_gpu_hours"], float(e["estimate_gpu_hours"]), float(e["allowance_gpu_hours"]))
+               for e in experiments])
         table("Open BLOCKED items", ("item", "key", "opened", "detail"),
-              [(item["id"], item["key"], item["opened"], pairs(item["detail"])) for item in self.open_items])
+              [(item["id"], item["key"], item["opened"], pairs(item["detail"]))
+               for item in self.items if item["closed"] is None])
         table("Latest gate records", ("gate", "result", "path", "decided", "skipped"),
-              [(name, record["result"], record["path"], record["decided"], len(record["skipped"]))
+              [(name, record["result"], record["path_taken"], record["decided_at"], len(record["skipped"]))
                for name, record in sorted(self.gate_records.items())])
-        try:
-            events = self.paths.events.read_text().splitlines()[-30:]
-        except OSError:
-            events = []
-        table("Latest events", ("time", "kind", "text"),
-              [line.split("\t") for line in events if export_guard.event_ok(line)])
-
+        table("Latest events", ("time", "kind", "text"), events)
         text = "\n".join(lines) + "\n"
         if export_guard.status_violations(text):
             raise ValueError("STATUS.md must hold names, counts, numbers and codes only")
         write_text(self.paths.status, text)
+
+    def stage_row(self, stage):
+        """One entry of status.json "stages": the stage, and its current or else its last job."""
+        state = self.states[stage["id"]]
+        ended = [attempt for attempt in state["attempts"] if attempt["outcome"] != "untracked"]
+        if state["job_id"] is not None:
+            job = state["job"] or {}
+            last = {"job_id": state["job_id"], "account": state.get("account"),
+                    "submitted_at": iso(state["submitted"]), "started_at": job.get("started_at"),
+                    "ended_at": None, "elapsed_s": job.get("elapsed_s"), "exit_code": None,
+                    "last_state": job.get("state")}
+        elif ended:
+            last = {"job_id": ended[-1]["job_id"], "account": ended[-1]["account"],
+                    "submitted_at": ended[-1]["submitted_at"], "started_at": ended[-1]["started_at"],
+                    "ended_at": ended[-1]["ended_at"], "elapsed_s": ended[-1]["elapsed_s"],
+                    "exit_code": ended[-1]["exit_code"], "last_state": ended[-1]["state"]}
+        else:
+            last = dict.fromkeys(("job_id", "account", "submitted_at", "started_at", "ended_at",
+                                  "elapsed_s", "exit_code", "last_state"))
+        return dict(last, id=stage["id"], experiment=stage["experiment"], kind=stage["kind"],
+                    status=state["status"], depends_on=stage["depends_on"], gate=stage["gate"],
+                    attempts=state["attempt_count"], gpus=stage["resources"]["gpus"],
+                    gpu_hours=round(self.used(state), 6), estimate_gpu_hours=stage["estimate_gpu_hours"])
 
 
 def main():
     paths = Paths()
     stale = take_lock(paths)
     if stale is None:
+        mark_lock_held(paths)
         print("%s another cycle holds the lock" % now())
         return 0
     try:
-        cycle = Cycle(paths)
+        cycle = Cycle(paths, lock="stale_taken" if stale else "ok")
         if stale:
-            cycle.log("stale_lock", age_s=stale)
+            cycle.note("stale_lock taken age_s=%d" % stale)
         code = cycle.run()
-        print("%s cycle %s rc=%d ended=%d submitted=%d events=%d" % (
-            now(), cycle.meta.get("cycle", 0), code, cycle.counts["ended"],
+        cycle.note("cycle %s rc=%d ended=%d submitted=%d events=%d" % (
+            cycle.meta.get("cycle", 0), code, cycle.counts["ended"],
             cycle.counts["submitted"], cycle.counts["events"]))
         return code
     finally:

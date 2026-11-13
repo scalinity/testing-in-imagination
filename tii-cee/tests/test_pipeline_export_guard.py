@@ -110,16 +110,52 @@ def test_command_line_approves_or_refuses_without_echoing_content(tmp_path, monk
     assert [path.name for path in (tmp_path / "tii" / "export" / "approved").iterdir()] == ["good.json"]
 
 
+def test_times_are_iso_8601_with_a_colon_in_the_offset():
+    from tiicee.pipeline.util import iso, now
+    assert export_guard.TIME.match(now()) and export_guard.TIME.match(iso(0))
+    assert iso(1794557702)[:-6].endswith(":02") and iso(1794557702)[-3] == ":"
+
+
+def test_status_json_and_progress_checks():
+    status = {"schema": "tii-status/1", "generated_at": "2026-11-13T03:15:02-05:00", "milestone": "M0",
+              "watcher": {"cycle": 12, "lock": "ok", "completed": False}, "authorization": {"ok": True},
+              "gpu": {"limit_by_account": {"cai6734": 8}}, "counts": {"SKIPPED BY GATE": 0, "RUNNING": 3},
+              "experiments": [{"id": "E8", "status": "RUNNING", "spent_gpu_hours": 12.4}],
+              "stages": [{"id": "e8-seed1-part1", "status": "SKIPPED BY GATE", "gate": None, "depends_on": ["preflight"]}],
+              "gates": [{"id": "G2a", "decided": False, "result": None}],
+              "blocked": [{"id": "BLOCKED-W003", "title": "allowance:E8", "status": "OPEN"}]}
+    export_guard.check_status_json(status)
+    for change, code in ((lambda s: s.update(generated_at="yesterday"), "status_shape"),
+                         (lambda s: s.update(stages={}), "status_shape"),
+                         (lambda s: s["stages"].append("e9"), "status_shape"),
+                         (lambda s: s["blocked"][0].update(title="short name only"), "string_not_identifier"),
+                         (lambda s: s["counts"].update({"NOT A STATUS": 1}), "key_not_identifier")):
+        changed = json.loads(json.dumps(status))
+        change(changed)
+        with pytest.raises(Refused) as caught:
+            export_guard.check_status_json(changed)
+        assert caught.value.code == code
+
+    report = {"stage": "e4-cohort-x", "unit": "admission", "done": 812, "total": 2160, "updated_at": "2026-11-13T03:15:02-05:00"}
+    export_guard.check_progress(report, "e4-cohort-x")
+    for change in ({"done": 812.5}, {"done": True}, {"done": -1}, {"unit": "two words"}, {"updated_at": "now"}):
+        with pytest.raises(Refused):
+            export_guard.check_progress(dict(report, **change), "e4-cohort-x")
+    with pytest.raises(Refused):
+        export_guard.check_progress(report, "another-stage")
+
+
 def test_event_and_status_shapes():
-    ok = "2026-11-13T03:10:00-0500\tblocked\titem=W-001 key=allowance:E2 spent=12.5 estimate=90 allowance=200"
+    ok = "2026-11-13T03:10:00-05:00\tblocked\titem=BLOCKED-W001 key=allowance:E2 spent=12.5 estimate=90 allowance=200"
     assert export_guard.event_ok(ok)
-    for line in ("2026-11-13T03:10:00-0500\tblocked\tsomething went wrong",
-                 "2026-11-13T03:10:00-0500\tsurprise\tstage=a", "blocked\tstage=a",
-                 "2026-11-13T03:10:00-0500\tblocked\tstage=a note=free text here", ok + "\n", ok + " "):
+    for line in ("2026-11-13T03:10:00-05:00\tblocked\tsomething went wrong",
+                 "2026-11-13T03:10:00-05:00\tsurprise\tstage=a", "blocked\tstage=a",
+                 "2026-11-13T03:10:00-0500\tblocked\tstage=a",  # the offset is written with a colon
+                 "2026-11-13T03:10:00-05:00\tblocked\tstage=a note=free text here", ok + "\n", ok + " "):
         assert not export_guard.event_ok(line), line
-    good = "\n".join([export_guard.STATUS_TITLE, "", "updated: 2026-11-13T03:10:00-0500", "## Stages by status", "",
+    good = "\n".join([export_guard.STATUS_TITLE, "", "updated: 2026-11-13T03:10:00-05:00", "## Stages by status", "",
                       "| status | count |", "|---|---|", "| SKIPPED BY GATE | 2 |",
-                      "| 2026-11-13T03:10:00-0500 | stage completed | stage=a experiment=E2 attempts=1 gpu_hours=0.458 |", ""])
+                      "| 2026-11-13T03:10:00-05:00 | stage completed | stage=e8-seed1 experiment=E8 attempts=1 gpu_hours=0.458 |", ""])
     assert export_guard.status_violations(good) == []
     assert export_guard.status_violations(good + "## Notes\nnext: call the patient\n| a | two words |\n") == [10, 11, 12]
 

@@ -13,6 +13,9 @@ The contract of WATCHER_DESIGN.md section 3:
 Exit codes: 0 done, 10 continue, 20 identity refusal, 30 authorization refusal, 40 out of memory;
 anything else is a failure. A test-kind stage also writes a one-shot ledger entry before its first
 row: a second start under a different manifest is refused, a resume under the same one is the same run.
+
+For the monitor (monitor/DATA_CONTRACT.md) a stage may report counts with ctx.progress(done, total,
+unit); they go to state/progress/<id>.json at most once a minute, and once more when the attempt ends.
 """
 from __future__ import annotations
 
@@ -21,16 +24,18 @@ import json
 import os
 import signal
 import sys
+import time
 
 from . import authorization, export_guard
 from . import graph as graphs
 from . import manifest as manifests
 from .manifest import Refusal
-from .paths import Paths
+from .paths import ID, Paths
 from .stages import StageInterrupted, resolve
 from .util import now, read_json, tree_digest, write_json, write_new_json
 
 DONE, CONTINUE, OUT_OF_MEMORY = 0, 10, 40
+PROGRESS_INTERVAL_S = 60
 
 
 class Context:
@@ -47,6 +52,8 @@ class Context:
         self._checkpoint = self.dir / "checkpoint.json"
         self._items_path = self.dir / "items.jsonl"
         self._items = self._load_items()
+        self._progress = None        # the latest counts the stage reported
+        self._progress_at = None     # when they were last written, on the monotonic clock
 
     def _load_items(self):
         """Read the completed-item log, dropping a last line torn by a kill."""
@@ -92,6 +99,23 @@ class Context:
     def approve(self, name, value):
         """Publish an aggregate to export/approved/ through the export guard."""
         return export_guard.approve(self.paths, name, value)
+
+    def progress(self, done, total, unit="item"):
+        """Report how far the stage is, for the monitor: done of total, in a unit such as "admission".
+
+        Counts only. Call it as often as is convenient; the file is written at most once a minute.
+        """
+        if type(done) is not int or type(total) is not int or done < 0 or total < 0 or not ID.match(unit):
+            raise ValueError("progress is two counts and a unit name")
+        self._progress = {"stage": self.stage_id, "unit": unit, "done": done, "total": total}
+        if self._progress_at is None or time.monotonic() - self._progress_at >= PROGRESS_INTERVAL_S:
+            self.flush_progress()
+
+    def flush_progress(self):
+        """Write the latest reported counts now. The runner calls this when the attempt ends."""
+        if self._progress is not None:
+            write_json(self.paths.progress_file(self.stage_id), dict(self._progress, updated_at=now()))
+            self._progress, self._progress_at = None, time.monotonic()
 
 
 def _refuse(paths, stage_id, refusal):
@@ -170,10 +194,11 @@ def _run(paths, graph, stage):
     try:
         resolve(stage["command"][0], graph.stage_modules)(context)
     except StageInterrupted:
-        print("stage %s checkpointed on the warning signal" % stage_id)
+        print("stage %s checkpointed and will continue in a new job" % stage_id)
         return CONTINUE
     finally:
         signal.signal(signal.SIGUSR1, previous)
+        context.flush_progress()
     os.rename(context.out_dir, out)
     _publish(paths, stage_id, manifest)
     return DONE

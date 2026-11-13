@@ -1,7 +1,8 @@
 """Registry of stage implementations, and the two built-in no-op stages.
 
 A stage implementation is a callable taking one Context (see stage.py). It returns when the work
-is complete. When ctx.stop turns true it saves what it needs and raises StageInterrupted.
+is complete. When ctx.stop turns true it saves what it needs and raises StageInterrupted; it may
+also raise StageInterrupted by itself to continue in a fresh process (exit 10, never counted as a retry).
 A stage's command in graph.json is [registered name, arguments...]; modules that register further
 stages are listed in graph.json under "stage_modules" and imported before the lookup.
 """
@@ -40,6 +41,7 @@ def noop(ctx):
     count = parser.parse_args(ctx.args).count
     (ctx.out_dir / "result.json").write_text(json.dumps({"count": count}) + "\n")
     ctx.approve(ctx.stage_id + ".json", {"stage": ctx.stage_id, "count": count})
+    ctx.progress(1, 1, "item")
 
 
 @register("noop_slow")
@@ -60,6 +62,7 @@ def noop_slow(ctx):
         time.sleep(options.sleep)
         ctx.mark_done(key, {"step": step})
         ctx.save_checkpoint({"next": step + 1, "resumed_at": resumed_at})
+        ctx.progress(step + 1, options.steps, "step")
     done = ctx.results()
     (ctx.out_dir / "result.json").write_text(json.dumps({"keys": sorted(done), "count": len(done)}) + "\n")
     ctx.approve(ctx.stage_id + ".json", {"stage": ctx.stage_id, "count": len(done)})

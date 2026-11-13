@@ -10,7 +10,7 @@ from pathlib import Path
 
 STUDY = "TII-CEE-1"
 DEFAULT_ROOT = "/blue/cai6734/daniel.escalante/private/tii-cee-1"  # AUTHORIZATION.md section 3
-ID = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,47}\Z")  # stage, gate and experiment names
+ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,47}\Z")  # stage, gate and experiment names
 
 
 class Paths:
@@ -27,6 +27,8 @@ class Paths:
         self.runlog = self.state / "runlog.jsonl"
         self.events = self.state / "events.tsv"
         self.status = self.state / "STATUS.md"
+        self.status_json = self.state / "status.json"   # for the monitor (monitor/DATA_CONTRACT.md)
+        self.progress = self.state / "progress"         # one small file per running stage
         self.blocked_md = self.state / "BLOCKED.md"
         self.blocked = self.state / "blocked.json"
         self.watcher = self.state / "watcher.json"
@@ -58,6 +60,9 @@ class Paths:
 
     def ledger_entry(self, stage_id):
         return self.ledger / (stage_id + ".json")
+
+    def progress_file(self, stage_id):
+        return self.progress / (stage_id + ".json")
 
     def gate_record(self, gate_id):
         return self.gates / (gate_id + ".json")

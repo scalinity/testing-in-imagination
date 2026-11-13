@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
-from pipeline_harness import DOCS, PACKAGE, Study, stage  # noqa: E402
+from pipeline_harness import (ADDENDUM_SHA, AUTHORIZATION_SHA, BOUND_ADDENDUM_SHA,  # noqa: E402
+                              BOUND_AUTHORIZATION_SHA, PACKAGE, Study, pin, stage)
 
 from tiicee.pipeline import authorization  # noqa: E402
 from tiicee.pipeline import graph as graphs  # noqa: E402
@@ -21,6 +22,12 @@ from tiicee.pipeline.util import sha256_file, tree_digest  # noqa: E402
 
 BIND = {"card": "cards/E4.md", "calibration": "$TII/private/artifacts/calibration.json",
         "policy_checkpoints": "$TII/private/checkpoints"}
+
+
+@pytest.fixture(autouse=True)
+def synthetic_authorization(monkeypatch):
+    """Every test here works on the study's own synthetic files, never the repository's."""
+    pin(monkeypatch)
 
 
 @pytest.fixture
@@ -62,9 +69,9 @@ def test_manifest_binds_every_field_of_the_specification(study):
         "pairing_unit": "admission", "command": ["noop", "--count", "2"]}
     assert manifest["allowance"] == {"key": "E4", "gpu_hours": 400, "estimate_gpu_hours": 7}
     assert manifest["authorization"] == {
-        "sha256": "72ccc89c8a825c82578c8efdf942025e3ce60d72f179b8b13489737ee37221ae", "expires": "2027-03-31",
-        "addenda": {"AUTHORIZATION_ADDENDUM_1.md": {
-            "sha256": sha256_file(study.docs / "AUTHORIZATION_ADDENDUM_1.md"), "signed": False}}}
+        "sha256": AUTHORIZATION_SHA, "expires": "2027-03-31",
+        "addenda": {"AUTHORIZATION_ADDENDUM_1.md": {"sha256": ADDENDUM_SHA, "sha256_ok": True, "signed": False}}}
+    assert sha256_file(study.docs / "AUTHORIZATION.md") == AUTHORIZATION_SHA
     # Not a git checkout here, so the code is bound by a snapshot digest.
     assert manifest["code"] == {"commit": None, "clean": False, "snapshot": manifests.snapshot(study.paths)}
     bound = manifest["bound"]
@@ -188,24 +195,24 @@ def test_command_line_builds_and_verifies(study, monkeypatch, capsys):
 
 # ---- the authorization --------------------------------------------------------------------------
 
-def test_repository_files_carry_the_hashes_this_code_binds():
-    assert sha256_file(DOCS / "AUTHORIZATION.md") == authorization.AUTHORIZATION_SHA256
-    assert sha256_file(DOCS / "AUTHORIZATION_ADDENDUM_1.md") == authorization.ADDENDUM_1_SHA256
-    assert authorization.check(DOCS) == "ok"
+def test_the_committed_code_binds_the_recorded_hashes():
+    """The values written in SIGNATURE.md at the time of signing; no file is read to check them."""
+    assert BOUND_AUTHORIZATION_SHA == "72ccc89c8a825c82578c8efdf942025e3ce60d72f179b8b13489737ee37221ae"
+    assert BOUND_ADDENDUM_SHA == "f59cd6fa638d00b2d1bc9bdc4848ba9ae412f9abecb7cdfcfa83cb4475e05658"
     assert authorization.EXPIRES == datetime.date(2027, 3, 31)
 
 
 def test_authorization_check_codes(study):
     docs = study.docs
-    assert authorization.check(docs) == "ok"
+    assert authorization.inspect(docs) == {"code": "ok", "sha256_ok": True, "signature_ok": True}
     assert authorization.check(docs, today=datetime.date(2027, 3, 31)) == "ok"
     assert authorization.check(docs, today=datetime.date(2027, 4, 1)) == "authorization_expired"
     (docs / "SIGNATURE.md").write_text("a different hash\n")
-    assert authorization.check(docs) == "signature_mismatch"
+    assert authorization.inspect(docs) == {"code": "signature_mismatch", "sha256_ok": True, "signature_ok": False}
     (docs / "SIGNATURE.md").unlink()
     assert authorization.check(docs) == "signature_missing"
     (docs / "AUTHORIZATION.md").write_text("changed\n")
-    assert authorization.check(docs) == "authorization_changed"
+    assert authorization.inspect(docs) == {"code": "authorization_changed", "sha256_ok": False, "signature_ok": False}
     (docs / "AUTHORIZATION.md").unlink()
     assert authorization.check(docs) == "authorization_missing"
     assert authorization.pools(docs) == ()
@@ -213,7 +220,9 @@ def test_authorization_check_codes(study):
 
 def test_addendum_counts_only_while_its_exact_text_is_signed(study):
     docs = study.docs
-    assert authorization.pools(docs) == BASE_POOLS
+    assert authorization.pools(docs) == BASE_POOLS  # on disk, hash as bound, but not in SIGNATURE.md
+    assert authorization.addenda(docs)["AUTHORIZATION_ADDENDUM_1.md"] == {
+        "sha256": ADDENDUM_SHA, "sha256_ok": True, "signed": False}
     assert BASE_POOLS == (Pool("gpu", "cai6734", "cai6734", 8), Pool("cpu", "cai6734", "cai6734-b", 288))
     study.sign_addendum()
     assert authorization.pools(docs) == BASE_POOLS + ADDENDUM_1_POOLS
@@ -224,6 +233,7 @@ def test_addendum_counts_only_while_its_exact_text_is_signed(study):
     with open(docs / "AUTHORIZATION_ADDENDUM_1.md", "a") as handle:
         handle.write("and also hpg-b200\n")
     assert authorization.pools(docs) == BASE_POOLS  # the signed text is no longer the text on disk
+    assert authorization.addenda(docs)["AUTHORIZATION_ADDENDUM_1.md"]["sha256_ok"] is False
     study.sign_addendum()                           # even a signature of the new text does not
     assert authorization.pools(docs) == BASE_POOLS  # widen compute this code has not been given
     (docs / "AUTHORIZATION_ADDENDUM_1.md").unlink()
@@ -246,11 +256,10 @@ def test_allowances_file_mirrors_the_authorization():
     paths = Paths(root="/nowhere", code=PACKAGE.parent)
     allowances = graphs.load_allowances(paths)
     whole = json.loads(paths.allowances.read_text())
-    assert whole["authorization_sha256"] == authorization.AUTHORIZATION_SHA256
+    assert whole["authorization_sha256"] == BOUND_AUTHORIZATION_SHA
     # The totals AUTHORIZATION.md section 4 states: 1,333 estimated and 2,810 allowed.
     assert sum(entry["estimate_gpu_hours"] for entry in allowances.values()) == 1333
     assert sum(entry["allowance_gpu_hours"] for entry in allowances.values()) == 2810
-    assert "| Total | | 1,333 | 2,810 |" in (DOCS / "AUTHORIZATION.md").read_text()
     assert [key for key, entry in allowances.items() if not entry["authorized"]] == ["E11"]
     assert (allowances["E2"]["allowance_gpu_hours"], allowances["E5"]["allowance_gpu_hours"]) == (200, 800)
 

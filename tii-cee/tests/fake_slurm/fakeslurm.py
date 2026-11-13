@@ -17,8 +17,9 @@ pending or running job:
     hold       leave it PENDING for this advance
 
 An outcome is a name or {"outcome": name, "state": ..., "elapsed": seconds, "wait_file": path,
-"wait_lines": n}; the trigger is "wait_file has at least wait_lines lines". Planning "reject" makes
-the next sbatch for that job name fail. Every executable call is appended to calls.log.
+"wait_lines": n}; the trigger is "wait_file has at least wait_lines lines", and "elapsed" is what
+sacct reports (for "start": the time run so far). Planning "reject" makes the next sbatch for that
+job name fail. Every executable call is appended to calls.log.
 """
 from __future__ import annotations
 
@@ -101,8 +102,8 @@ class Cluster:
                 "cpus": int(options.get("cpus-per-task", 1)), "mem": options.get("mem"),
                 "time": options.get("time"), "signal": options.get("signal"),
                 "requeue": "no-requeue" not in options, "output": options.get("output"),
-                "script": script, "state": "PENDING", "exit": "0:0", "elapsed": 0, "end": None,
-                "env": dict(os.environ)}
+                "script": script, "state": "PENDING", "exit": "0:0", "elapsed": 0, "start": None,
+                "end": None, "env": dict(os.environ)}
             return job_id
 
         job_id = self._locked(add)
@@ -147,7 +148,8 @@ class Cluster:
                 tres += ",mem=%s,node=1" % job["mem"]
             values = {"JobID": job["id"], "JobName": job["name"], "State": job["state"],
                       "ExitCode": job["exit"], "ElapsedRaw": str(job["elapsed"]), "AllocTRES": tres,
-                      "Account": job["account"], "QOS": job["qos"]}
+                      "Account": job["account"], "QOS": job["qos"],
+                      "Start": _clock(job["start"]), "End": _clock(job["end"])}
             print("|".join(values[column] for column in columns))
         return 0
 
@@ -190,7 +192,9 @@ class Cluster:
                 continue
             if outcome in ENDED_WITHOUT_RUNNING:
                 state, code = ENDED_WITHOUT_RUNNING[outcome]
-                update = {"state": state, "exit": code, "elapsed": step.get("elapsed", 60), "end": time.time()}
+                elapsed = step.get("elapsed", 60)
+                update = {"state": state, "exit": code, "elapsed": elapsed,
+                          "start": time.time() - elapsed, "end": time.time()}
             else:
                 update = self._execute(job, step)
             self._locked(lambda state: state["jobs"][job["id"]].update(update))
@@ -216,17 +220,19 @@ class Cluster:
                 if outcome == "start":
                     os.killpg(process.pid, signal.SIGSTOP)
                     self.frozen[job["id"]] = (process, started)
-                    return {"state": "RUNNING"}
+                    return {"state": "RUNNING", "start": started, "elapsed": step.get("elapsed", 0)}
                 if outcome == "usr1":
                     os.kill(process.pid, signal.SIGUSR1)  # the script execs the stage: same pid
                 else:
                     os.killpg(process.pid, signal.SIGKILL)
         code = process.wait(timeout=120)
-        elapsed = step.get("elapsed", max(1, int(math.ceil(time.time() - started))))
+        ended = time.time()
+        elapsed = step.get("elapsed", max(1, int(math.ceil(ended - started))))
+        timing = {"elapsed": elapsed, "start": ended - elapsed if "elapsed" in step else started, "end": ended}
         if outcome == "kill":
-            return {"state": step.get("state", "NODE_FAIL"), "exit": "0:0", "elapsed": elapsed, "end": time.time()}
-        return {"state": "COMPLETED" if code == 0 else "FAILED",
-                "exit": "%d:0" % code if code >= 0 else "0:%d" % -code, "elapsed": elapsed, "end": time.time()}
+            return dict(timing, state=step.get("state", "NODE_FAIL"), exit="0:0")
+        return dict(timing, state="COMPLETED" if code == 0 else "FAILED",
+                    exit="%d:0" % code if code >= 0 else "0:%d" % -code)
 
     def _triggered(self, step):
         if "wait_file" not in step:
@@ -236,6 +242,11 @@ class Cluster:
                 return handle.read().count(b"\n") >= step.get("wait_lines", 1)
         except OSError:
             return False
+
+
+def _clock(epoch):
+    """A start or end time as sacct prints it: local time without an offset, or Unknown."""
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(epoch)) if epoch else "Unknown"
 
 
 def main(command, argv):

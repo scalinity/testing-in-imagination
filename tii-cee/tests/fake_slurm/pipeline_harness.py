@@ -1,13 +1,20 @@
 """A throwaway study for the pipeline tests.
 
 Builds, under a temporary directory: a storage root ($TII), a copy of the code the watcher and the
-stages run (so a test can change an allowance or rename AUTHORIZATION.md without touching the
-repository), copies of the authorization files, and a fake Slurm. The watcher runs as a
-subprocess under TII_TEST_WATCHER_PYTHON when that is set (point it at a Python 3.9 to exercise
-the watcher on the interpreter it will meet on the cluster), else under the test interpreter.
+stages run, a fake Slurm, and the study's own AUTHORIZATION.md, SIGNATURE.md and addendum.
+
+Those three files are synthetic. No test reads the repository's authorization files, so a test
+means the same whatever they say today. The copied authorization.py is pointed at the synthetic
+files' hashes, and pin() does the same for code a test calls in-process. The addendum starts
+unsigned; sign_addendum() signs it.
+
+The watcher runs as a subprocess under TII_TEST_WATCHER_PYTHON when that is set (point it at a
+Python 3.9 to exercise the watcher on the interpreter it will meet on the cluster), else under the
+test interpreter.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -16,14 +23,27 @@ import sys
 from pathlib import Path
 
 import fakeslurm
-from tiicee.pipeline.authorization import AUTHORIZATION_SHA256
+from tiicee.pipeline import authorization
 from tiicee.pipeline.paths import Paths
 from tiicee.pipeline.util import sha256_file
 
 FAKE = Path(__file__).resolve().parent
 PACKAGE = FAKE.parents[1]
-DOCS = PACKAGE.parent / "reports" / "research-advancement"
 WATCHER_PYTHON = os.environ.get("TII_TEST_WATCHER_PYTHON") or sys.executable
+
+AUTHORIZATION_TEXT = "Synthetic authorization for the pipeline tests. It authorizes nothing.\n"
+ADDENDUM_TEXT = "Synthetic addendum 1 for the pipeline tests. It authorizes nothing.\n"
+AUTHORIZATION_SHA = hashlib.sha256(AUTHORIZATION_TEXT.encode()).hexdigest()
+ADDENDUM_SHA = hashlib.sha256(ADDENDUM_TEXT.encode()).hexdigest()
+# The hashes the committed code binds, read once at import, before any test changes them.
+BOUND_AUTHORIZATION_SHA = authorization.AUTHORIZATION_SHA256
+BOUND_ADDENDUM_SHA = authorization.ADDENDUM_1_SHA256
+
+
+def pin(monkeypatch):
+    """Point the in-process authorization module at the synthetic files, for this test only."""
+    monkeypatch.setattr(authorization, "AUTHORIZATION_SHA256", AUTHORIZATION_SHA)
+    monkeypatch.setattr(authorization, "ADDENDUM_1_SHA256", ADDENDUM_SHA)
 
 
 
@@ -48,13 +68,17 @@ class Study:
         shutil.copytree(PACKAGE / "tiicee" / "pipeline", package / "tiicee" / "pipeline", ignore=skip)
         shutil.copy(PACKAGE / "tiicee" / "__init__.py", package / "tiicee" / "__init__.py")
         shutil.copytree(PACKAGE / "gates", package / "gates", ignore=skip)
+        # The copied code binds the synthetic files instead of the repository's.
+        module = package / "tiicee" / "pipeline" / "authorization.py"
+        source = module.read_text()
+        assert source.count(BOUND_AUTHORIZATION_SHA) == 1 and source.count(BOUND_ADDENDUM_SHA) == 1
+        module.write_text(source.replace(BOUND_AUTHORIZATION_SHA, AUTHORIZATION_SHA)
+                          .replace(BOUND_ADDENDUM_SHA, ADDENDUM_SHA))
         self.docs = self.code / "reports" / "research-advancement"
         self.docs.mkdir(parents=True)
-        for name in ("AUTHORIZATION.md", "AUTHORIZATION_ADDENDUM_1.md"):
-            shutil.copy(DOCS / name, self.docs / name)
-        # The study's own signature file, so a test decides whether the addendum is signed
-        # whatever the repository's SIGNATURE.md says today.
-        (self.docs / "SIGNATURE.md").write_text("AUTHORIZATION.md, SHA-256 %s\n" % AUTHORIZATION_SHA256)
+        (self.docs / "AUTHORIZATION.md").write_text(AUTHORIZATION_TEXT)
+        (self.docs / "AUTHORIZATION_ADDENDUM_1.md").write_text(ADDENDUM_TEXT)
+        (self.docs / "SIGNATURE.md").write_text("AUTHORIZATION.md, SHA-256 %s\n" % AUTHORIZATION_SHA)
         self.paths = Paths(self.root, self.code)
         self.cluster = fakeslurm.Cluster(tmp_path / "slurm")
         self.env = dict(os.environ, PATH="%s%s%s" % (FAKE, os.pathsep, os.environ["PATH"]),
@@ -78,7 +102,7 @@ class Study:
         self.paths.allowances.write_text(json.dumps(allowances))
 
     def sign_addendum(self):
-        """What Daniel's signature of addendum 1 would add to SIGNATURE.md: its SHA-256."""
+        """What a signature of the addendum adds to SIGNATURE.md: the SHA-256 of the file on disk."""
         with open(self.docs / "SIGNATURE.md", "a") as handle:
             handle.write("\nAddendum 1, SHA-256 %s\n" % sha256_file(self.docs / "AUTHORIZATION_ADDENDUM_1.md"))
 
@@ -130,11 +154,17 @@ class Study:
                 found.append((event_kind, dict(pair.split("=", 1) for pair in text.split(" "))))
         return found
 
-    def runlog(self, event):
+    def runlog(self, event=None):
         if not self.paths.runlog.exists():
             return []
         lines = [json.loads(line) for line in self.paths.runlog.read_text().splitlines()]
-        return [line for line in lines if line["event"] == event]
+        return [line for line in lines if event in (None, line["event"])]
+
+    def status_json(self):
+        return json.loads(self.paths.status_json.read_text())
+
+    def progress(self, name):
+        return json.loads(self.paths.progress_file(name).read_text())
 
     def blocked(self):
         """Open BLOCKED items by key."""

@@ -3,10 +3,11 @@
 # every 600 seconds.
 #
 # What it does, only while an authenticated HiPerGator SSH master connection already exists:
-# reads the new lines of the watcher's event queue and its STATUS.md into a local mirror, copies
-# export/approved/ (aggregates that passed the export guard; nothing else is ever copied), shows a
-# notification per new event, and starts ONE headless agent session in the repository when a stage
-# completed, a gate was decided, something failed or something is blocked.
+# reads the watcher's surface into a local mirror (the new lines of the event queue, STATUS.md,
+# status.json and the stages' progress files), copies export/approved/ (aggregates that passed the
+# export guard), shows a notification per new event, and starts ONE headless agent session in the
+# repository when a stage completed, a gate was decided, something failed or something is blocked.
+# Nothing outside that surface is ever read or copied.
 # What it never does: open a connection, log in, or touch a password or a Duo prompt. With no
 # master it exits quietly; the work on HiPerGator does not depend on it.
 set -u
@@ -31,7 +32,7 @@ BATCH=50   # events handled per run; the rest wait for the next one
 # The fixed continuation prompt of WATCHER_DESIGN.md section 5, step 5.
 PROMPT="Read STATUS.md, RESEARCH_LEDGER.md, BLOCKED.md, and the newest gate records. Continue study TII-CEE-1 under the version 3.1 kickoff from the first unfinished item. Do not repeat completed work."
 
-mkdir -p "$STATE" "$MIRROR" "$APPROVED" "$(dirname "$LOG")" "$(dirname "$SESSION_LOG")"
+mkdir -p "$STATE" "$MIRROR/progress" "$APPROVED" "$(dirname "$LOG")" "$(dirname "$SESSION_LOG")"
 
 now() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 log() { printf '%s %s\n' "$(now)" "$*" >> "$LOG"; }
@@ -66,6 +67,24 @@ with_timeout() {
 VIA_MASTER="-o BatchMode=yes -o ControlMaster=no -o ProxyCommand=false"
 via_master() { ssh $VIA_MASTER "$HOST" "$@"; }
 
+# One whole file of the watcher's surface, state/$1, into the mirror; kept as it was on any failure.
+mirror_file() {
+    local remote
+    remote=$(printf '%q' "$REMOTE_ROOT/state/$1")
+    if with_timeout 40 via_master "cat $remote" > "$MIRROR/$1.tmp" 2>/dev/null && [ -s "$MIRROR/$1.tmp" ]; then
+        mv "$MIRROR/$1.tmp" "$MIRROR/$1"
+    else
+        rm -f "$MIRROR/$1.tmp"
+    fi
+}
+
+# The JSON files of one remote directory ($1, under the storage root) into a local one ($2), over
+# the same master and the same options. Both trees hold nothing but guarded JSON, so only JSON is copied.
+copy_json() {
+    with_timeout 300 rsync -a --delete --include='*/' --include='*.json' --exclude='*' \
+        -e "ssh $VIA_MASTER" "$HOST:$REMOTE_ROOT/$1/" "$2/" >/dev/null 2>&1
+}
+
 # Keep the log small.
 if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 1000000 ]; then
     tail -n 2000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
@@ -90,15 +109,15 @@ fi
 # 2. A control command that contacts no server. No master: exit quietly; never try to connect.
 ssh -O check "$HOST" >/dev/null 2>&1 || exit 0
 
-# 3. New lines of the event queue, and STATUS.md, into the local mirror. The first line of the
-#    answer is the queue's length, so a queue that was started over is noticed.
+# 3. New lines of the event queue into the local mirror, then STATUS.md, status.json and the
+#    stages' progress files. The first line of the answer is the queue's length, so a queue that
+#    was started over is noticed.
 seen=$(num "$(cat "$STATE/events.seen" 2>/dev/null)")
 events=$(printf '%q' "$REMOTE_ROOT/state/events.tsv")
-status=$(printf '%q' "$REMOTE_ROOT/state/STATUS.md")
 tmp=$(mktemp "$STATE/ev.XXXXXX") || exit 0
 trigger=0
 if with_timeout 40 via_master "test -f $events || exit 0; wc -l < $events; tail -n +$((seen + 1)) $events | head -n $BATCH" > "$tmp" 2>/dev/null; then
-    TIME_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{4}$'
+    TIME_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$'
     TEXT_RE='^[a-z][a-z0-9_]*=[-A-Za-z0-9_.:+/]+( [a-z][a-z0-9_]*=[-A-Za-z0-9_.:+/]+)*$'
     {
         IFS= read -r total || total=""
@@ -135,17 +154,12 @@ if with_timeout 40 via_master "test -f $events || exit 0; wc -l < $events; tail 
 fi
 rm -f "$tmp"
 
-if with_timeout 40 via_master "cat $status" > "$MIRROR/STATUS.md.tmp" 2>/dev/null && [ -s "$MIRROR/STATUS.md.tmp" ]; then
-    mv "$MIRROR/STATUS.md.tmp" "$MIRROR/STATUS.md"
-else
-    rm -f "$MIRROR/STATUS.md.tmp"
-fi
+mirror_file STATUS.md
+mirror_file status.json
+copy_json state/progress "$MIRROR/progress" || true   # absent until a stage reports progress
 
-# 4. Approved aggregates, over the same master and the same options. The guard only ever approves
-#    JSON files, so only JSON files are copied. No other path is ever copied.
-with_timeout 300 rsync -a --delete --include='*/' --include='*.json' --exclude='*' \
-    -e "ssh $VIA_MASTER" "$HOST:$REMOTE_ROOT/export/approved/" "$APPROVED/" >/dev/null 2>&1 \
-    || log "approved aggregates were not copied this time"
+# 4. Approved aggregates. Apart from the surface above, no other path is ever copied.
+copy_json export/approved "$APPROVED" || log "approved aggregates were not copied this time"
 
 # 5. One headless agent session, in the repository, with the fixed prompt. The command line comes
 #    from the settings file; the prompt is its last argument. The pid file goes when the session ends.

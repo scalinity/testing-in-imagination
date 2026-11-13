@@ -12,9 +12,14 @@ import time
 from pathlib import Path
 
 
+def iso(epoch=None):
+    """Local time as ISO 8601 with offset, 2026-11-13T03:15:02-05:00 (monitor/DATA_CONTRACT.md)."""
+    text = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(epoch))
+    return text[:-2] + ":" + text[-2:]
+
+
 def now():
-    """Local time with offset, the format hpg_keeper.sh writes."""
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return iso()
 
 
 def canonical(value):

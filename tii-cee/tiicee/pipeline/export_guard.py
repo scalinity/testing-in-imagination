@@ -10,9 +10,10 @@ module cannot be imported here because it needs third-party packages. This guard
   - a value is a number, a boolean, null, an identifier string, or a list or object of those;
   - no key resembles row, rows, patient, subject, hadm, stay, text, note, prompt, generation, hpi.
 
-surface_check applies the same idea to everything the Mac reads: events.tsv, STATUS.md and
-export/approved/ may hold names, counts, numbers and codes only. A refusal never echoes the
-offending key or value. Standard library only and Python 3.9 compatible.
+surface_check applies the same idea to everything the Mac reads: events.tsv, STATUS.md,
+status.json, progress/ and export/approved/ may hold names, counts, numbers and codes only. The
+shapes of status.json and of a progress file are those of monitor/DATA_CONTRACT.md. A refusal
+never echoes the offending key or value. Standard library only and Python 3.9 compatible.
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-from .paths import Paths
+from .paths import ID, Paths
 from .util import write_text
 
 # Copied from replication/manifest.py (FORBIDDEN_KEYS). Keep the two in step.
@@ -42,8 +43,9 @@ FILE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\.json\Z")
 
 EVENT_KINDS = ("stage completed", "gate decided", "blocked", "failure", "study completed",
                "all remaining items blocked")
-EVENT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}\t(?:%s)\t%s\Z"
-                   % ("|".join(EVENT_KINDS), PAIRS_TEXT))
+TIME_TEXT = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}"
+TIME = re.compile(TIME_TEXT + r"\Z")
+EVENT = re.compile(r"%s\t(?:%s)\t%s\Z" % (TIME_TEXT, "|".join(EVENT_KINDS), PAIRS_TEXT))
 
 # STATUS.md, as watcher.py writes it.
 STATUS_TITLE = "# TII-CEE-1 watcher status"
@@ -53,6 +55,13 @@ STATUS_FIELDS = ("updated", "milestone", "cycle", "authorization", "addendum_1",
 STATUS_PHRASES = EVENT_KINDS + ("SKIPPED BY GATE",)
 _FIELD = re.compile(r"(?:%s): %s\Z" % ("|".join(STATUS_FIELDS), NAME_TEXT))
 _CELL = re.compile(r"(?:|-+|%s|%s|%s)\Z" % ("|".join(STATUS_PHRASES), NAME_TEXT, PAIRS_TEXT))
+
+# status.json and progress/<stage>.json, as monitor/DATA_CONTRACT.md lays them out.
+STATUS_SCHEMA = "tii-status/1"
+STATUS_JSON_SHAPE = {"schema": str, "generated_at": str, "milestone": str, "watcher": dict,
+                     "authorization": dict, "gpu": dict, "counts": dict, "experiments": list,
+                     "stages": list, "gates": list, "blocked": list}
+PROGRESS_KEYS = {"stage", "unit", "done", "total", "updated_at"}
 
 
 class Refused(ValueError):
@@ -68,22 +77,26 @@ def _resembles_forbidden(key):
     return any(word.startswith(FORBIDDEN_WORDS) for word in words)
 
 
-def check_aggregate(value, top=True):
-    """Raise Refused unless value is an aggregate: names, counts, numbers and codes only."""
+def check_aggregate(value, top=True, phrases=()):
+    """Raise Refused unless value is an aggregate: names, counts, numbers and codes only.
+
+    phrases are the few fixed multi-word names (a status such as SKIPPED BY GATE) a caller allows.
+    """
     if top and not isinstance(value, dict):
         raise Refused("not_an_object")
     if isinstance(value, dict):
         for key, item in value.items():
-            if not isinstance(key, str) or key.lower() in FORBIDDEN_KEYS or _resembles_forbidden(key):
-                raise Refused("forbidden_key")
-            if not KEY.match(key):
-                raise Refused("key_not_identifier")
-            check_aggregate(item, top=False)
+            if key not in phrases:
+                if not isinstance(key, str) or key.lower() in FORBIDDEN_KEYS or _resembles_forbidden(key):
+                    raise Refused("forbidden_key")
+                if not KEY.match(key):
+                    raise Refused("key_not_identifier")
+            check_aggregate(item, top=False, phrases=phrases)
     elif isinstance(value, list):
         for item in value:
-            check_aggregate(item, top=False)
+            check_aggregate(item, top=False, phrases=phrases)
     elif isinstance(value, str):
-        if not NAME.match(value):
+        if value not in phrases and not NAME.match(value):
             raise Refused("string_not_identifier")
     elif isinstance(value, float):
         if not math.isfinite(value):
@@ -115,6 +128,26 @@ def approve(paths, name, value):
                       json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n")
 
 
+def check_status_json(value):
+    """status.json: the contract's top-level fields and nothing else, holding names and numbers only."""
+    check_aggregate(value, phrases=STATUS_PHRASES)
+    if (set(value) != set(STATUS_JSON_SHAPE) or value["schema"] != STATUS_SCHEMA
+            or not all(isinstance(value[key], kind) for key, kind in STATUS_JSON_SHAPE.items())
+            or not TIME.match(value["generated_at"])
+            or not all(isinstance(entry, dict) for key in ("experiments", "stages", "gates", "blocked")
+                       for entry in value[key])):
+        raise Refused("status_shape")
+
+
+def check_progress(value, stage_id):
+    """progress/<stage>.json: {"stage", "unit", "done", "total", "updated_at"}, counts only."""
+    check_aggregate(value)
+    if (set(value) != PROGRESS_KEYS or value["stage"] != stage_id or not ID.match(str(value["unit"]))
+            or not all(type(value[key]) is int and value[key] >= 0 for key in ("done", "total"))
+            or not TIME.match(str(value["updated_at"]))):
+        raise Refused("progress_shape")
+
+
 def event_ok(line):
     return bool(EVENT.match(line))
 
@@ -134,8 +167,8 @@ def status_violations(text):
     return bad
 
 
-def approved_violations(paths):
-    """Files under export/approved/ that are not guarded aggregates, as (path, code)."""
+def file_violations(paths):
+    """Files under export/approved/ and state/progress/ that should not be there, as (path, code)."""
     bad = []
     for base, dirs, files in os.walk(paths.approved, followlinks=False):
         dirs.sort()
@@ -149,6 +182,15 @@ def approved_violations(paths):
                 check_aggregate(_load(path))
             except Refused as refused:
                 bad.append((path, refused.code))
+    for path in sorted(paths.progress.iterdir()) if paths.progress.is_dir() else []:
+        try:
+            if path.is_symlink() or not path.is_file():
+                raise Refused("not_a_regular_file")
+            if path.suffix != ".json" or not ID.match(path.stem):
+                raise Refused("file_name")
+            check_progress(_load(path), path.stem)
+        except Refused as refused:
+            bad.append((path, refused.code))
     return bad
 
 
@@ -162,8 +204,14 @@ def surface_check(paths):
     if paths.status.exists():
         for number in status_violations(paths.status.read_text(errors="replace")):
             found.append("STATUS.md:%d:not_a_status_line" % number)
-    for index, (_, code) in enumerate(approved_violations(paths), 1):
-        found.append("export/approved:%d:%s" % (index, code))
+    if paths.status_json.exists():
+        try:
+            check_status_json(_load(paths.status_json))
+        except Refused as refused:
+            found.append("status.json:1:%s" % refused.code)
+    for index, (path, code) in enumerate(file_violations(paths), 1):
+        tree = "state/progress" if path.parent == paths.progress else "export/approved"
+        found.append("%s:%d:%s" % (tree, index, code))
     return found
 
 

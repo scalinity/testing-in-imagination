@@ -4,12 +4,13 @@ import json
 import os
 import signal
 import sys
+import types
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
-from pipeline_harness import Study, stage  # noqa: E402
+from pipeline_harness import Study, pin, stage  # noqa: E402
 
 from tiicee.pipeline import graph as graphs  # noqa: E402
 from tiicee.pipeline import manifest as manifests  # noqa: E402
@@ -22,6 +23,7 @@ ARTIFACT = "$TII/private/artifacts/index.bin"
 
 @pytest.fixture
 def study(tmp_path, monkeypatch):
+    pin(monkeypatch)  # the study's own synthetic authorization files, never the repository's
     for name in ("SLURM_JOB_ID", "SLURM_JOB_ACCOUNT", "SLURM_JOB_QOS"):
         monkeypatch.delenv(name, raising=False)
 
@@ -207,6 +209,53 @@ def test_test_stage_runs_once_resume_is_the_same_run_and_a_new_manifest_is_refus
     assert starts == [first["manifest_id"]] * 2 and s.paths.ledger_entry("e6").read_text() == entry
     assert s.items("e6") == ["case-1", "case-2"]
     assert not s.paths.ledger_entry("a").exists()
+
+
+def test_progress_is_counts_only_written_at_most_once_a_minute_and_once_at_the_end(study, monkeypatch):
+    s = study()
+    manifest = bind(s)
+    s.paths.stage_dir("a").mkdir(parents=True)
+    context = runner.Context(s.paths, graphs.load(s.paths).by_id["a"], manifest)
+    clock = [1000.0]
+    monkeypatch.setattr(runner, "time", types.SimpleNamespace(monotonic=lambda: clock[0]))
+
+    context.progress(1, 2160, "admission")
+    first = s.progress("a")
+    assert {key: first[key] for key in ("stage", "unit", "done", "total")} == {
+        "stage": "a", "unit": "admission", "done": 1, "total": 2160}
+    assert set(first) == {"stage", "unit", "done", "total", "updated_at"}
+    clock[0] += 59
+    context.progress(40, 2160, "admission")
+    assert s.progress("a")["done"] == 1      # inside the minute: nothing written
+    clock[0] += 1
+    context.progress(41, 2160, "admission")
+    assert s.progress("a")["done"] == 41     # a minute on: written
+    context.progress(42, 2160, "admission")
+    context.flush_progress()                  # what the runner does when the attempt ends
+    assert s.progress("a")["done"] == 42
+    written = s.paths.progress_file("a").stat().st_mtime_ns
+    context.flush_progress()
+    assert s.paths.progress_file("a").stat().st_mtime_ns == written  # nothing new, nothing rewritten
+
+    for bad in ((1.5, 10, "admission"), (-1, 10, "admission"), (1, "ten", "admission"), (1, 10, "two words")):
+        with pytest.raises(ValueError):
+            context.progress(*bad)
+
+
+def test_stage_that_stops_itself_to_continue_in_a_new_job_keeps_its_progress(study, monkeypatch):
+    s = study()
+    bind(s)
+
+    def two_phases(ctx):
+        if (ctx.load_checkpoint() or {}).get("phase") != "second":
+            ctx.progress(1, 2, "phase")
+            ctx.save_checkpoint({"phase": "second"})
+            raise stages.StageInterrupted()  # no signal: a fresh process is wanted for the next phase
+        ctx.progress(2, 2, "phase")
+
+    monkeypatch.setitem(stages.REGISTRY, "noop", two_phases)
+    assert runner.run_stage(s.paths, "a") == 10 and s.progress("a")["done"] == 1
+    assert runner.run_stage(s.paths, "a") == 0 and s.progress("a")["done"] == 2
 
 
 def test_normal_stage_writes_no_ledger_entry(study):

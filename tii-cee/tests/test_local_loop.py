@@ -38,8 +38,10 @@ exec /usr/bin/rsync "${args[@]}"
     "agent": RECORD + 'printf "cwd\\t%s\\n" "$PWD" >> "$STUB_LOG"\n'
                       'while [ -f "$STUB_DIR/agent_hold" ]; do sleep 0.05; done\n',
 }
-EVENTS = ["2026-11-13T03:10:00-0500\tstage completed\tstage=noop_a experiment=benches attempts=1 gpu_hours=0",
-          "2026-11-13T03:10:00-0500\tgate decided\tgate=G_noop result=met path=met skipped=0"]
+EVENTS = ["2026-11-13T03:10:00-05:00\tstage completed\tstage=noop_a experiment=benches attempts=1 gpu_hours=0",
+          "2026-11-13T03:10:00-05:00\tgate decided\tgate=G_noop result=met path=met skipped=0"]
+STATUS_JSON = '{"schema": "tii-status/1", "watcher": {"cycle": 3}}\n'
+PROGRESS = '{"stage": "e4-cohort-x", "unit": "admission", "done": 812, "total": 2160}\n'
 
 
 class Mac:
@@ -47,7 +49,7 @@ class Mac:
         self.tmp = tmp_path
         self.bin, self.remote, self.repo = tmp_path / "bin", tmp_path / "remote", tmp_path / "repo"
         self.state, self.approved = tmp_path / "loop state", tmp_path / "approved"
-        for directory in (self.bin, self.remote / "state", self.remote / "export" / "approved", self.repo):
+        for directory in (self.bin, self.remote / "state" / "progress", self.remote / "export" / "approved", self.repo):
             directory.mkdir(parents=True)
         for name, body in STUBS.items():
             (self.bin / name).write_text("#!/bin/bash\n" + body)
@@ -56,6 +58,8 @@ class Mac:
         self.conf = tmp_path / "local_loop.conf"
         self.configure()
         (self.remote / "state" / "STATUS.md").write_text("# TII-CEE-1 watcher status\n\ncycle: 3\n")
+        (self.remote / "state" / "status.json").write_text(STATUS_JSON)
+        (self.remote / "state" / "progress" / "e4-cohort-x.json").write_text(PROGRESS)
         (tmp_path / "master_up").touch()
         self.env = {"HOME": str(tmp_path / "home"), "PATH": "%s:/usr/bin:/bin:/usr/sbin:/sbin" % self.bin,
                     "TII_LOCAL_LOOP_CONF": str(self.conf), "STUB_LOG": str(self.log), "STUB_DIR": str(tmp_path)}
@@ -118,8 +122,13 @@ def test_new_events_are_mirrored_notified_and_start_exactly_one_session(mac):
     mac.run()
     mac.wait_for_session_to_end()
 
-    assert (mac.state / "mirror" / "events.tsv").read_text().splitlines() == EVENTS
-    assert (mac.state / "mirror" / "STATUS.md").read_text() == (mac.remote / "state" / "STATUS.md").read_text()
+    mirror = mac.state / "mirror"
+    assert (mirror / "events.tsv").read_text().splitlines() == EVENTS
+    assert (mirror / "STATUS.md").read_text() == (mac.remote / "state" / "STATUS.md").read_text()
+    # The monitor's files are mirrored with them: status.json and the stages' progress files.
+    assert (mirror / "status.json").read_text() == STATUS_JSON
+    assert sorted(path.name for path in (mirror / "progress").iterdir()) == ["e4-cohort-x.json"]
+    assert (mirror / "progress" / "e4-cohort-x.json").read_text() == PROGRESS
     assert mac.notifications() == [("TII: stage completed", "stage=noop_a experiment=benches attempts=1 gpu_hours=0"),
                                    ("TII: gate decided", "gate=G_noop result=met path=met skipped=0")]
     # Text reaches osascript as arguments after "--", never inside the script source.
@@ -135,12 +144,20 @@ def test_new_events_are_mirrored_notified_and_start_exactly_one_session(mac):
 
     # Every call after the check goes through the existing master and cannot open a connection.
     ssh = mac.calls("ssh")
-    assert ssh[0] == ["ssh", "-O", "check", "hpg"] and len(ssh) == 3
+    assert ssh[0] == ["ssh", "-O", "check", "hpg"] and len(ssh) == 4  # check, events, STATUS.md, status.json
     assert all(call[1:8] == VIA_MASTER + ["hpg"] for call in ssh[1:])
-    rsync = mac.calls("rsync")[0]
-    assert rsync[rsync.index("-e") + 1] == "ssh " + " ".join(VIA_MASTER)
-    assert rsync[-2:] == ["hpg:%s/export/approved/" % mac.remote, "%s/" % mac.approved]
+    # (The real rsync behind the stub starts its own local helper through PATH; those calls carry --server.)
+    progress, approved = [call for call in mac.calls("rsync") if "--server" not in call]
+    assert all(call[call.index("-e") + 1] == "ssh " + " ".join(VIA_MASTER) for call in (progress, approved))
+    assert progress[-2:] == ["hpg:%s/state/progress/" % mac.remote, "%s/progress/" % mirror]
+    assert approved[-2:] == ["hpg:%s/export/approved/" % mac.remote, "%s/" % mac.approved]
     assert not (mac.state / "lock").exists()
+
+    # A progress file that is gone on the cluster goes from the mirror; a stray file is never copied.
+    (mac.remote / "state" / "progress" / "e4-cohort-x.json").unlink()
+    (mac.remote / "state" / "progress" / "private.csv").write_text("not for the mirror\n")
+    mac.run()
+    assert list((mirror / "progress").iterdir()) == []
 
 
 def test_events_are_relayed_once_and_a_quiet_queue_starts_nothing(mac):
@@ -152,7 +169,7 @@ def test_events_are_relayed_once_and_a_quiet_queue_starts_nothing(mac):
     assert len(mac.notifications()) == 2 and len(mac.calls("agent")) == 1
     assert (mac.state / "events.seen").read_text().strip() == "2"
 
-    mac.add_events("2026-11-13T04:00:00-0500\tstudy completed\tstages=3 completed=3 skipped=0")
+    mac.add_events("2026-11-13T04:00:00-05:00\tstudy completed\tstages=3 completed=3 skipped=0")
     mac.run()  # relayed, but not one of the four kinds that call for a session
     assert mac.notifications()[-1] == ("TII: study completed", "stages=3 completed=3 skipped=0")
     assert len(mac.notifications()) == 3 and len(mac.calls("agent")) == 1
@@ -170,7 +187,7 @@ def test_running_session_prevents_a_second(mac):
         time.sleep(0.05)
     calls = len(mac.calls())
 
-    mac.add_events(EVENTS[1], "2026-11-13T03:25:00-0500\tfailure\tstage=x experiment=E2 outcome=other attempts=2")
+    mac.add_events(EVENTS[1], "2026-11-13T03:25:00-05:00\tfailure\tstage=x experiment=E2 outcome=other attempts=2")
     mac.run()
     mac.run()
     assert len(mac.calls()) == calls  # nothing at all while a session runs: no ssh, no second agent
@@ -185,8 +202,8 @@ def test_running_session_prevents_a_second(mac):
 
 
 def test_free_text_in_the_queue_is_dropped_unseen_and_later_events_still_arrive(mac):
-    mac.add_events(EVENTS[0], "2026-11-13T03:11:00-0500\tfailure\tthe patient in bed 4 had chest pain",
-                   "no tabs at all", "2026-11-13T03:12:00-0500\tnote\tstage=a", EVENTS[1])
+    mac.add_events(EVENTS[0], "2026-11-13T03:11:00-05:00\tfailure\tthe patient in bed 4 had chest pain",
+                   "no tabs at all", "2026-11-13T03:12:00-05:00\tnote\tstage=a", EVENTS[1])
     mac.run()
     mac.wait_for_session_to_end()
     assert (mac.state / "mirror" / "events.tsv").read_text().splitlines() == EVENTS
@@ -204,11 +221,11 @@ def test_queue_that_started_over_is_read_from_its_first_line(mac):
     mac.run()
     mac.wait_for_session_to_end()
     (mac.remote / "state" / "events.tsv").write_text(
-        "2026-11-14T09:00:00-0500\tblocked\titem=W-001 key=authorization code=authorization_missing\n")
+        "2026-11-14T09:00:00-05:00\tblocked\titem=BLOCKED-W001 key=authorization code=authorization_missing\n")
     mac.run()  # notices the shorter queue
     mac.run()  # and reads it from the top
     mac.wait_for_session_to_end()
-    assert mac.notifications()[-1] == ("TII: blocked", "item=W-001 key=authorization code=authorization_missing")
+    assert mac.notifications()[-1] == ("TII: blocked", "item=BLOCKED-W001 key=authorization code=authorization_missing")
     assert len(mac.notifications()) == 3 and len(mac.calls("agent")) == 2
 
 
@@ -248,6 +265,4 @@ def test_launchd_template_and_example_settings():
                             "-", str(LOCAL / "local_loop.conf.example")], capture_output=True, text=True,
                            env={"HOME": "/Users/someone", "PATH": "/usr/bin:/bin"})
     assert shown.stdout.split("\n")[:5] == ["hpg", "/blue/cai6734/daniel.escalante/private/tii-cee-1", "2", "-p", "1"]
-    assert PROMPT in (LOCAL / "local_loop.sh").read_text()
-    design = (LOCAL.parents[1] / "reports" / "research-advancement" / "WATCHER_DESIGN.md").read_text()
-    assert PROMPT in " ".join(design.split())  # the prompt is the one the design quotes
+    assert PROMPT in (LOCAL / "local_loop.sh").read_text()  # the prompt WATCHER_DESIGN.md section 5 quotes

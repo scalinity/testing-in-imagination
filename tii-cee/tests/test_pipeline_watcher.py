@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent / "fake_slurm"))
 from pipeline_harness import PACKAGE, Study, stage  # noqa: E402
 
 from tiicee.pipeline import export_guard, watcher  # noqa: E402
-from tiicee.pipeline.util import sha256_file  # noqa: E402
+from tiicee.pipeline.util import iso, now, sha256_file  # noqa: E402
 
 SLOW = ["noop_slow", "--steps", "6", "--sleep", "0.05"]
 OTHER_ENTRIES_ABOVE = """#SCRON --job-name=nightly
@@ -65,7 +65,7 @@ def test_noop_graph_runs_to_completion_and_disables_only_its_own_entry(study):
 
     assert [s.status(name) for name in ("noop_a", "noop_b", "noop_c")] == ["COMPLETED"] * 3
     record = json.loads(s.paths.gate_record("G_noop").read_text())
-    assert (record["result"], record["path"], record["skipped"]) == ("met", "met", [])
+    assert (record["result"], record["path_taken"], record["skipped"]) == ("met", "met", [])
     assert record["inputs"] == {"noop_a": "COMPLETED"}
     assert record["input_digests"] == [{"file": "export/approved/noop_a.json",
                                         "sha256": sha256_file(s.paths.approved / "noop_a.json")}]
@@ -243,8 +243,9 @@ def test_every_attempt_is_logged_with_its_gpu_hours_and_charged(study):
         s.cycle()
         s.advance()
     s.cycle()
-    attempts = [(a["stage"], a["state"], a["exit_code"], a["elapsed_s"], a["gpu_hours"]) for a in s.runlog("attempt")]
-    assert attempts == [("g", "PREEMPTED", 0, 1800, 0.5), ("g", "COMPLETED", 0, 3600, 1.0)]
+    attempts = [(a["stage"], a["attempt"], a["state"], a["exit_code"], a["elapsed_s"], a["gpu_hours"])
+                for a in s.runlog("ended")]
+    assert attempts == [("g", 1, "PREEMPTED", 0, 1800, 0.5), ("g", 2, "COMPLETED", 0, 3600, 1.0)]
     assert s.state("g")["gpu_hours"] == 1.5
     assert "| benches | 1.5 | 10 | 30 |" in s.paths.status.read_text()
     assert s.events("stage completed")[0][1]["gpu_hours"] == "1.5"
@@ -332,6 +333,9 @@ def test_without_authorization_nothing_new_is_submitted_and_restoring_it_resumes
     assert (s.status("a"), s.status("b")) == ("RUNNING", "BLOCKED")
     assert [detail["code"] for _, detail in s.events("blocked")] == ["authorization_missing"]
     assert "authorization: authorization_missing" in s.paths.status.read_text()
+    status = s.status_json()
+    assert status["authorization"] == dict(status["authorization"], ok=False, sha256_ok=False, signature_ok=True)
+    assert status["gpu"] == {"limit_by_account": {}, "in_use_by_account": {}}  # nothing is usable now
     s.cycle()
     assert len(s.events("blocked")) == 1  # one event, not one per cycle
 
@@ -383,9 +387,17 @@ def test_fresh_lock_is_respected_and_a_stale_one_is_taken_and_recorded(study):
 
     old = time.time() - 21 * 60
     os.utime(s.paths.lock, (old, old))
-    s.cycle()
+    assert "stale_lock taken age_s=12" in s.cycle()
     assert s.status("a") == "QUEUED" and not s.paths.lock.exists()
-    assert s.runlog("stale_lock")[0]["age_s"] >= 20 * 60
+    assert s.status_json()["watcher"]["lock"] == "stale_taken"
+
+    s.paths.lock.mkdir()
+    s.cycle()  # a cycle that finds the lock held says so and changes nothing else
+    held = s.status_json()
+    assert held["watcher"]["lock"] == "held" and held["watcher"]["cycle"] == 1 and len(s.calls("squeue")) == 1
+    s.paths.lock.rmdir()
+    s.cycle()
+    assert s.status_json()["watcher"] == dict(s.status_json()["watcher"], lock="ok", cycle=2)
 
 
 # ---- the addendum -------------------------------------------------------------------------------
@@ -398,6 +410,10 @@ def test_unsigned_addendum_keeps_every_job_on_cai6734(study):
     assert [(job["account"], job["qos"]) for job in jobs if not job["gpus"]] == [("cai6734", "cai6734-b")]
     assert (s.status("g8"), s.status("g9")) == ("PLANNED", "PLANNED")  # waiting for a GPU, not blocked
     assert "addendum_1: unsigned" in s.paths.status.read_text()
+    status = s.status_json()
+    assert status["gpu"] == {"limit_by_account": {"cai6734": 8}, "in_use_by_account": {"cai6734": 8}}
+    assert status["authorization"]["addenda"] == [
+        {"name": "AUTHORIZATION_ADDENDUM_1.md", "sha256_ok": True, "signed": False}]
     s.cycle()
     assert len(s.cluster.jobs()) == 9  # eight GPUs in use: nothing more until one frees
 
@@ -409,6 +425,10 @@ def test_signed_addendum_adds_cai5724_once_cai6734_is_full(study):
     accounts = [(job["account"], job["qos"]) for job in s.cluster.jobs()]
     assert accounts == [("cai6734", "cai6734")] * 8 + [("cai5724", "cai5724")] * 2
     assert "addendum_1: signed" in s.paths.status.read_text()
+    status = s.status_json()
+    assert status["gpu"] == {"limit_by_account": {"cai6734": 8, "cai5724": 8},
+                             "in_use_by_account": {"cai6734": 8, "cai5724": 2}}
+    assert status["authorization"]["addenda"][0]["signed"] is True
 
 
 def test_generated_scripts_follow_the_project_conventions(study):
@@ -438,6 +458,7 @@ def test_gate_not_met_skips_its_stages_and_their_dependents(study):
     assert (record["result"], record["skipped"]) == ("not_met", ["b", "c"])
     assert s.state("c")["skipped_by"] == "G"
     assert s.events("gate decided") == [("gate decided", {"gate": "G", "result": "not_met", "path": "not_met", "skipped": "2"})]
+    assert record["path_taken"] == "not_met" and export_guard.TIME.match(record["decided_at"])
     assert len(s.calls("sbatch")) == 2 and s.final()["kind"] == "study completed"
     assert "| SKIPPED BY GATE | 2 |" in s.paths.status.read_text()
 
@@ -456,10 +477,10 @@ def test_gate_whose_rule_does_not_decide_is_a_blocked_item(study):
 
 def test_scheduler_query_failure_changes_nothing(study):
     s = study([stage("a")])
-    s.cycle(expect=1, FAKE_SLURM_FAIL="squeue")
-    assert not s.calls("sbatch") and not s.paths.stage_state("a").exists()
+    assert "scheduler_error sacct=True squeue=False" in s.cycle(expect=1, FAKE_SLURM_FAIL="squeue")
+    assert not s.calls("sbatch") and not s.paths.stage_state("a").exists() and not s.runlog()
     assert "scheduler: error" in s.paths.status.read_text()
-    assert s.runlog("scheduler_error") == [dict(s.runlog("scheduler_error")[0], sacct=True, squeue=False)]
+    assert s.status_json()["counts"]["PLANNED"] == 1  # still written, from what is on disk
     s.cycle()
     assert s.status("a") == "QUEUED"
 
@@ -519,7 +540,7 @@ def test_surface_holds_names_and_numbers_only_and_rejects_free_text(study):
 
     events, status = s.paths.events.read_text(), s.paths.status.read_text()
     count = len(events.splitlines())
-    s.paths.events.write_text(events + "2026-11-13T03:00:00-0500\tfailure\tthe patient in bed 4 had chest pain\n")
+    s.paths.events.write_text(events + "2026-11-13T03:00:00-05:00\tfailure\tthe patient in bed 4 had chest pain\n")
     assert export_guard.surface_check(s.paths) == ["events.tsv:%d:not_an_event" % (count + 1)]
     s.paths.events.write_text(events + "a line with no fields\n")
     assert export_guard.surface_check(s.paths) == ["events.tsv:%d:not_an_event" % (count + 1)]
@@ -553,3 +574,196 @@ def test_pure_helpers():
     assert watcher.remove_tagged(entry) == ""
     assert watcher.remove_tagged(OTHER_ENTRIES_BELOW) == OTHER_ENTRIES_BELOW
     assert [watcher.show(value) for value in (None, 2.0, 0.4583333, 0.0, 7, "E2")] == ["none", "2", "0.458", "0", "7", "E2"]
+
+
+# ---- the monitor's files (monitor/DATA_CONTRACT.md) ---------------------------------------------
+
+STAGE_FIELDS = {"id", "experiment", "kind", "status", "depends_on", "gate", "attempts", "job_id", "account",
+                "gpus", "submitted_at", "started_at", "ended_at", "elapsed_s", "gpu_hours", "exit_code",
+                "last_state", "estimate_gpu_hours"}
+
+
+def is_time(text):
+    return isinstance(text, str) and bool(export_guard.TIME.match(text))
+
+
+def test_status_json_has_the_shape_of_the_data_contract(study):
+    s = study([stage("prep"),
+               stage("e8-seed1-part1", SLOW, experiment="E8", gpus=1, estimate=25.6, depends_on=["prep"]),
+               stage("e8-eval", experiment="E8", gpus=1, estimate=2, depends_on=["e8-seed1-part1"], gate="G2a"),
+               stage("big", experiment="E2", gpus=1, estimate=500)],  # more than E2's whole allowance
+              [{"id": "G2a", "rule": "noop_gate.py", "inputs": ["e8-seed1-part1"], "reads": []}])
+    items = s.paths.stage_dir("e8-seed1-part1") / "items.jsonl"
+    s.cluster.plan("tii-e8-seed1-part1", [{"outcome": "start", "wait_file": str(items), "wait_lines": 1, "elapsed": 3600},
+                                          {"outcome": "complete", "elapsed": 7200}])
+    s.cycle()
+    s.advance()
+    s.cycle()
+    s.advance()  # the training part is now running, an hour in
+    s.cycle()
+    status = s.status_json()
+
+    assert list(status) == sorted(["schema", "generated_at", "milestone", "watcher", "authorization", "gpu",
+                                   "counts", "experiments", "stages", "gates", "blocked"])
+    assert (status["schema"], status["milestone"]) == ("tii-status/1", "M0") and is_time(status["generated_at"])
+    cycle = status["watcher"]
+    assert set(cycle) == {"cycle", "started_at", "finished_at", "interval_s", "lock", "completed"}
+    assert (cycle["cycle"], cycle["interval_s"], cycle["lock"], cycle["completed"]) == (3, 900, "ok", False)
+    assert is_time(cycle["started_at"]) and is_time(cycle["finished_at"])
+    assert status["authorization"] == {
+        "ok": True, "sha256_ok": True, "signature_ok": True, "expires": "2027-03-31",
+        "addenda": [{"name": "AUTHORIZATION_ADDENDUM_1.md", "sha256_ok": True, "signed": False}]}
+    assert status["gpu"] == {"limit_by_account": {"cai6734": 8}, "in_use_by_account": {"cai6734": 1}}
+    assert status["counts"] == {"PLANNED": 1, "BLOCKED": 1, "QUEUED": 0, "RUNNING": 1, "INTERRUPTED": 0,
+                                "FAILED": 0, "REFUSED": 0, "COMPLETED": 1, "SKIPPED BY GATE": 0}
+    assert status["experiments"] == [
+        {"id": "benches", "status": "COMPLETED", "estimate_gpu_hours": 10, "allowance_gpu_hours": 30, "spent_gpu_hours": 0},
+        {"id": "E8", "status": "RUNNING", "estimate_gpu_hours": 105, "allowance_gpu_hours": 210, "spent_gpu_hours": 1.0},
+        {"id": "E2", "status": "BLOCKED", "estimate_gpu_hours": 90, "allowance_gpu_hours": 200, "spent_gpu_hours": 0}]
+
+    rows = {row["id"]: row for row in status["stages"]}
+    assert list(rows) == ["prep", "e8-seed1-part1", "e8-eval", "big"]
+    assert all(set(row) == STAGE_FIELDS for row in rows.values())
+    job = [j for j in s.cluster.jobs() if j["name"] == "tii-e8-seed1-part1"][0]
+    running = rows["e8-seed1-part1"]
+    assert {key: running[key] for key in STAGE_FIELDS - {"id", "submitted_at", "started_at"}} == {
+        "experiment": "E8", "kind": "normal", "status": "RUNNING", "depends_on": ["prep"], "gate": None,
+        "attempts": 1, "job_id": job["id"], "account": "cai6734", "gpus": 1, "ended_at": None,
+        "elapsed_s": 3600, "gpu_hours": 1.0, "exit_code": None, "last_state": "RUNNING",
+        "estimate_gpu_hours": 25.6}
+    assert is_time(running["submitted_at"]) and running["started_at"] == iso(job["start"])
+    done = rows["prep"]
+    assert (done["status"], done["exit_code"], done["last_state"], done["attempts"], done["gpus"]) == (
+        "COMPLETED", 0, "COMPLETED", 1, 0)
+    assert all(is_time(done[key]) for key in ("submitted_at", "started_at", "ended_at"))
+    never = rows["e8-eval"]
+    assert [never[key] for key in ("status", "gate", "attempts", "job_id", "account", "submitted_at",
+                                   "elapsed_s", "exit_code", "last_state", "gpu_hours")] == [
+        "PLANNED", "G2a", 0, None, None, None, None, None, None, 0]
+    assert rows["big"]["status"] == "BLOCKED"
+    assert status["gates"] == [{"id": "G2a", "decided": False, "result": None, "path_taken": None, "decided_at": None}]
+    assert [(b["id"], b["title"], b["status"]) for b in status["blocked"]] == [("BLOCKED-W001", "allowance:E2", "OPEN")]
+    assert set(status["blocked"][0]) == {"id", "title", "opened_at", "status"} and is_time(status["blocked"][0]["opened_at"])
+    assert "| E8 | 1 | 105 | 210 |" in s.paths.status.read_text()  # STATUS.md shows the same numbers
+    assert export_guard.surface_check(s.paths) == []
+    assert [path.name for path in s.paths.state.iterdir() if ".tmp" in path.name] == []  # renamed into place
+
+    s.advance()  # the part completes; its gate is decided, not met with nothing to read
+    s.cycle()
+    status = s.status_json()
+    part = {row["id"]: row for row in status["stages"]}["e8-seed1-part1"]
+    assert (part["status"], part["exit_code"], part["last_state"], part["elapsed_s"], part["gpu_hours"]) == (
+        "COMPLETED", 0, "COMPLETED", 7200, 2.0)
+    assert is_time(part["ended_at"])
+    gate = status["gates"][0]
+    assert (gate["decided"], gate["result"], gate["path_taken"]) == (True, "not_met", "not_met") and is_time(gate["decided_at"])
+    assert status["counts"]["SKIPPED BY GATE"] == 1
+    # Nothing is left that can run: the watcher has finished, with E2 still blocked.
+    assert status["watcher"]["completed"] is True and status["watcher"]["cycle"] == 4
+    assert [e["status"] for e in status["experiments"]] == ["COMPLETED", "COMPLETED", "BLOCKED"]
+    assert status["gpu"]["in_use_by_account"] == {"cai6734": 0}
+
+
+def test_runlog_lines_follow_the_data_contract(study):
+    s = study([stage("a", bind={"card": "$TII/private/card.json"}), stage("g", gpus=1, estimate=3),
+               stage("x", depends_on=["g"], gate="G")],
+              [{"id": "G", "rule": "noop_gate.py", "inputs": ["g"], "reads": []}])
+    s.paths.private.mkdir(parents=True)
+    (s.paths.private / "card.json").write_text("{}")
+    s.cluster.plan("tii-g", [{"outcome": "preempt", "elapsed": 1800}, {"outcome": "complete", "elapsed": 3600}])
+    s.cycle()
+    (s.paths.private / "card.json").write_text('{"changed": 1}')
+    for _ in range(2):
+        s.advance()
+        s.cycle()
+    lines = s.runlog()
+    assert all(is_time(line["time"]) for line in lines)
+    assert {line["event"] for line in lines} == {"submitted", "started", "ended", "resubmitted", "refused",
+                                                 "gate_decided", "blocked"}
+
+    first, second = [job for job in s.cluster.jobs() if job["name"] == "tii-g"]
+    described = {"stage": "g", "experiment": "benches", "account": "cai6734"}
+    submitted = [line for line in lines if line["event"] == "submitted" and line["stage"] == "g"][0]
+    resubmitted = [line for line in lines if line["event"] == "resubmitted"][0]
+    assert [line for line in lines if line.get("stage") == "g"] == [
+        dict(described, time=submitted["time"], event="submitted", attempt=1, job_id=first["id"]),
+        # started and ended carry the scheduler's own times, not the time the watcher looked
+        dict(described, time=iso(first["start"]), event="started", attempt=1, job_id=first["id"], state="RUNNING"),
+        dict(described, time=iso(first["end"]), event="ended", attempt=1, job_id=first["id"], state="PREEMPTED",
+             exit_code=0, elapsed_s=1800, gpu_hours=0.5),
+        dict(described, time=resubmitted["time"], event="resubmitted", attempt=2, job_id=second["id"]),
+        dict(described, time=iso(second["start"]), event="started", attempt=2, job_id=second["id"], state="RUNNING"),
+        dict(described, time=iso(second["end"]), event="ended", attempt=2, job_id=second["id"], state="COMPLETED",
+             exit_code=0, elapsed_s=3600, gpu_hours=1.0)]
+
+    refused = [line for line in lines if line["event"] == "refused"]
+    job = [j for j in s.cluster.jobs() if j["name"] == "tii-a"][0]
+    assert refused == [{"time": iso(job["end"]), "event": "refused", "stage": "a", "experiment": "benches",
+                        "attempt": 1, "job_id": job["id"], "account": "cai6734", "exit_code": 20}]
+    record = json.loads(s.paths.gate_record("G").read_text())
+    assert [line for line in lines if line["event"] == "gate_decided"] == [
+        {"time": record["decided_at"], "event": "gate_decided", "gate": "G", "result": "not_met", "path_taken": "not_met"}]
+    blocked = [line for line in lines if line["event"] == "blocked"]
+    assert [{k: v for k, v in line.items() if k != "time"} for line in blocked] == [
+        {"event": "blocked", "item": "BLOCKED-W001", "title": "refused:a", "stage": "a"}]
+
+
+def test_running_stage_reports_progress_for_the_monitor(study):
+    s = study([stage("slow", SLOW), stage("quick")])
+    items = s.paths.stage_dir("slow") / "items.jsonl"
+    s.cluster.plan("tii-slow", [{"outcome": "usr1", "wait_file": str(items), "wait_lines": 2}])
+    s.cycle()
+    s.advance()
+    partial = s.progress("slow")
+    assert set(partial) == {"stage", "unit", "done", "total", "updated_at"} and is_time(partial["updated_at"])
+    assert (partial["stage"], partial["unit"], partial["total"]) == ("slow", "step", 6)
+    assert 2 <= partial["done"] < 6 and partial["done"] == len(s.items("slow"))  # written when the attempt ended
+    assert {key: s.progress("quick")[key] for key in ("stage", "unit", "done", "total")} == {
+        "stage": "quick", "unit": "item", "done": 1, "total": 1}
+    s.cycle()
+    s.advance()
+    s.cycle()
+    assert s.progress("slow")["done"] == 6 and s.status("slow") == "COMPLETED"
+    assert export_guard.surface_check(s.paths) == []
+
+
+def test_surface_check_covers_the_monitors_files(study):
+    s = study([stage("a")])
+    s.run_to_end()
+    assert export_guard.surface_check(s.paths) == []
+    good = s.paths.status_json.read_text()
+
+    def with_change(change):
+        status = json.loads(good)
+        change(status)
+        s.paths.status_json.write_text(json.dumps(status))
+        return export_guard.surface_check(s.paths)
+
+    assert with_change(lambda st: st["stages"][0].update(note="seen at 3 am")) == ["status.json:1:forbidden_key"]
+    assert with_change(lambda st: st["blocked"].append({"id": "x", "title": "the patient in bed 4"})) == [
+        "status.json:1:string_not_identifier"]
+    assert with_change(lambda st: st.pop("counts")) == ["status.json:1:status_shape"]
+    assert with_change(lambda st: st.update(extra=1)) == ["status.json:1:status_shape"]
+    assert with_change(lambda st: st.update(schema="tii-status/2")) == ["status.json:1:status_shape"]
+    s.paths.status_json.write_text("{not json")
+    assert export_guard.surface_check(s.paths) == ["status.json:1:not_json"]
+    s.paths.status_json.write_text(good)
+
+    report = {"stage": "b", "unit": "admission", "done": 3, "total": 9, "updated_at": now()}
+    for name, content, code in (
+            ("b.json", dict(report, done="three of nine so far"), "string_not_identifier"),
+            ("b.json", dict(report, stage="a"), "progress_shape"),
+            ("b.json", dict(report, total=None), "progress_shape"),
+            ("b.json", dict(report, detail=1), "progress_shape"),
+            ("two words.json", report, "file_name"), ("b.txt", report, "file_name")):
+        (s.paths.progress / name).write_text(json.dumps(content))
+        assert export_guard.surface_check(s.paths) == ["state/progress:1:%s" % code], name
+        (s.paths.progress / name).unlink()
+    (s.paths.progress / "b.json").write_text(json.dumps(report))
+    assert export_guard.surface_check(s.paths) == []  # a well-formed report from another stage is fine
+
+    (s.paths.progress / "rogue.json").write_text(json.dumps({"hpi": "65 year old with chest pain"}))
+    s.cycle()  # the watcher moves it out of what the monitor reads and raises an item
+    assert sorted(path.name for path in s.paths.progress.iterdir()) == ["a.json", "b.json"]
+    assert s.blocked()["surface"]["detail"] == {"quarantined": 1, "violations": 0}
+    assert s.status_json()["blocked"][-1]["title"] == "surface"
