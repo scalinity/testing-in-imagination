@@ -62,6 +62,25 @@ def test_only_named_faults_are_bench_results():
     assert bench.fault(RuntimeError("anything else")) is None
 
 
+def test_each_backbones_defaults_fit_a_three_hour_bench():
+    nemotron, granite = bench.options_of(["--backbone", "nemotron"]), bench.options_of(["--backbone", "granite"])
+    assert (nemotron.train_admissions, nemotron.val_admissions, nemotron.pause_at, nemotron.reference) == (60, 8, 90, True)
+    assert (granite.train_admissions, granite.val_admissions, granite.pause_at, granite.reference) == (110, 12, 150, False)
+    for options in (nemotron, granite):  # the pause lies inside the second of the two epochs
+        assert options.train_admissions < options.pause_at < 2 * options.train_admissions
+    assert 2 * granite.train_admissions > 200  # Granite's one training reaches all three 100-step loss phases
+
+    def gpu_hours(options):  # the docstring's assumptions: 24 s a step, 20 s an episode, 5 min a process
+        runs, processes = (2, 5) if options.reference else (1, 4)
+        steps, episodes = runs * 2 * options.train_admissions, (runs * 4 + 1) * options.val_admissions
+        return (steps * 24 + episodes * 20 + processes * 300) / 3600
+
+    assert round(gpu_hours(nemotron), 1) == 2.4 and round(gpu_hours(granite), 1) == 2.1  # as the docstring states
+    explicit = bench.options_of(["--backbone", "granite", "--reference", "--train-admissions", "20", "--pause-at", "0"])
+    assert (explicit.reference, explicit.train_admissions, explicit.pause_at, explicit.val_admissions) == (True, 20, 0, 12)
+    assert bench.options_of(["--backbone", "nemotron", "--no-reference"]).reference is False
+
+
 def test_the_bench_data_are_the_first_admissions_unchanged(tmp_path):
     source = prepared(tmp_path, with_test=False)
     bench.cut(source, tmp_path / "small", 10, 3)

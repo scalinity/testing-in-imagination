@@ -276,3 +276,14 @@ compares a paused-and-resumed run with an uninterrupted run of the same seed and
 step-by-step sequences and visit counts. Parts are also scheduled to end at the epoch boundary where
 the time limit allows. A training whose sequence departs from the plan is refused, not published.
 This is a repair of resume behavior, not of the recipe.
+
+### D-GATE-RESUME, November 13, 2026
+
+Gate G_resume (tii-cee/gates/resume_gate.py), committed before its input exists. Input: the
+Nemotron bench's approved report. Met only if the uninterrupted reference and the training in parts
+both end "ok", both follow the drawn plan, and they trained on the same admission at every optimizer
+step and on every admission the same number of times. Every E8, E9 and E10 training stage waits on
+it; if not met, no policy of the training track is trained and the result is reported. Bench sizes
+fit the 3-GPU-hour bench cap: Nemotron 60 training and 8 validation admissions with the reference
+(about 2.4 GPU-hours, benches allowance); Granite 110 and 12 without the reference (about 2.1,
+E9's allowance).

@@ -1,0 +1,206 @@
+{
+  "study": "TII-CEE-1",
+  "milestone": "M1",
+  "notes": [
+    "A fragment for review, in the format of $TII/pipeline/graph.json (tiicee/pipeline/graph.py). The loader ignores the keys 'notes' and 'note'.",
+    "watcher.env must set CDM_WORK_DIR (the baseline work directory) for e8-data and e10-folds, and the Hugging Face cache and token for the GPU stages.",
+    "GPU estimates: 24 s an optimizer step (E8's measured 25.6 h for 3,840 steps), up to 20 s a validation or rollout episode, five minutes to load the model per process (assumed). See tiicee/clinical/bench.py.",
+    "Resources follow the prior studies' jobs: training 4 CPUs and 40 GB (replication scripts/submit_slurm.py:60-67), evaluation 4 CPUs and 16 GB (tim scripts/submit_slurm.py:82).",
+    "No gate is written here. Before E8's training stages are added they need a gate on export/approved/bench-nemotron.json requiring sequences_identical and visits_identical (and reference.follows_plan, training.follows_plan) to be true; its rule file belongs in tii-cee/gates/.",
+    "Bound cluster paths resolved November 13, 2026 by name only (directory and file names listed, no contents read)."
+  ],
+  "stage_modules": [
+    "tiicee.clinical.folds",
+    "tiicee.clinical.train",
+    "tiicee.clinical.rollout",
+    "tiicee.clinical.bench",
+    "tiicee.clinical.acceptance"
+  ],
+  "stages": [
+    {
+      "id": "e8-data",
+      "note": "E8 and E9 data: train.csv, val.csv and lab_test_mapping.csv copied unchanged from $CDM_WORK_DIR/prepared/. test.csv is never opened.",
+      "experiment": "E8",
+      "kind": "normal",
+      "command": [
+        "clinical_data"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [],
+      "allowance_key": "E8",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e10-folds",
+      "note": "E10 folds: five fold directories over the 2,160 training-plus-validation admissions, seed 20261113 (fixed in tiicee/clinical/folds.py).",
+      "experiment": "E10",
+      "kind": "normal",
+      "command": [
+        "clinical_folds"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [],
+      "allowance_key": "E10",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "bench-nemotron",
+      "note": "Resume mechanics on the real stack (D-CLIN-RESUME): one seed trained uninterrupted and in parts, then rolled out. Defaults: 60 training and 8 validation admissions, pause at step 90, with the reference. Five jobs.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_bench",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 40,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 2.4,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "e9-bench-granite",
+      "note": "E9's bench of the second backbone. Defaults: 110 training and 12 validation admissions, pause at step 150, no reference. Four jobs. It waits for bench-nemotron so the resume mechanics are known first; that is an ordering, not a condition on its result.",
+      "experiment": "E9",
+      "kind": "normal",
+      "command": [
+        "clinical_bench",
+        "--backbone",
+        "granite"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 40,
+        "time_hours": 2
+      },
+      "depends_on": [
+        "e8-data",
+        "bench-nemotron"
+      ],
+      "allowance_key": "E9",
+      "estimate_gpu_hours": 2.1,
+      "env": {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+        "CUBLAS_WORKSPACE_CONFIG": null
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "data": "$TII/private/stages/e8-data/out",
+          "backbone_overlay": "tii-cee/clinical_configs/backbone/granite_3_3_8b.yaml"
+        },
+        "seeds": {
+          "training": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "p-rollout-val",
+      "note": "Launch check 7.4a, first half: the primary policy's unguarded validation rollout regenerated once with every prompt logged. Same checkpoint and seed as tim's val-a V0.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_rollout",
+        "--backbone",
+        "nemotron"
+      ],
+      "resources": {
+        "gpus": 1,
+        "cpus": 4,
+        "mem_gb": 16,
+        "time_hours": 1
+      },
+      "depends_on": [
+        "e8-data"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0.5,
+      "env": {
+        "CUBLAS_WORKSPACE_CONFIG": ":4096:8"
+      },
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "split": "$TII/private/stages/e8-data/out/val.csv",
+          "lab_test_mapping": "$TII/private/stages/e8-data/out/lab_test_mapping.csv",
+          "train_csv": "$TII/private/stages/e8-data/out/train.csv",
+          "adapter": "/blue/cai6734/daniel.escalante/private/cdm-work/mimic-v1.1-hpg-bw-7fcd9e5/models/parity/269/primary/adapter"
+        },
+        "seeds": {
+          "policy": 269
+        },
+        "pairing_unit": "admission"
+      }
+    },
+    {
+      "id": "launch-check-7-4a",
+      "note": "Launch check 7.4a, second half: the regenerated rollout is accepted only if its final answers match tim's stored val-a V0 outcomes on at least 99% of admissions. Counts only.",
+      "experiment": "benches",
+      "kind": "normal",
+      "command": [
+        "clinical_acceptance"
+      ],
+      "resources": {
+        "gpus": 0,
+        "cpus": 1,
+        "mem_gb": 4,
+        "time_hours": 0.25
+      },
+      "depends_on": [
+        "p-rollout-val"
+      ],
+      "allowance_key": "benches",
+      "estimate_gpu_hours": 0,
+      "manifest": {
+        "intervention": "new intervention",
+        "bind": {
+          "stored": "/blue/cai6734/daniel.escalante/private/tim-work/private/episodes/7fc5cda72158e08d_val-a_V0_primary_0b3edac732b9.jsonl",
+          "regenerated": "$TII/private/stages/p-rollout-val/out/rows.jsonl"
+        },
+        "pairing_unit": "admission"
+      }
+    }
+  ],
+  "gates": []
+}

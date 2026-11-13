@@ -1,8 +1,8 @@
 """Bench of a backbone under the frozen recipe, and of training in parts (EXPERIMENT_CARDS/E9.md,
 "Bench and repairs"; RESEARCH_LEDGER.md, D-CLIN-RESUME).
 
-Stage: clinical_bench --backbone nemotron|granite [--train-admissions 110] [--val-admissions 12]
-                      [--pause-at 150] [--no-reference]
+Stage: clinical_bench --backbone nemotron|granite [--train-admissions N] [--val-admissions N]
+                      [--pause-at STEP] [--reference | --no-reference]
 Manifest: role "data" (as clinical_train) and seed "training". Job environment: the training
 environment (backbone.TRAINING_ENVIRONMENT). The bench also evaluates, which runs with tim's cuBLAS
 setting, so the stage puts that one variable in place itself for each of its processes, before
@@ -10,12 +10,25 @@ torch is loaded; train.fit and rollout.roll then verify the environment as they 
 stages.
 
 The bench calls the same code as the real stages (train.fit, rollout.roll) on the first
-admissions of train.csv and val.csv, with one seed throughout. The defaults give 220 optimizer
-steps, enough to pass through all three loss phases (100 da, 100 ha_sft, then ha_conf_cal) and two
-100-step checkpoints.
+admissions of train.csv and val.csv, with one seed throughout and two epochs as the recipe has.
 
-It runs as five processes, each ending with the continue code until the last, because no two
-engines can share a process:
+Defaults per backbone, each sized to the specification's limit of 3 GPU-hours for a bench
+(section 14.3). The estimates assume 24 s an optimizer step (E8's measured 25.6 h for 3,840 steps,
+validation included), up to 20 s a validation or rollout episode (the replication's figure; tim
+measured about 6 s) and five minutes to load the model in each process (assumed, not measured):
+  nemotron  the resume mechanics, charged to the benches allowance. 60 training and 8 validation
+            admissions, a pause at step 90, with the reference: two trainings of 120 steps
+            (96 min), 64 validation episodes (21 min), five processes (25 min), the rollout
+            (3 min). About 2.4 GPU-hours. A run reaches the da and ha_sft loss phases and one
+            100-step checkpoint, which the resumed part crosses.
+  granite   E9's bench of the backbone, charged to E9. 110 and 12 admissions, a pause at step 150,
+            no reference (the resume mechanics do not depend on the backbone): one training of 220
+            steps (88 min), passing through all three loss phases (100 da, 100 ha_sft, then
+            ha_conf_cal), 48 validation episodes (16 min), four processes (20 min), the rollout
+            (4 min). About 2.1 GPU-hours at Nemotron's speed; Granite's own speed is not known.
+
+It runs as up to five processes, each ending with the continue code until the last, because no
+two engines can share a process:
   1. the reference: the whole training, uninterrupted, with the trainer's sampler left exactly as
      TRL builds it and only observed (left out with --no-reference). A killed attempt starts over;
   2. the same training in parts, as clinical_train runs it: the first epoch, ending at the planned
@@ -56,6 +69,10 @@ from tiicee.clinical.train import Paused, fit, hooks, inspect_data, visits
 from tiicee.pipeline.stages import StageInterrupted, register
 
 MAPPING = "lab_test_mapping.csv"
+DEFAULTS = {  # see the module docstring for what each is sized for
+    "nemotron": {"train_admissions": 60, "val_admissions": 8, "pause_at": 90, "reference": True},
+    "granite": {"train_admissions": 110, "val_admissions": 12, "pause_at": 150, "reference": False},
+}
 PRIVATE = ("sequence_sha256", "visits_sha256")  # digests over admission identifiers stay in the stage
 
 
@@ -145,22 +162,31 @@ def adherence(results, facts) -> dict:
     }
 
 
-@register("clinical_bench")
-def run(ctx):
+def options_of(args):
+    """The stage's options, with what was not given taken from the backbone's defaults."""
     parser = argparse.ArgumentParser(prog="clinical_bench")
     parser.add_argument("--backbone", choices=sorted(BACKBONES), required=True)
-    parser.add_argument("--train-admissions", type=int, default=110)
-    parser.add_argument("--val-admissions", type=int, default=12)
-    parser.add_argument("--pause-at", type=int, default=150)
-    parser.add_argument("--no-reference", action="store_true")
-    options = parser.parse_args(ctx.args)
+    parser.add_argument("--train-admissions", type=int)
+    parser.add_argument("--val-admissions", type=int)
+    parser.add_argument("--pause-at", type=int)
+    parser.add_argument("--reference", action=argparse.BooleanOptionalAction)
+    options = parser.parse_args(args)
+    for name, value in DEFAULTS[options.backbone].items():
+        if getattr(options, name) is None:
+            setattr(options, name, value)
+    return options
+
+
+@register("clinical_bench")
+def run(ctx):
+    options = options_of(ctx.args)
     backbone, seed = chosen(ctx, options.backbone), ctx.manifest["seeds"]["training"]
     data, small, model = bound(ctx, "data"), ctx.dir / "data", ctx.out_dir / "model"
     inspect_data(data)
     cut(data, small, options.train_admissions, options.val_admissions)
     state = ctx.load_checkpoint() or {}
 
-    if not options.no_reference and "reference" not in state:
+    if options.reference and "reference" not in state:
         def watched(step, total):  # the reference reports progress and is never asked to stop
             ctx.progress(int(step), int(total), "step")
             return False
