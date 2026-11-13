@@ -70,6 +70,7 @@ parallel because it does not depend on the method.
 
 ## What we are not claiming
 
-That the content model passed a valid quality check, that the availability null proves no possible
-benefit, that the projection fixes double counting or wrong scale, that sandbox numbers are project
+That measuring the violation is new (DIVA, arXiv 2610.32181, measured it across 20 language models
+and avoids it by construction; PRIOR_WORK_MATRIX.md row 17), that the content model passed a valid
+quality check, that the availability null proves no possible benefit, that the projection fixes double counting or wrong scale, that sandbox numbers are project
 results, or anything about clinical use.

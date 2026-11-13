@@ -33,10 +33,12 @@ we said in advance what each one would mean.
 
 ## Likely questions
 
-- "Isn't this ArbitrageForecaster or BED-LLM?" Paleka et al. patch a model's own forecasts toward
-  the same constraint and report the smallest gain for it; BED-LLM avoids the incoherent pairing. We
-  repair it under a separate world model, account for the gain exactly, and add the scale repair.
-  The mathematics is classical; we say so.
+- "Isn't this ArbitrageForecaster, BED-LLM or DIVA?" Paleka et al. patch a model's own forecasts
+  toward the same constraint and report the smallest gain for it; BED-LLM and DIVA avoid the
+  incoherent pairing by having Bayes' rule do the updating, and DIVA already measured the violation
+  (6.3 points on average across 20 language models, binary checks). We repair the posteriors of a
+  reader that cannot be replaced, such as a trained clinical agent, under a separate world model;
+  account for the gain exactly; and add the scale repair. The mathematics is classical; we say so.
 - "Will accuracy improve?" Unknown, and not promised. Lower log loss is not more correct answers.
 - "Why should a 240-admission test move anything?" It may not; that is why the clinical sample is a
   cross-fitted cohort of 2,160 admissions and five policies, and why the test split is used once.
