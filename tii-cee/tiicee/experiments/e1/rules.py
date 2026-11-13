@@ -14,7 +14,6 @@ Shared readings:
 """
 from __future__ import annotations
 
-import itertools
 from collections import defaultdict
 
 import numpy as np
@@ -41,6 +40,12 @@ SANDBOX_PATIENTS = 4000
 SEED_INTERVAL_CAVEAT = ("The specified 95% percentile bootstrap over twenty seeds has simulated coverage of about 92% for normal "
                         "and 90% for skewed differences, so a verdict that rests on it runs slightly liberal. The method is the "
                         "card's and is not changed.")
+# Each rule draws its bootstrap streams from a fixed block of keys, so its intervals do not depend on whether an
+# earlier rule was complete. The blocks number the intervals in the order of a complete evaluation, which is the
+# order the committed E1 verdicts were drawn in: repair and controls have 2 world models x 2 families each;
+# scale_present has two variants x 3 families x 2 comparators; usable_outside one variant of those.
+KEY_BLOCKS = {"track_selection": 0, "repair_present": 1, "negative_controls": 5, "variant_selection": 9,
+              "scale_present": 10, "usable_outside": 22}
 RESTS_ON_SEED_INTERVAL = ("track_selection", "repair_present", "negative_controls", "variant_selection", "scale_present", "usable_outside")
 
 
@@ -81,12 +86,10 @@ class Evaluator:
     def __init__(self, cfg: Config, interval=None):
         self.cfg = cfg
         self._interval = interval or (lambda differences, key: stats_api.seed_interval(differences, cfg, key))
-        self._keys = itertools.count()
         self.families = tuple(r for r in cfg.readers if r != "r0")      # the R4 family of the run
 
-    def interval(self, differences):
-        """{estimate, lo, hi} of the mean per-seed difference; None for a missing seed."""
-        key = next(self._keys)                     # numbered in evaluation order, so each interval has its own stream
+    def interval(self, differences, key):
+        """{estimate, lo, hi} of the mean per-seed difference, on the bootstrap stream `key`; None for a missing seed."""
         if differences is None:
             return None
         out = self._interval(differences, key)
@@ -104,7 +107,7 @@ class Evaluator:
         for track in ("stateless", "stateful"):
             families = [self._b(b_horizon, variant, family, "W2", track) for family in DRIFT_FAMILIES]
             per_track[track] = {seed: float(np.mean([f[seed] for f in families])) for seed in families[0] if all(seed in f for f in families)}
-        found = self.interval(_difference(per_track["stateful"], per_track["stateless"], self.cfg))
+        found = self.interval(_difference(per_track["stateful"], per_track["stateless"], self.cfg), KEY_BLOCKS["track_selection"])
         if found is None:
             return {"status": "incomplete", "verdict": None}
         return {"status": "evaluated", "verdict": "stateful" if found["hi"] < 0 else "stateless",
@@ -115,13 +118,13 @@ class Evaluator:
         and under W2. Kills the claim: the drift families do not improve under W0."""
         variant = variant or self.cfg.primary_variant
         cells = {}
-        for world in ("W0", "W2"):
-            for family in DRIFT_FAMILIES:
-                gain = self.interval(_difference(self._b(b_horizon, variant, family, world, "raw"),
-                                                 self._b(b_horizon, variant, family, world, track), self.cfg))
-                if gain is None:
-                    return {"status": "incomplete", "verdict": None}
-                cells[f"{family}|{world}"] = {**gain, "improves": gain["lo"] > 0}
+        for i, (world, family) in enumerate((w, f) for w in ("W0", "W2") for f in DRIFT_FAMILIES):
+            gain = self.interval(_difference(self._b(b_horizon, variant, family, world, "raw"),
+                                             self._b(b_horizon, variant, family, world, track), self.cfg),
+                                 KEY_BLOCKS["repair_present"] + i)
+            if gain is None:
+                return {"status": "incomplete", "verdict": None}
+            cells[f"{family}|{world}"] = {**gain, "improves": gain["lo"] > 0}
         under_truth = all(cells[f"{family}|W0"]["improves"] for family in DRIFT_FAMILIES)
         return {"status": "evaluated", "verdict": all(c["improves"] for c in cells.values()), "track": track,
                 "raw_minus_corrected": cells, "killed": not under_truth}
@@ -145,13 +148,13 @@ class Evaluator:
         Reading: under W0, the mean over seeds of corrected minus raw is positive for both; the interval is reported."""
         variant = variant or self.cfg.primary_variant
         cells = {}
-        for world in ("W0", "W2"):
-            for family in SCALE_FAMILIES:
-                harm = self.interval(_difference(self._b(b_horizon, variant, family, world, track),
-                                                 self._b(b_horizon, variant, family, world, "raw"), self.cfg))
-                if harm is None:
-                    return {"status": "incomplete", "verdict": None}
-                cells[f"{family}|{world}"] = {**harm, "worsens": harm["estimate"] > 0}
+        for i, (world, family) in enumerate((w, f) for w in ("W0", "W2") for f in SCALE_FAMILIES):
+            harm = self.interval(_difference(self._b(b_horizon, variant, family, world, track),
+                                             self._b(b_horizon, variant, family, world, "raw"), self.cfg),
+                                 KEY_BLOCKS["negative_controls"] + i)
+            if harm is None:
+                return {"status": "incomplete", "verdict": None}
+            cells[f"{family}|{world}"] = {**harm, "worsens": harm["estimate"] > 0}
         return {"status": "evaluated", "verdict": all(cells[f"{family}|W0"]["worsens"] for family in SCALE_FAMILIES),
                 "track": track, "corrected_minus_raw": cells}
 
@@ -240,19 +243,19 @@ class Evaluator:
                 stress = [self._d(d_horizon, variant, family, "W2", track, scale, budget) for budget in STRESS_SET]
                 families.append({seed: max(s[seed] for s in stress) for seed in stress[0] if all(seed in s for s in stress)})
             worst[scale] = {seed: float(np.mean([f[seed] for f in families])) for seed in families[0] if all(seed in f for f in families)}
-        found = self.interval(_difference(worst["two-sided"], worst["shrink-only"], self.cfg))
+        found = self.interval(_difference(worst["two-sided"], worst["shrink-only"], self.cfg), KEY_BLOCKS["variant_selection"])
         if found is None:
             return {"status": "incomplete", "verdict": None}
         return {"status": "evaluated", "verdict": "two-sided" if found["hi"] < 0 else "shrink-only",
                 "two_sided_minus_shrink_only": found, "tie": found["lo"] <= 0 <= found["hi"], "track": track}
 
-    def _scale_improves(self, d_horizon, variant, world, track, scale, budget):
+    def _scale_improves(self, d_horizon, variant, world, track, scale, budget, first_key):
         cells = {}
-        for family in SCALE_REPAIR_FAMILIES:
+        for i, family in enumerate(SCALE_REPAIR_FAMILIES):
             scaled = self._d(d_horizon, variant, family, world, track, scale, budget)
-            for name, comparator in (("raw", self._d(d_horizon, variant, family, world, "raw", "none", "none")),
-                                     ("projection", self._d(d_horizon, variant, family, world, track, "none", "none"))):
-                gain = self.interval(_difference(comparator, scaled, self.cfg))
+            for j, (name, comparator) in enumerate((("raw", self._d(d_horizon, variant, family, world, "raw", "none", "none")),
+                                                    ("projection", self._d(d_horizon, variant, family, world, track, "none", "none")))):
+                gain = self.interval(_difference(comparator, scaled, self.cfg), first_key + 2 * i + j)
                 if gain is None:
                     return None
                 cells[f"{family}|{name}"] = {**gain, "improves": gain["lo"] > 0}
@@ -265,7 +268,9 @@ class Evaluator:
         Reading: decided on the two-sided variant, the only one that can amplify an under-reactive reader;
         shrink-only is evaluated the same way and reported."""
         variant = variant or self.cfg.primary_variant
-        by_scale = {scale: self._scale_improves(d_horizon, variant, "W0", track, scale, "exact") for scale in ("two-sided", "shrink-only")}
+        by_scale = {scale: self._scale_improves(d_horizon, variant, "W0", track, scale, "exact",
+                                                KEY_BLOCKS["scale_present"] + 2 * len(SCALE_REPAIR_FAMILIES) * k)
+                    for k, scale in enumerate(("two-sided", "shrink-only"))}
         if any(cells is None for cells in by_scale.values()):
             return {"status": "incomplete", "verdict": None}
         decided = by_scale["two-sided"]
@@ -296,7 +301,7 @@ class Evaluator:
         """Card (gate G2c): usable outside the twin if the scale-repair condition holds for the selected variant
         under W2 with the estimated conservative budget, and the admission rate is at most 10%."""
         variant = variant or self.cfg.primary_variant
-        cells = self._scale_improves(d_horizon, variant, "W2", track, scale, "heldout")
+        cells = self._scale_improves(d_horizon, variant, "W2", track, scale, "heldout", KEY_BLOCKS["usable_outside"])
         admitted = self.admission(d_heldout, variant)
         if cells is None or admitted["status"] != "evaluated":
             return {"status": "incomplete", "verdict": None}

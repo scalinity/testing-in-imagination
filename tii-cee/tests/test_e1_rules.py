@@ -526,3 +526,22 @@ def test_attribution_needs_every_family_and_both_agents():
     assert evaluator().attribution(missing) == INCOMPLETE
     short = [r for r in rows if not (r["reader"] == "over" and r["seed"] == 1)]
     assert evaluator().attribution(short) == INCOMPLETE
+
+
+def test_each_rule_draws_from_its_own_fixed_block_of_bootstrap_keys():
+    # review F005: one counter ran across every rule, so a rule that stopped early shifted every later rule's stream
+    keys = []
+
+    def recording(differences, key):
+        keys.append(key)
+        return spread(differences, key)
+
+    table = {"B_reduced_horizon": b_table(textbook), "D_horizon": d_table(scale_textbook), "D_heldout": heldout_table([(0.10, 0.30, 0.11)])}
+    rules.evaluate(table, CFG, interval=recording)
+    assert sorted(keys) == list(range(28))        # a complete evaluation: every interval once, in the committed numbering
+    complete = list(keys)
+    keys.clear()
+    broken = [r for r in table["B_reduced_horizon"] if not (r["reader"] == "over" and r["world_model"] == "W0")]
+    out = rules.evaluate({**table, "B_reduced_horizon": broken}, CFG, interval=recording)
+    assert out["negative_controls"]["status"] == "incomplete"
+    assert keys == [k for k in complete if not rules.KEY_BLOCKS["negative_controls"] <= k < rules.KEY_BLOCKS["variant_selection"]]
