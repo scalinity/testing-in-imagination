@@ -53,6 +53,12 @@ def multistep_accounting(paths, truth, path_probs, leaf_beliefs, prefix_beliefs)
     corrected agent both residuals are zero and m0 = c_0 at every horizon (SPEC 5.12 (i), (ii));
     for a raw reader they are not. To account at an earlier horizon, pass the truncated tree with
     the truth marginalized over the later outcomes.
+
+    Zero world-model mass is legitimate (exact re-exposure makes P_hat a point mass). A prefix with
+    P_hat(h) = 0 is unreachable under the world model, so the martingale and tower statements, which
+    condition on h, say nothing there and it is left out of both residuals. A labeled class with
+    m_0(y) = 0 makes the prior term +inf and has no conditional M(O | y); it is left out of the
+    likelihood term, so the right side is +inf whatever value that class would add.
     """
     paths = [tuple(p) for p in paths]
     truth, probs, leaf = np.asarray(truth, dtype=float), np.asarray(path_probs, dtype=float), np.asarray(leaf_beliefs, dtype=float)
@@ -69,7 +75,7 @@ def multistep_accounting(paths, truth, path_probs, leaf_beliefs, prefix_beliefs)
     joint = probs[:, None] * leaf                   # M(path, y)
     m0 = joint.sum(0)
     p_star, b_star = truth.sum(1), truth.sum(0)
-    seen, labeled = p_star > 0, b_star > 0
+    seen, labeled = p_star > 0, (b_star > 0) & (m0 > 0)
     excess = float(p_star[seen] @ kl(truth[seen] / p_star[seen, None], leaf[seen]))
     likelihood = float(b_star[labeled] @ kl((truth[:, labeled] / b_star[labeled]).T, (joint[:, labeled] / m0[labeled]).T))
     prior_kl, world_model_kl = float(kl(b_star, m0)), float(kl(p_star, probs))
@@ -79,11 +85,14 @@ def multistep_accounting(paths, truth, path_probs, leaf_beliefs, prefix_beliefs)
     martingale = tower = 0.0
     for h, idx in members.items():
         idx = np.asarray(idx)
+        reach = probs[idx].sum()
+        if reach <= 0:                              # unreachable under P_hat: nothing to state
+            continue
         tower = max(tower, float(np.abs(joint[idx].sum(0) / joint[idx].sum() - beliefs[h]).max()))
         mass = {}                                   # next outcome -> P_hat mass of the paths through it
         for i in idx:
             child = paths[i][: len(h) + 1]
             mass[child] = mass.get(child, 0.0) + probs[i]
-        expected = sum(m * beliefs[child] for child, m in mass.items()) / probs[idx].sum()
+        expected = sum(m * beliefs[child] for child, m in mass.items() if m > 0) / reach
         martingale = max(martingale, float(np.abs(expected - beliefs[h]).max()))
     return MultiStepAccounting(m0, excess, prior_kl, likelihood, world_model_kl, rhs, excess - rhs, martingale, tower)

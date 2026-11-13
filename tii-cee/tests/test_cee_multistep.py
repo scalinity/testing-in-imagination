@@ -247,3 +247,27 @@ def test_malformed_problems_are_rejected():
         multistep_accounting([(0,), (0, 1)], np.full((2, 2), 0.25), [0.5, 0.5], np.full((2, 2), 0.5), {(): [0.5, 0.5]})
     with pytest.raises(ValueError):                  # shapes disagree
         multistep_accounting(M_PATHS, M_TRUTH, [0.5, 0.5, 0.0], [[0.5, 0.5], [0.5, 0.5]], {(): [0.5, 0.5]})
+
+
+# ------------------------------------------------------------- zero world-model mass (review F002)
+def test_an_unreachable_branch_is_left_out_of_the_residuals():
+    # re-exposure at step 1: P_hat puts all its mass on o_1 = 0, so the prefix (1,) is unreachable.
+    # The corrected beliefs below (1,) are arbitrary, and both residuals are still exactly zero.
+    paths = [(0, 0), (0, 1), (1, 0), (1, 1)]
+    truth = np.array([[0.4, 0.1], [0.1, 0.4], [0.0, 0.0], [0.0, 0.0]])
+    probs = np.array([0.5, 0.5, 0.0, 0.0])
+    leaf = np.array([[0.8, 0.2], [0.2, 0.8], [0.3, 0.7], [0.6, 0.4]])
+    prefix = {(): [0.5, 0.5], (0,): [0.5, 0.5], (1,): [0.9, 0.1]}
+    with np.errstate(all="raise"):
+        found = multistep_accounting(paths, truth, probs, leaf, prefix)
+    assert found.martingale_residual == pytest.approx(0.0, abs=1e-15)
+    assert found.tower_residual == pytest.approx(0.0, abs=1e-15)
+    assert found.residual == pytest.approx(0.0, abs=1e-15) and found.excess_log_loss == pytest.approx(0.0, abs=1e-15)
+
+
+def test_a_class_the_belief_never_covers_gives_an_infinite_prior_term_without_nan():
+    leaf = np.array([[1.0, 0.0], [1.0, 0.0]])                     # m_0 = (1, 0) while b_star = (1/2, 1/2)
+    with np.errstate(all="raise"):
+        found = multistep_accounting(M_PATHS, M_TRUTH, [0.5, 0.5], leaf, {(): [1.0, 0.0]})
+    assert found.prior_kl == math.inf and found.rhs == math.inf and found.excess_log_loss == math.inf
+    assert math.isfinite(found.likelihood_kl)
