@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 2:15 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 2:50 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -19,8 +19,10 @@ Updated November 13, 2026, about 2:15 PM EST. Times are US Eastern.
   (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
   charts get projection only, stateful track). G2a waits for E1-C. D-REGIME's coordinate (tau_B at
   the first decision point) is VALIDATED in the twin under W0 and W2 (RESEARCH_LEDGER.md, "D-REGIME
-  validation"); for the twin's readers the ordering is an identity, and the amendments of E2, E4 and
-  E7 are not yet made.
+  validation"); for the twin's readers the ordering is an identity. The two open questions are
+  decided ("D-REGIME decisions"): E2's scale call is read against R0 with a band of log(1.01), and
+  E2, E4 and E7 are amended. The extension with result-dependent readers is SUPPORTED under W0 and
+  W2 ("D-REGIME extension"), with a residual dependence on outcome frequencies reported.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
   done; G_resume met, training stages wait on a redeploy); E9 IN PROGRESS (Granite bench running); E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
@@ -31,9 +33,9 @@ Updated November 13, 2026, about 2:15 PM EST. Times are US Eastern.
   unaffected.
 - Next executable actions: redeploy with the E8 and E10 training stages (G_resume met); E9's
   training after the Granite bench; the E1-C interval finishes locally (about 20
-  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; the E2, E4 and
-  E7 amendments for D-REGIME (open: the scale call against R0, and whether the check gains readers
-  whose distortion depends on the result or the history); REVIEW-001 and REVIEW-008.
+  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; E2's analysis
+  code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
+  REVIEW-001 and REVIEW-008.
 
 ## 2. Authorization
 

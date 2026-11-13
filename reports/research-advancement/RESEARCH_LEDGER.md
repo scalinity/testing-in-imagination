@@ -485,3 +485,67 @@ How the answer is applied, fixed here before the extension runs:
 5. Cards E2, E4 and E7 are amended accordingly (each card's "Amendments before the first run").
    Clinical and public data have no R0, so E4 and E7 make no scale call: they report the
    first-decision-point coordinate descriptively, with its limits.
+
+### D-REGIME extension, November 13, 2026: result
+
+Run of tii-cee/tiicee/regime_extension.py at 93b992e (the module unchanged since 52eeef5) at 2:41 PM
+EST; criteria as fixed above (item 4) and in the module's docstring. Reviewed before the counted run
+by Gemini 4 Argon High through NativePeers (task 85663ef0, read-only): no defect in the module's
+logic; four findings, all applied. F001 and F002 (warnings): the tests could not catch a broken R0
+pairing, a wrong band endpoint, an outcome that ignored ordering, or a swap of a and b in cell();
+F003 and F004 (info): two branches never ran, and an unknown world model fell back to W0. Fixed in
+52eeef5, 5232fd1, c95b99b and 93b992e; each strengthened test fails under the mutations it names.
+Setting: E1 card configuration, 20 seeds, base variant, both acquisition rules. Output:
+tii-cee/results/D-REGIME-extension/verdict.json (SHA-256 2b5096c9…) and rows/ (20 files).
+
+Result: SUPPORTED. Under W0 and under W2 every judged reader is beyond the band on its side, and
+tau_B rises strictly along all six lines. Every search under W0 and W2 solved and converged. R0's
+own tau_B: 1.0007 [1.0001, 1.0012] under W0, 1.0069 [1.0015, 1.0124] under W2.
+
+| Reader (a, b) | Side | W0, tau_B / tau_B(R0) [95% seed interval] | W2 |
+|---|---|---|---|
+| (2, 2) | above | 1.995 [1.995, 1.995] | 2.000 [2.000, 2.000] |
+| (2, 1) | above | 1.931 [1.920, 1.942] | 1.936 [1.925, 1.946] |
+| (1, 2) | above | 1.081 [1.069, 1.092] | 1.080 [1.069, 1.091] |
+| (1, 0.5) | below | 0.965 [0.960, 0.971] | 0.968 [0.963, 0.973] |
+| (0.5, 1) | below | 0.540 [0.534, 0.546] | 0.540 [0.534, 0.545] |
+| (0.5, 0.5) | below | 0.499 [0.499, 0.499] | 0.500 [0.500, 0.500] |
+| (2, 0.5), mixed | reported | 1.906 [1.891, 1.921] | 1.911 [1.895, 1.925] |
+| (0.5, 2), mixed | reported | 0.621 [0.601, 0.640] | 0.621 [0.602, 0.639] |
+
+The per-result-kind slopes (item 3) recovered every reader's (a, b) exactly, under every world model.
+
+What the result shows:
+1. The coordinate weighs a distortion by the information each kind of result carries, and at these
+   first tests the class-pointing findings carry most of it. A reader distorted only on them moves
+   tau_B nearly as far as a uniform one ((2, 1) at 1.93); a reader distorted only on the
+   nonspecific finding moves it little ((1, 2) at 1.08, (1, 0.5) at 0.97). Both clear the band
+   here, but in E2, with sampling over patients and renderings, a language model whose distortion
+   is confined to nonspecific results may not be called. The slopes of E2's amendment A1 show that
+   case directly.
+2. A mixed reader is called by its distortion on class-pointing findings: (2, 0.5) reads as an
+   over-reactor at 1.91 and (0.5, 2) as an under-reactor at 0.62. The collapsed coordinate cannot
+   show the opposite error on nonspecific results; the slopes can.
+3. Shifted world models, reported only:
+   - Absolute tau_B moves for every reader, R0 included: R0 reads 1.197 [1.175, 1.219] with the
+     class-pointing findings doubled and 0.706 [0.614, 0.776] with them halved. The absolute call
+     of specification 10.2 would place the exact Bayes reader in the scale regime on either side.
+   - Read against R0, the uniform readers stay exact with the findings doubled ((2, 2) at 2.000,
+     (0.5, 0.5) at 0.500). The result-dependent readers do not: their relative tau_B follows the
+     outcome frequencies. (2, 0.5): 1.906 under W0, 1.942 doubled, 1.743 halved. (0.5, 2): 0.621,
+     0.576, 0.736. (1, 2): 1.081, 1.048, 1.147. (1, 0.5): 0.965, 0.979, 0.931. That is up to about 7%
+     with the findings doubled and up to about 19% with them halved, part of the latter from the
+     clipped seeds below. No reader changed side or fell inside the band under any of the four world
+     models, and the ordering held under all four.
+   - With the findings halved, the random rule's first test was MRI in two seeds, and there every
+     search, R0's included, ended clipped at 1/8 (20 of 400 rows). Those seeds pull the relative
+     values toward 1, which is why (2, 2) reads 1.932 [1.834, 2.000] there. E2's amendment A1 calls
+     such a reader "not identified".
+   - With the findings doubled, the projection did not converge for the three readers with a = 2 on
+     CT, in every seed (60 of 400 rows); their values are reported with that flag.
+4. Scope, as decided before the run: result-dependent distortions of this two-kind form are read
+   on the correct side and in order under the truth and under a fitted world model. Reading against
+   R0 removes the world model's common factor, but for a result-dependent reader it leaves a
+   dependence on the outcome frequencies, which is what E2's W4 will vary; the regime map reports
+   that beside each relative call, with the slopes. Distortions that depend on the history remain
+   out of the coordinate's reach.
