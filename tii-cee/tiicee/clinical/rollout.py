@@ -33,7 +33,7 @@ from unittest.mock import patch
 
 from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
 from tiicee.clinical.backbone import (BACKBONES, ROLLOUT_ENVIRONMENT, chosen, compose, recipe_record,
-                                       require_environment, require_frozen_code, runtime, tokenizer_facts)
+                                       require_environment, runtime, tokenizer_facts)
 from tiicee.clinical.v1 import v1_rows
 from tiicee.pipeline.stages import StageInterrupted, register
 from tiicee.pipeline.util import tree_digest
@@ -157,7 +157,6 @@ def roll(ctx, backbone, seed, split, mapping, adapter, trained_on) -> dict:
         use_prior_studies()
         from replication import gpu
         from replication.config import stream_seed
-        require_frozen_code()
         input_dir = ctx.dir / "input"
         input_dir.mkdir(exist_ok=True)
         (input_dir / f"{SPLIT}.csv").write_bytes(data)

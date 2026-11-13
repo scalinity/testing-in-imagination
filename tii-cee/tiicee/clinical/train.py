@@ -37,7 +37,7 @@ from unittest.mock import patch
 
 from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
 from tiicee.clinical.backbone import (ARM, BACKBONES, TRAINING_ENVIRONMENT, chosen, compose, recipe_record,
-                                       require_environment, require_frozen_code, runtime)
+                                       require_environment, runtime)
 from tiicee.clinical.plan import Schedule, observed, planned
 from tiicee.pipeline.stages import StageInterrupted, register
 from tiicee.pipeline.util import tree_digest
@@ -168,7 +168,6 @@ def fit(backbone, seed, data_dir, output_dir, on_step, saved=lambda step: None, 
     require_environment(TRAINING_ENVIRONMENT)
     use_prior_studies()
     from replication import gpu
-    require_frozen_code()
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     cfg = compose(backbone, data_dir, output_dir, seed)

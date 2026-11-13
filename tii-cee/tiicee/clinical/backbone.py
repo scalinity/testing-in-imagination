@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from tiicee.clinical import CONFIGS, REPLICATION, ROOT, TIM, bound, sha256, use_prior_studies
+from tiicee.clinical import CONFIGS, bound, sha256, use_prior_studies
 
 ARM = "primary"  # the recipe of EXPERIMENT_CARDS/E8.md; no other arm is trained here
 # The job environment each kind of stage runs in (RESEARCH_LEDGER.md, D-CLIN item 6); None means
@@ -105,21 +105,6 @@ def chosen(ctx, key):
         if entry is None or bound(ctx, "backbone_overlay").resolve() != backbone.overlay.resolve():
             raise ValueError("a Granite stage must bind the backbone overlay as role backbone_overlay")
     return backbone
-
-
-def require_frozen_code():
-    """Refuse to run on changed prior-study code: the upstream pin check that
-    replication.manifest.make_manifest makes before every run of the replication, and no tracked
-    change in the replication, tim or the lacdm overlay."""
-    use_prior_studies()
-    from replication.config import UPSTREAM, UPSTREAM_SHA
-    from replication.manifest import command
-    if command(["git", "-C", str(UPSTREAM), "rev-parse", "HEAD"]) != UPSTREAM_SHA \
-            or command(["git", "-C", str(UPSTREAM), "status", "--porcelain"]):
-        raise RuntimeError("lacdm/upstream is not at its pin, or has local changes")
-    if command(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no", "--",
-                str(REPLICATION), str(TIM), str(ROOT / "lacdm")]):
-        raise RuntimeError("the replication, tim or lacdm has tracked changes")
 
 
 def recipe_record(cfg, backbone, seed) -> dict:

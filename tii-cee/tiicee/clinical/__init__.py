@@ -3,8 +3,11 @@
 The replication (replication-of-original/daniel-escalante), tim (cdm-extension/daniel-escalante)
 and the pinned upstream (lacdm/upstream) are used as they stand, by import. Where their code has
 no seam, a module attribute is replaced inside this process for the length of one call; each such
-replacement is named where it is made. Nothing here imports torch, vLLM, transformers, hydra or
-pandas at module level, so `tiicee` stays importable with numpy alone.
+replacement is named where it is made. That their code is unchanged is the pipeline's check, not
+this package's: a stage runs from a read-only export of one commit, re-digested at every start,
+with the upstream submodule required to sit at its pin (tiicee/pipeline/manifest.py, verify).
+Nothing here calls git or writes under the code directory. Nothing here imports torch, vLLM,
+transformers, hydra or pandas at module level, so `tiicee` stays importable with numpy alone.
 
 Stages (tiicee.pipeline.stages registry; list these modules under "stage_modules" in graph.json):
   clinical_data, clinical_folds   tiicee.clinical.folds       CPU

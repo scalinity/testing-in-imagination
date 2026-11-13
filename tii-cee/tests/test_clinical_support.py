@@ -15,6 +15,7 @@ import importlib.util
 import io
 import json
 import random
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -79,8 +80,21 @@ def context(tmp_path, stage_id, args=(), bound=None, seeds=None) -> Context:
     return ctx
 
 
+def _no_git(monkeypatch):
+    """On the cluster a stage runs from a code export that is not a git repository
+    (tiicee/pipeline/deploy.py), so no clinical stage may call git."""
+    run = subprocess.run
+
+    def refusing(args, *rest, **options):
+        assert args[0] != "git", "a clinical stage called git"
+        return run(args, *rest, **options)
+
+    monkeypatch.setattr(subprocess, "run", refusing)
+
+
 def training_environment(monkeypatch):
     """The job environment a training stage runs in (backbone.TRAINING_ENVIRONMENT), for one test."""
+    _no_git(monkeypatch)
     monkeypatch.setenv("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     monkeypatch.setenv("CUBLAS_WORKSPACE_CONFIG", "recorded for restoring")
     monkeypatch.delenv("CUBLAS_WORKSPACE_CONFIG")
@@ -88,6 +102,7 @@ def training_environment(monkeypatch):
 
 def rollout_environment(monkeypatch):
     """The job environment a rollout stage runs in (backbone.ROLLOUT_ENVIRONMENT), for one test."""
+    _no_git(monkeypatch)
     monkeypatch.setenv("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 
