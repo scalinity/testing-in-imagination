@@ -62,15 +62,15 @@ Updated November 13, 2026, about 3:20 AM EST. Times are US Eastern.
 | D2 | GPU-hours unconstrained November 13 to about December 13, 2026, at least 8 GPUs at once | Confirmed; 16 at once with the addendum |
 | D3 | Jobs at most 24 hours, split into resumable parts | Confirmed |
 | D4 | Account cai6734, GPU QOS cai6734, CPU QOS cai6734-b, partition hpg-rtx6000, study root …/tii-cee-1 | Verified live November 13, 2026 (section 3) |
-| D5 | Whether logged trajectories store full prompts | Open check 7.4a, in progress |
+| D5 | Whether logged trajectories store full prompts | Answered (7.4a): no prompts stored; the primary policy's validation rollout is regenerated once with prompt logging, accepted at ≥ 99% answer agreement |
 | D6 | E6 is the one additional, disclosed use of the 240 test admissions | Confirmed (stricter) |
 | D7 | Reader panel of nine ungated US-origin models; second backbone granite-3.3-8b-instruct | Confirmed |
-| D8 | Public datasets downloadable from official sources | Confirmed; licenses being recorded |
+| D8 | Public datasets downloadable from official sources | Confirmed; CKD, HCV, DDXPlus are CC BY 4.0; Pima excluded, license unverifiable (E7 amendment A1) |
 | D9 | No other credentialed cohort; E11 blocked | Confirmed; BLOCKED-002 |
 | D10 | No push | Confirmed |
-| D11 | PhysioNet Credentialed Health Data Use Agreement 1.5.0 | Confirmed; DATA_USE_CHECK.md in progress |
-| D12 | ICML 2027 target, 2026 rules assumed until the 2027 call | Confirmed; launch check 7.4g in progress |
-| D13 | 15-minute watcher cycle and held SSH session within UF policy as documented | Confirmed; launch check 7.4c in progress |
+| D11 | PhysioNet Credentialed Health Data Use Agreement 1.5.0 | Confirmed; DATA_USE_CHECK.md: F1 and F2 pass |
+| D12 | ICML 2027 target | The 2027 call is published (7.4g); its rules replace the assumed 2026 ones |
+| D13 | 15-minute watcher cycle and held SSH session within UF policy as documented | Re-read (7.4c); the daemon-server page is gone (404), so the fallback is unconfirmed; the live no-op cycle settles whether scrontab can call Slurm |
 | D14 | Method plus mechanism framing | Confirmed |
 | D15 | AUTHORIZATION.md valid until March 31, 2027 | Confirmed |
 
