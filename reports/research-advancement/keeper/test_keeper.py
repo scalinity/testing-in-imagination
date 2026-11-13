@@ -30,7 +30,7 @@ class KeeperTests(unittest.TestCase):
             self.assertIn("ssh -fN hpg-tail", notice)
             self.assertIn("hpg-public, then login7 and tsup", notice)
 
-    def check_event_cursor(self, rows, expected_notices):
+    def check_event_cursor(self, rows, expected_notices, finish_partial=False):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             conf = home / ".tii/keeper"
@@ -50,16 +50,25 @@ first=${first%% *}
             osa.write_text('#!/bin/bash\nprintf "%s\\n" "$@" >> "$HOME/notice"\n')
             osa.chmod(0o700)
             env = dict(os.environ, HOME=tmp, TII_SSH_BIN=str(ssh), TII_OSASCRIPT_BIN=str(osa))
-            for _ in range(2):
+            for iteration in range(2):
+                if finish_partial and iteration == 1:
+                    with (home / "rows").open("a") as stream:
+                        stream.write("ial\n")
                 subprocess.run(["/bin/bash", str(KEEPER)], env=env, check=True, timeout=10)
             cursor = home / "Library/Application Support/tii-keeper/events.seen"
             self.assertEqual(int(cursor.read_text()), len(rows.splitlines()))
             notices = (home / "notice").read_text() if (home / "notice").exists() else ""
             self.assertEqual(notices.count("TII: done"), expected_notices)
             self.assertNotIn("TII: should be skipped", notices)
+            if finish_partial:
+                self.assertIn("partial", notices)
+                self.assertNotIn("\npart\n", notices)
 
     def test_skipped_lines_are_consumed_without_replaying_notifications(self):
         self.check_event_cursor("\nnow\t\tshould be skipped\nnow\tdone\tcompleted\n", 1)
+
+    def test_unfinished_event_waits_for_terminating_newline(self):
+        self.check_event_cursor("now\tdone\tcompleted\nnow\tdone\tpart", 2, finish_partial=True)
 
     def test_only_malformed_lines_advance_cursor(self):
         self.check_event_cursor("malformed\n\n", 0)

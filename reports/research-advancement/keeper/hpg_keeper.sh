@@ -64,7 +64,7 @@ relay_events() {
     if with_timeout 40 via_master "tail -n +$((seen + 1)) $(printf '%q' "$REMOTE_EVENTS") 2>/dev/null | head -n 20" > "$tmp" 2>/dev/null; then
         n=0
         used=0
-        while IFS= read -r line || [ -n "$line" ]; do
+        while IFS= read -r line; do
             used=$((used + 1))
             case "$line" in *$'\t'*$'\t'*) ;; *) continue ;; esac
             rest=${line#*$'\t'}
