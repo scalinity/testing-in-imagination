@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
+Updated November 13, 2026, about 8:05 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -9,25 +9,25 @@ Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
   removed its own entry at 5:45 AM; launch check 7.4c is answered and G0 is met in full.
 - M1: the twin repairs (REVIEW-002, -006, -011) are verified (GATE_DECISIONS/G1-twin.md); the
   section 8.3 preflight and manifests are built (tii-cee/tiicee/pipeline); the training-track
-  adapters, the resume guarantee (D-CLIN-RESUME) and gate G_resume are committed. REVIEW-001 (for
-  E3) and REVIEW-008 (for E5) are not started.
+  adapters, the resume guarantee (D-CLIN-RESUME) and gate G_resume are committed; the training
+  track's first graph is installed on HiPerGator (G1 training part met). Launch check 7.4a is
+  accepted: 240 of 240 final answers and digests match (LAUNCH_CHECKS.md). REVIEW-001 (for E3) and
+  REVIEW-008 (for E5) are not started.
 - M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
   (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
   charts get projection only, stateful track). G2a waits for E1-C.
-- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E11 SKIPPED (accepted gap, not run); all
-  others PLANNED. Only the no-op test stages have been submitted to the cluster.
+- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
+  done; training waits on G_resume); E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
   (accepted by Daniel November 13, 2026). BLOCKED-001 is closed.
-- Interruption: from about 4:47 AM the AI worker sessions fail with "Please run /login · API Error:
-  403 Attention Required! | Cloudflare"; the lead session is unaffected. The E1 pre-registration
-  and the pipeline's flake confirmation wait on it. The HiPerGator watcher needs no AI calls and
-  is unaffected.
-- Next executable actions: confirm the no-op graph's completion and close G0; deploy the current
-  commit and install the training-track graph (tii-cee/tiicee/clinical/graph_training_m1.json):
-  data copy, folds, the Nemotron and Granite benches, the primary policy's prompt-logged validation
-  rollout and launch check 7.4a's acceptance; E8 to E10 trainings behind gate G_resume; E1 after
-  its pre-registration is committed.
+- AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
+  their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
+  unaffected.
+- Next executable actions: the Nemotron resume bench decides gate G_resume; then the Granite bench
+  and the E8 to E10 training stages, with a redeploy; the E1-C interval finishes locally (about 20
+  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; D-REGIME's
+  validation in the twin; REVIEW-001 and REVIEW-008.
 
 ## 2. Authorization
 
@@ -92,8 +92,14 @@ Updated November 13, 2026, about 6:15 AM EST. Times are US Eastern.
 
 ## 5. Running and queued jobs
 
-None.
+| Stage | Job ID | Account | State | Since |
+|---|---|---|---|---|
+| bench-nemotron | 51161948 | cai6734 | RUNNING | 7:05 AM EST |
+
+Every attempt so far: RESEARCH_LEDGER.md section 5.
 
 ## 6. GPU-hours by experiment
 
-None spent. Estimates and allowances: AUTHORIZATION.md section 4.
+Benches: 1.03 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the rest is
+the running Nemotron bench), as of 8:00 AM EST from state/status.json. E8, E9, E10: none spent.
+Estimates and allowances: AUTHORIZATION.md section 4.

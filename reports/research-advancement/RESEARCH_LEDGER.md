@@ -113,9 +113,9 @@ df467ea, all unchanged since the review.
 | E5 | PLANNED | Frozen at G3 | Waits on G3 |
 | E6 | PLANNED | Frozen at G4 | Waits on G4 |
 | E7 | PLANNED | EXPERIMENT_CARDS/E7.md | Waits on G2a and dataset licenses |
-| E8 | PLANNED | EXPERIMENT_CARDS/E8.md | Waits on the preflight of spec 8.3 |
-| E9 | PLANNED | EXPERIMENT_CARDS/E9.md | Waits on the preflight of spec 8.3 |
-| E10 | PLANNED | EXPERIMENT_CARDS/E10.md | Waits on the preflight of spec 8.3 |
+| E8 | IN PROGRESS | EXPERIMENT_CARDS/E8.md | Data copy (stage e8-data) completed November 13, 2026, 6:49 AM EST; the Nemotron resume bench is running; training stages are added only after gate G_resume (GATE_DECISIONS/G1-training.md) |
+| E9 | PLANNED | EXPERIMENT_CARDS/E9.md | Preflight built (G1 training part met); the Granite bench (e9-bench-granite) is in the training graph; training waits on G_resume |
+| E10 | IN PROGRESS | EXPERIMENT_CARDS/E10.md | Folds (stage e10-folds) completed November 13, 2026, 6:49 AM EST: 432, 1,555 and 173 admissions, no leaks; training waits on G_resume |
 | E11 | SKIPPED (accepted gap: not run, decided by Daniel November 13, 2026) | None | No other credentialed cohort exists or will be acquired; the paper states the missing independent cohort as a limitation (BLOCKED.md, Accepted gaps, BLOCKED-002). Nothing waits on it |
 
 ## 5. Job ledger
@@ -123,9 +123,18 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-| Stage | Attempt | Job ID | Account | State | Exit | Elapsed | GPU-hours |
-|---|---|---|---|---|---|---|---|
-| (none yet) | | | | | | | |
+Mirrored November 13, 2026, about 8:05 AM EST. Times are EST, from the runlog's started events.
+
+| Stage | Attempt | Job ID | Account | Started | State | Exit | Elapsed | GPU-hours |
+|---|---|---|---|---|---|---|---|---|
+| noop_a | 1 | 51145986 | cai6734 | 4:49 AM | COMPLETED | 0 | 5 s | 0 |
+| noop_b | 1 | 51151361 | cai5724 | 5:19 AM | COMPLETED | 0 | 4 s | 0 |
+| noop_c | 1 | 51152783 | cai5724 | 5:35 AM | COMPLETED | 0 | 6 s | 0 |
+| e8-data | 1 | 51157675 | cai5724 | 6:48 AM | COMPLETED | 0 | 6 s | 0 |
+| e10-folds | 1 | 51157681 | cai5724 | 6:48 AM | COMPLETED | 0 | 7 s | 0 |
+| bench-nemotron | 1 | 51161948 | cai6734 | 7:05 AM | RUNNING | | | |
+| p-rollout-val | 1 | 51161967 | cai6734 | 7:06 AM | COMPLETED | 0 | 1,340 s | 0.372 |
+| launch-check-7-4a | 1 | 51164379 | cai5724 | 7:35 AM | COMPLETED | 0 | 7 s | 0 |
 
 ## 6. Recorded design decisions
 

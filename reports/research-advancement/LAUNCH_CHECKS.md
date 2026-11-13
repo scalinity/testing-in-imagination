@@ -19,6 +19,12 @@ reported beside it (greedy decoding was bit-reproducible before: V0-shadow match
 digests). New policies (E8, E9, E10) log full prompts from their first rollout. Test trajectories are
 never regenerated outside E6.
 
+Result, November 13, 2026, 7:35 AM EST (stage launch-check-7-4a, job 51164379, counts only, from
+state/approved/launch-check-7-4a.json): ACCEPTED. The regenerated rollout (stage p-rollout-val, job
+51161967, 0.372 GPU-hours) pairs with all 240 stored val-a V0 admissions; final answers match on 240
+of 240 (100%, against the required 99%) and generation_digest matches on 240 of 240, so the
+prompt-logged rollout reproduces the stored one exactly.
+
 ## b. Data-use compliance: ANSWERED
 
 DATA_USE_CHECK.md: F1 passes, F2 passes. Pima is excluded from E7 for an unverifiable license.
