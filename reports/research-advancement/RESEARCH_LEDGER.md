@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 5:20 PM EST. Times are EST, from the runlog's started events. Exit 10
+Mirrored November 13, 2026, about 5:30 PM EST. Times are EST, from the runlog's started events. Exit 10
 is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
 retry.
 
@@ -154,9 +154,9 @@ retry.
 | e10-train-f2 | 1 | 51208035 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
-| e9-train-s269 | 1 | 51225455 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
-| e9-train-s270 | 1 | 51225464 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
-| e9-train-s271 | 1 | 51225466 | cai5724 | not yet | PENDING (QOSGrpMemLimit) | | | |
+| e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | RUNNING | | | |
+| e9-train-s270 | 1 | 51225464 | cai5724 | 5:21 PM | RUNNING | | | |
+| e9-train-s271 | 1 | 51225466 | cai5724 | 5:21 PM | RUNNING | | | |
 
 ## 6. Recorded design decisions
 
@@ -619,4 +619,28 @@ G_resume. Estimate 28.2 GPU-hours a training (E8's measured 25.6 times 1.1, the 
 GPU-hours over its 2.1 estimate) and 0.5 a rollout; E9 in all about 88 GPU-hours with the bench,
 under the card's 120 and the allowance of 300. Resources as E8's (16 GB host memory). While an
 E10 training waits on cai6734's shared CPU limit, the watcher puts new GPU jobs on cai5724 first.
+
+### Operations, November 13, 2026, evening: training CPUs and E9's memory
+
+Measured at 5:20 PM EST: each running E8 and E10 training had used about one CPU on average (sstat
+AveCPU 2:30:54 in 2:31:39 of elapsed time for e8-train-s270, the same ratio for the three others
+sampled) and 6.4 to 6.8 GB, against a request of 4 CPUs and 16 GB. Both class pools were near their
+shared limit of 32 CPUs: cai6734 29 (ours 24), cai5724 28 (ours 8), so E10 fold 2 waited on CPUs
+on cai6734, and E9's three trainings waited on memory on cai5724 (14 GB free of 250).
+
+Asked whether to lower the trainings' CPU request, the study lead chose "2 CPUs for trainings
+(Recommended)"; asked whether to lower E9's memory from 16 to 14 GB (about 1.8 times the Granite
+bench's 7.7 GB peak), the study lead chose "14 GB for E9 (Recommended)".
+
+Done. At 5:23 PM EST, under the watcher's lock (state/lock): fold 2's waiting job (51208035) was
+set to 2 CPUs with scontrol update (CPUsPerTask, NumCPUs, MinCPUsNode); E9's three trainings had
+started at 5:21 PM EST at 4 CPUs and 16 GB, before they could be changed, so their first parts keep
+that; their saved memory (state/stages/e9-train-s269, s270, s271) went from 16 to 14 GB, read back,
+so later parts ask for 14 GB. Training stages ask for 2 CPUs in graph_training_m2.json and
+graph_training_m3.json, and E9's for 14 GB in m3 (fd119a0), installed at 5:25 PM EST; the watcher
+takes CPUs from the graph at each submission, so every later part of the twelve trainings asks for
+2, while the eight first parts already running keep 4. Rollouts keep 4 CPUs. Manifests bind neither
+CPUs nor memory, so no stage is refused for the change. At 5:22 PM EST a classmate's one-hour job
+took cai6734's last CPUs; fold 2 is first in the class line and fits when that job ends, by 6:21 PM
+EST.
 

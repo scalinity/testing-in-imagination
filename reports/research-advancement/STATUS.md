@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 5:25 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 5:30 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -26,7 +26,7 @@ Updated November 13, 2026, about 5:25 PM EST. Times are US Eastern.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
   done; G_resume met; eight of the nine trainings running, E10 fold 2 waiting on the class CPU
   limit); E9 IN PROGRESS (the Granite bench completed 4:35 PM EST with outcome ok and no recipe
-  repair; its three trainings deployed in graph_training_m3.json at 87799de, installed 5:09 PM EST);
+  repair; its three trainings, added in graph_training_m3.json, running since 5:21 PM EST);
   E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
@@ -113,19 +113,21 @@ Updated November 13, 2026, about 5:25 PM EST. Times are US Eastern.
 | e8-train-s273, attempt 1 | 51208032 | cai6734 | RUNNING | 3:28 PM EST |
 | e10-train-f0, attempt 1 | 51208033 | cai6734 | RUNNING | 4:39 PM EST |
 | e10-train-f1, attempt 1 | 51208034 | cai6734 | RUNNING | 4:39 PM EST |
-| e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (QOSGrpCpuLimit) | submitted 2:46 PM EST |
+| e10-train-f2, attempt 1 | 51208035 | cai6734 | PENDING (QOSGrpCpuLimit; first in the class line, fits by 6:21 PM EST) | submitted 2:46 PM EST |
 | e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
 | e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
-| e9-train-s269, attempt 1 | 51225455 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
-| e9-train-s270, attempt 1 | 51225464 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
-| e9-train-s271, attempt 1 | 51225466 | cai5724 | PENDING (QOSGrpMemLimit) | submitted 5:17 PM EST |
+| e9-train-s269, attempt 1 | 51225455 | cai5724 | RUNNING | 5:21 PM EST |
+| e9-train-s270, attempt 1 | 51225464 | cai5724 | RUNNING | 5:21 PM EST |
+| e9-train-s271, attempt 1 | 51225466 | cai5724 | RUNNING | 5:21 PM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 Waiting trainings are held by the class QOS's shared limits of 32 CPUs and 250 GB per account. At
 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
 (ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
 time) and 6.4 to 6.8 GB, against a request of 4 CPUs and 16 GB (40 for the four first parts that
-started before the memory change).
+started before the memory change). Every later part of a training asks for 2 CPUs, and E9's for
+14 GB (chosen by the study lead at 5:23 PM EST; RESEARCH_LEDGER.md, "Operations, evening"); fold 2's
+waiting job was set to 2 CPUs.
 
 ## 6. GPU-hours by experiment
 
