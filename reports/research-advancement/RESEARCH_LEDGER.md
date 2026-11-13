@@ -318,3 +318,9 @@ figure step's harmful_region polygon is invalid (it encloses harmless readers an
 markers) and is not drawn; regret_attribution.json must carry each agent's stability and its range
 across orders; and byte-level reproduction of D_heldout with --jobs 1 needs VECLIB_MAXIMUM_THREADS=1
 exported before Python starts (differences below 1e-14 relative otherwise; no rule input changes).
+
+### Correction, November 13, 2026
+
+GATE_DECISIONS/G2b-addendum-1.md and G2c-addendum-1.md give their writing time as "about 7:15 AM
+EST"; both were written and committed at 6:36 AM EST (commit 478841f). The records stay unchanged;
+their content is unaffected.
