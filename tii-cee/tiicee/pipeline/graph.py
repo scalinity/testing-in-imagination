@@ -33,6 +33,10 @@ KINDS = ("normal", "test")
 ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 MODULE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\Z")
 SET_BY_THE_SCRIPT = ("TII_ROOT", "TII_CODE", "PYTHONDONTWRITEBYTECODE")
+# A stage's Slurm job is named "tii-" + its id, and the watcher finds its stages' jobs by that
+# name. The watcher's own scrontab job is tii-watcher (scrontab_entry.txt), so a stage with this
+# id would have the watcher take its own job for the stage's.
+WATCHER_JOB = "tii-watcher"
 INTERVENTIONS = ("new intervention", "legacy repair")
 # One GPU per job and 24 hours at most (AUTHORIZATION.md section 3). The lower bound keeps the
 # ten-minute warning signal from arriving the moment a job starts.
@@ -63,6 +67,7 @@ def _stage(raw, stage_ids, gate_ids, allowances):
     name = raw.get("id")
     _need(isinstance(name, str) and ID.match(name), "bad stage id")
     where = "stage %s: " % name
+    _need("tii-" + name != WATCHER_JOB, where + "this id would give the stage the watcher's own job name")
     _need(isinstance(raw.get("experiment"), str) and ID.match(raw["experiment"]), where + "bad experiment")
     _need(raw.get("kind", "normal") in KINDS, where + "kind must be normal or test")
     command = raw.get("command")

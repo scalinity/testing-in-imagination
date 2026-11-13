@@ -273,6 +273,19 @@ def test_allowances_file_mirrors_the_authorization():
     assert (allowances["E2"]["allowance_gpu_hours"], allowances["E5"]["allowance_gpu_hours"]) == (200, 800)
 
 
+def test_only_the_id_that_collides_with_the_watchers_job_is_refused(tmp_path):
+    study = Study(tmp_path)
+    # The name the guard protects is the one the scrontab entry gives the watcher's job.
+    entry = (PACKAGE / "tiicee" / "pipeline" / "scrontab_entry.txt").read_text()
+    assert "#SCRON --job-name=%s\n" % graphs.WATCHER_JOB in entry and graphs.WATCHER_JOB == "tii-watcher"
+    study.write_graph([stage("watcher")])
+    with pytest.raises(graphs.GraphError, match="stage watcher: this id would give the stage the watcher's own job name"):
+        graphs.load(study.paths)
+    # Ids that merely contain the word give other job names, and stay allowed.
+    study.write_graph([stage("watcher2"), stage("the-watcher"), stage("Watcher"), stage("watch")])
+    assert [s["id"] for s in graphs.load(study.paths).stages] == ["watcher2", "the-watcher", "Watcher", "watch"]
+
+
 def test_graph_keeps_env_and_stage_modules(tmp_path):
     study = Study(tmp_path)
     modules = ["tiicee.clinical.folds", "tiicee.clinical.train", "tiicee.clinical.rollout",
@@ -324,6 +337,7 @@ def test_committed_noop_graph_loads_and_paths_follow_the_design(tmp_path):
     (lambda g: g["stages"][0].update(gate="G"), "cycle"),
     (lambda g: g["stages"][0].update(kind="final"), "kind"),
     (lambda g: g["stages"][0].update(id="has space"), "bad stage id"),
+    (lambda g: g["stages"][0].update(id="watcher"), "the watcher's own job name"),
     (lambda g: g["stages"][0].update(command="noop"), "command"),
     (lambda g: g["stages"][0].update(manifest={"bind": {"two words": "x"}}), "role names"),
     (lambda g: g["stages"][0].update(env={"NOT A NAME": "1"}), "env must map"),

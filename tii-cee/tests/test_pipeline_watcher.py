@@ -771,6 +771,17 @@ def test_refused_submission_is_reported_and_tried_again(study):
     assert s.status("a") == "QUEUED" and not s.blocked()
 
 
+def test_stage_that_would_share_the_watchers_job_name_is_refused_before_anything_runs(study):
+    s = study([stage("watcher")])
+    # The watcher's own scrontab job, as the queue shows it. Named tii-watcher, it is exactly what
+    # the watcher would look for as the job of a stage called "watcher", and adopt.
+    s.cluster.add_job("tii-watcher", "RUNNING", "cai6734", "cai6734-b")
+    output = s.cycle(expect=1)
+    assert "graph_invalid" in output and "adopted" not in output
+    assert not s.calls("squeue") and not s.calls("sbatch") and not s.paths.stage_state("watcher").exists()
+    assert [detail["code"] for _, detail in s.events("blocked")] == ["graph_invalid"]
+
+
 def test_unreadable_graph_is_reported_once(study):
     s = study([stage("a", time_hours=25)])
     s.cycle(expect=1)
