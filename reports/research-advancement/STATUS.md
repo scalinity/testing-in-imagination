@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 5:30 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 6:40 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -24,7 +24,8 @@ Updated November 13, 2026, about 5:30 PM EST. Times are US Eastern.
   E2, E4 and E7 are amended. The extension with result-dependent readers is SUPPORTED under W0 and
   W2 ("D-REGIME extension"), with a residual dependence on outcome frequencies reported.
 - Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
-  done; G_resume met; all nine trainings running, the last, E10 fold 2, since 5:26 PM EST);
+  done; G_resume met; all nine trainings running, E10 fold 2 on its second attempt since 6:35 PM
+  EST after the first stalled);
   E9 IN PROGRESS (the Granite bench completed 4:35 PM EST with outcome ok and no recipe
   repair; its three trainings, added in graph_training_m3.json, running since 5:21 PM EST);
   E11 SKIPPED (accepted gap, not run); all others PLANNED.
@@ -113,7 +114,7 @@ Updated November 13, 2026, about 5:30 PM EST. Times are US Eastern.
 | e8-train-s273, attempt 1 | 51208032 | cai6734 | RUNNING | 3:28 PM EST |
 | e10-train-f0, attempt 1 | 51208033 | cai6734 | RUNNING | 4:39 PM EST |
 | e10-train-f1, attempt 1 | 51208034 | cai6734 | RUNNING | 4:39 PM EST |
-| e10-train-f2, attempt 1 | 51208035 | cai6734 | RUNNING (2 CPUs) | 5:26 PM EST |
+| e10-train-f2, attempt 2 | 51232421 | cai5724 | RUNNING | 6:35 PM EST |
 | e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
 | e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
 | e9-train-s269, attempt 1 | 51225455 | cai5724 | RUNNING | 5:21 PM EST |
@@ -125,9 +126,10 @@ All twelve trainings are running. Trainings that wait are held by the class QOS'
 of 32 CPUs and 250 GB per account. At 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
 (ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
 time) and 6.4 to 6.8 GB, against a request of 4 CPUs and 16 GB (40 for the four first parts that
-started before the memory change). Every later part of a training asks for 2 CPUs, and E9's for
-14 GB (chosen by the study lead at 5:23 PM EST; RESEARCH_LEDGER.md, "Operations, evening"); fold 2's
-waiting job was set to 2 CPUs.
+started before the memory change). E9's later parts ask for 14 GB (chosen by the study lead at
+5:23 PM EST). Trainings ask for 4 CPUs again: fold 2's first attempt, the only training started with
+2, stalled before its first step and was cancelled at 6:19 PM EST; its retry was moved to cai5724,
+where it started at 6:35 PM EST (RESEARCH_LEDGER.md, "Operations, evening").
 
 ## 6. GPU-hours by experiment
 

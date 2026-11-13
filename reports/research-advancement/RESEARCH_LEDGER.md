@@ -151,7 +151,8 @@ retry.
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | RUNNING | | | |
 | e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | RUNNING | | | |
 | e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | RUNNING | | | |
-| e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | RUNNING | | | |
+| e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (stalled before its first step at 2 CPUs) | 0 | 3,181 s | 0.884 |
+| e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | RUNNING | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
 | e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | RUNNING | | | |
@@ -644,4 +645,29 @@ CPUs nor memory, so no stage is refused for the change. At 5:22 PM EST a classma
 took cai6734's last CPUs; it ended early, and fold 2 started at 5:26 PM EST with 2 CPUs. The
 watcher's 5:30 PM EST cycle, its first on the amended graph, recorded the four starts and blocked
 nothing: all twelve trainings were running.
+
+Fold 2 at 2 CPUs stalled, and the request went back to 4. At 6:15 PM EST, 49 minutes after it
+started, e10-train-f2 (51208035) had written no progress mark and its log had not grown since
+5:29 PM EST, while the E9 trainings, started five minutes earlier with 4 CPUs, were at step 21 to
+23, and folds 0 and 1 had reached their first step within minutes. Read without opening the log
+(it can hold restricted generations): its GPU was 97% busy with 74 GB in use (94 GB in a training
+past its first step); its Python process had one thread running, all others asleep, and no
+pt_autograd_0 thread, which PyTorch creates at the first backward pass and every other training
+had; gdb showed the main thread in tensor.tolist(), waiting on a device-to-host copy, in two
+samples nine seconds apart. The cause is not established; 2 CPUs was the one difference from the
+eleven trainings that ran. Because every later part of every training would otherwise start with 2
+CPUs on Saturday morning, the graphs went back to 4 CPUs for training (aa0f9bb, installed 6:19 PM
+EST), and the stalled job was cancelled at 6:19:56 PM EST after 53 minutes (about 0.88 GPU-hours,
+charged to E10). The watcher records a cancelled job as outcome "other", which the stage may retry
+once; the retry is submitted with 4 CPUs. If it stalls the same way, the cause is fold 2's data or
+the node, not the CPU count. The study lead's choice of 2 CPUs is reversed by this evidence, not by
+a new decision; it can be taken again once the stall is understood.
+
+The watcher resubmitted fold 2 at 6:33 PM EST (attempt 2, 51232421, 4 CPUs) on cai6734, where it
+waited on the class CPU limit with an estimated start of 10:31 PM EST (hpg ahead), while cai5724 had
+8 CPUs, 94 GB and 2 GPUs free (hpg roster). The watcher had put it on cai6734 because none of its
+jobs was then waiting on that pool's limit. At 6:35 PM EST, under the watcher's lock, the pending
+job was moved to cai5724 (scontrol update Account and QOS) and its saved state's account and QOS
+changed to match; it started at once. Moving a job between the two authorized GPU accounts changes
+none of its resources.
 
