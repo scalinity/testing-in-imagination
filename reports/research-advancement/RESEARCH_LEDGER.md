@@ -151,7 +151,7 @@ retry.
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | RUNNING | | | |
 | e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | RUNNING | | | |
 | e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | RUNNING | | | |
-| e10-train-f2 | 1 | 51208035 | cai6734 | not yet | PENDING (QOSGrpCpuLimit) | | | |
+| e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | RUNNING | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
 | e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | RUNNING | | | |
@@ -641,6 +641,7 @@ graph_training_m3.json, and E9's for 14 GB in m3 (fd119a0), installed at 5:25 PM
 takes CPUs from the graph at each submission, so every later part of the twelve trainings asks for
 2, while the eight first parts already running keep 4. Rollouts keep 4 CPUs. Manifests bind neither
 CPUs nor memory, so no stage is refused for the change. At 5:22 PM EST a classmate's one-hour job
-took cai6734's last CPUs; fold 2 is first in the class line and fits when that job ends, by 6:21 PM
-EST.
+took cai6734's last CPUs; it ended early, and fold 2 started at 5:26 PM EST with 2 CPUs. The
+watcher's 5:30 PM EST cycle, its first on the amended graph, recorded the four starts and blocked
+nothing: all twelve trainings were running.
 
