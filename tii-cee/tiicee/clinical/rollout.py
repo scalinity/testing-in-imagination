@@ -32,8 +32,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
-from tiicee.clinical.backbone import (BACKBONES, chosen, compose, recipe_record, require_frozen_code, runtime,
-                                       tokenizer_facts)
+from tiicee.clinical.backbone import (ALLOCATOR, BACKBONES, chosen, compose, recipe_record, require_frozen_code,
+                                       runtime, tokenizer_facts)
 from tiicee.clinical.v1 import v1_rows
 from tiicee.pipeline.stages import StageInterrupted, register
 from tiicee.pipeline.util import tree_digest
@@ -122,14 +122,17 @@ class Completed:
         self.ctx.progress(done, len(self.fingerprint_of), "admission")
 
 
-def evaluator(completed, identity):
-    """A drop-in for replication.shim._evaluate_with_model: tim's V0 evaluator over a logging model."""
+def evaluator(completed, backbone, seed):
+    """A drop-in for replication.shim._evaluate_with_model: tim's V0 evaluator over a logging model.
+    Before the first admission it records what is running: the configuration gpu.evaluate resolved,
+    the runtime it set up, and the tokenizer's facts."""
 
     def evaluate(cfg, dataset, model, sampling_params):
         from tim import runner
         completed.prompts = PromptLog(model, markers(cfg))
         remember(completed.ctx, rollout={
-            "identity": identity, "tokenizer": tokenizer_facts(model.get_tokenizer(), cfg.environment.system_prompt)})
+            "identity": recipe_record(cfg, backbone, seed),
+            "tokenizer": tokenizer_facts(model.get_tokenizer(), cfg.environment.system_prompt)})
         inner = runner.make_evaluator(runner.VARIANTS["V0"], dataset, None, completed,
                                       runner.Limits(**runner.CONFIG["limits"]))
         return inner(cfg, dataset, completed.prompts, sampling_params)
@@ -153,6 +156,7 @@ def roll(ctx, backbone, seed, split, mapping, adapter, trained_on) -> dict:
     if not all(ctx.is_done(a.fingerprint) for a in members):
         if os.environ.setdefault(*CUBLAS) != CUBLAS[1]:
             raise RuntimeError("CUBLAS_WORKSPACE_CONFIG differs from the project's setting")
+        os.environ.setdefault(*ALLOCATOR)
         use_prior_studies()
         from replication import gpu
         from replication.config import stream_seed
@@ -163,8 +167,7 @@ def roll(ctx, backbone, seed, split, mapping, adapter, trained_on) -> dict:
         (input_dir / "lab_test_mapping.csv").write_bytes(Path(mapping).read_bytes())
         cfg = compose(backbone, input_dir, None, seed)
         completed = Completed(ctx, {a.patient_id: a.fingerprint for a in members})
-        with runtime(backbone, cfg), \
-                patch.object(gpu, "_evaluate_with_model", evaluator(completed, recipe_record(cfg, backbone, seed))):
+        with runtime(backbone, cfg), patch.object(gpu, "_evaluate_with_model", evaluator(completed, backbone, seed)):
             gpu.evaluate(cfg, input_dir, split=SPLIT, seed=stream_seed(seed, SPLIT, "policy"), adapter_dir=adapter)
         if not all(ctx.is_done(a.fingerprint) for a in members):
             if not ctx.stop:

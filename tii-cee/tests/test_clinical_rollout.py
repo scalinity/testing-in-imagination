@@ -9,7 +9,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from test_clinical_support import approved, context, cpu_stack, fake_evaluate
+from test_clinical_support import approved, context, cpu_stack, fake_evaluate, unset_gpu_environment
 from tiicee.clinical import acceptance, rollout, sha256, use_prior_studies, v1
 from tiicee.clinical.backbone import BACKBONES
 from tiicee.pipeline.stages import StageInterrupted
@@ -172,10 +172,8 @@ def test_the_acceptance_stage_reads_tims_log_and_publishes_counts_only(tmp_path)
 
 
 @pytest.fixture(autouse=True)
-def cublas_unset(monkeypatch):
-    """Each test starts without the variable, and whatever a rollout sets is removed afterwards."""
-    monkeypatch.setenv("CUBLAS_WORKSPACE_CONFIG", "recorded for restoring")
-    monkeypatch.delenv("CUBLAS_WORKSPACE_CONFIG")
+def gpu_environment(monkeypatch):
+    unset_gpu_environment(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -260,6 +258,8 @@ def test_a_rollout_logs_every_role_and_reproduces_tims_rows_and_digests(tmp_path
     assert (record["recipe"], record["seed"], record["admissions"], record["evaluation_split_name"]) == ("primary", 269, 24, "val")
     assert record["split_sha256"] == sha256((baseline / "val.csv").read_bytes())
     assert record["cublas_workspace_config"] == os.environ["CUBLAS_WORKSPACE_CONFIG"] == ":4096:8"
+    assert record["runtime"]["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"  # the launchers' default
+    assert record["config"]["training"]["seed"] != 269  # the evaluation seed gpu.evaluate derived, as it ran
     assert record["tokenizer"]["system_message_sent"] and record["tokenizer"]["observation_stop_strips"]
     assert approved(ctx) == {"stage": "E8_rollout", "backbone": "nemotron", "seed": 269, "admissions": 24,
                              "answered": sum(row["prediction"] is not None for row in rows)}

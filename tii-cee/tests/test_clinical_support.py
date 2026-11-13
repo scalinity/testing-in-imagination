@@ -77,6 +77,13 @@ def context(tmp_path, stage_id, args=(), bound=None, seeds=None) -> Context:
     return ctx
 
 
+def unset_gpu_environment(monkeypatch):
+    """Start a test without the variables GPU stages set, and have them removed again afterwards."""
+    for name in ("CUBLAS_WORKSPACE_CONFIG", "PYTORCH_CUDA_ALLOC_CONF"):
+        monkeypatch.setenv(name, "recorded for restoring")
+        monkeypatch.delenv(name)
+
+
 def approved(ctx) -> dict:
     return json.loads((ctx.paths.approved / (ctx.stage_id + ".json")).read_text())
 

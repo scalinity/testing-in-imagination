@@ -11,12 +11,18 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from test_clinical_support import context, cpu_stack, fake_train, prepared
+from test_clinical_support import context, cpu_stack, fake_train, prepared, unset_gpu_environment
 from tiicee.clinical import ROOT, backbone, folds, train, use_prior_studies
 from tiicee.clinical.backbone import BACKBONES
 
 use_prior_studies()
 from replication import gpu, shim  # noqa: E402  (import with the standard library alone)
+
+
+@pytest.fixture(autouse=True)
+def gpu_environment(monkeypatch):
+    unset_gpu_environment(monkeypatch)
+
 
 CARDS = ROOT / "reports" / "research-advancement" / "EXPERIMENT_CARDS"
 NEMOTRON, GRANITE = BACKBONES["nemotron"], BACKBONES["granite"]

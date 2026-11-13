@@ -5,13 +5,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from test_clinical_support import CallbackBase, approved, context, cpu_stack, fake_train, prepared, split_bytes
+from test_clinical_support import CallbackBase, approved, context, cpu_stack, fake_train, prepared, split_bytes, unset_gpu_environment
 from tiicee.clinical import folds, sha256, train, use_prior_studies
 from tiicee.pipeline.stages import StageInterrupted
 from tiicee.pipeline.util import tree_digest
 
 use_prior_studies()
 from replication import gpu  # noqa: E402  (imports with the standard library alone)
+
+
+@pytest.fixture(autouse=True)
+def gpu_environment(monkeypatch):
+    unset_gpu_environment(monkeypatch)
 
 
 def trainer_step(callback, output_dir, step, due=False):
@@ -197,13 +202,17 @@ def test_training_pauses_on_the_flag_resumes_and_binds_the_policy(tmp_path, monk
     assert set(policy["templates"]) == {"decision_agent.txt", "hypothesis_agent.txt"}
     assert (policy["visits_min"], policy["visits_max"], policy["visits_as_recipe"]) == (2, 2, True)
     assert json.loads((second.out_dir / "training.json").read_text())["adapter_dir"] == "model/adapter"
+    assert policy["runtime"]["PYTORCH_CUDA_ALLOC_CONF"] == "expandable_segments:True"  # the launchers' default
     public = approved(second)
     assert (public["parts"], public["optimizer_steps"], public["train"], public["monitored"]) == (2, 192, 96, 24)
     assert public["adapter_sha256"] == policy["adapter_sha256"] and public["visits_as_recipe"] is True
 
+    monkeypatch.setenv("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:512")  # a value the job chose is kept
     whole = stage("E8_train_271_uninterrupted")
     train.run(whole)  # same seed, never paused: the resumed run must have reached the same policy
-    assert json.loads((whole.out_dir / "policy.json").read_text())["adapter_sha256"] == policy["adapter_sha256"]
+    unpaused = json.loads((whole.out_dir / "policy.json").read_text())
+    assert unpaused["adapter_sha256"] == policy["adapter_sha256"]
+    assert unpaused["runtime"]["PYTORCH_CUDA_ALLOC_CONF"] == "max_split_size_mb:512"
 
 
 @cpu_stack

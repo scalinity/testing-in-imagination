@@ -1,14 +1,20 @@
-"""The bench stage: what it counts, its two processes, and faults reported as results."""
+"""The bench stage: what it counts, its three processes, and faults reported as results."""
 import json
 
 import pytest
 
-from test_clinical_support import approved, context, cpu_stack, fake_evaluate, fake_train, prepared
+from test_clinical_support import approved, context, cpu_stack, fake_evaluate, fake_train, prepared, unset_gpu_environment
 from tiicee.clinical import admissions, bench, folds, use_prior_studies
 from tiicee.pipeline import export_guard
 from tiicee.pipeline.stages import StageInterrupted
 
 use_prior_studies()
+
+
+@pytest.fixture(autouse=True)
+def gpu_environment(monkeypatch):
+    unset_gpu_environment(monkeypatch)
+
 
 FACTS = {"observation_stop_ids": [41, 42], "observation_stop_strips": True, "eos_id": 2, "pad_is_eos": False,
          "label_ends_with_eos": True, "assistant_turn_ends_with_eos": True, "system_message_sent": True,

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 from collections import Counter
 from pathlib import Path
@@ -36,7 +37,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from tiicee.clinical import admissions, bound, remember, sha256, use_prior_studies
-from tiicee.clinical.backbone import ARM, BACKBONES, chosen, compose, recipe_record, require_frozen_code, runtime
+from tiicee.clinical.backbone import (ALLOCATOR, ARM, BACKBONES, chosen, compose, recipe_record, require_frozen_code,
+                                       runtime)
 from tiicee.pipeline.stages import StageInterrupted, register
 from tiicee.pipeline.util import tree_digest
 
@@ -173,6 +175,7 @@ def fit(backbone, seed, data_dir, output_dir, on_step, saved=lambda step: None):
     """One part of training. Returns (configuration, gpu.train's result, optimizer steps, visit
     sequence) when the fixed budget is complete; raises Paused when on_step(step, total) ended the
     part at a checkpoint gpu.train can resume from. saved(step) is called at every checkpoint."""
+    os.environ.setdefault(*ALLOCATOR)
     use_prior_studies()
     from replication import gpu
     require_frozen_code()

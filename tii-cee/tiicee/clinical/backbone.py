@@ -25,6 +25,9 @@ from unittest.mock import patch
 from tiicee.clinical import CONFIGS, REPLICATION, ROOT, TIM, bound, sha256, use_prior_studies
 
 ARM = "primary"  # the recipe of EXPERIMENT_CARDS/E8.md; no other arm is trained here
+# The default the replication's and tim's launchers export for every GPU stage (replication
+# scripts/stage.sh, tim scripts/gpu.slurm). The pipeline's job script does not, so GPU stages set it.
+ALLOCATOR = ("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 
 @dataclass(frozen=True)
