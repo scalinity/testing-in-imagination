@@ -60,8 +60,12 @@ def _kl(p, q):
     return float((p[m] * np.log(p[m] / q[m])).sum())
 
 
-def _problem(rng):
-    """Truth, world model, and the raw and corrected belief at every node of the outcome tree."""
+def _problem(rng, how="real_index"):
+    """Truth, world model, and the raw and corrected belief at every node of the outcome tree.
+
+    how names the real outcome to the track by its index among the imagined outcomes, or by the
+    reader's posterior after it (SPEC 5.9 needs only that posterior).
+    """
     c0 = _floor(rng.dirichlet(np.ones(C)))
     truth = rng.dirichlet(np.ones(C * K**T)).reshape((C,) + (K,) * T)            # P_star(y, o_1, o_2, o_3)
     phat = {h: _floor(rng.dirichlet(np.ones(K))) for h in PREFIXES}              # world model after history h
@@ -72,7 +76,8 @@ def _problem(rng):
         imagined = imagined / imagined.sum(1, keepdims=True)                     # the reader's q_o at history h
         for o in range(K):
             raw[h + (o,)] = imagined[o]
-            step = stateful_step(coh[h], raw[h], phat[h], imagined, o, **TIGHT)
+            real = {"real_index": o} if how == "real_index" else {"real_posterior": imagined[o]}
+            step = stateful_step(coh[h], raw[h], phat[h], imagined, **real, **TIGHT)
             assert step.projection.converged and not step.fallback
             coh[h + (o,)] = step.belief
     truth_paths = np.array([truth[(slice(None),) + p] for p in PATHS])            # [path, y]
@@ -145,10 +150,18 @@ def test_a_raw_belief_that_drifts_shows_up_in_m0_and_the_residuals():
 # ------------------------------------------------------------------------------------------------
 # T = 3, K = 3, C = 3 by enumeration
 # ------------------------------------------------------------------------------------------------
-@pytest.fixture(scope="module")
-def problems():
+@pytest.fixture(scope="module", params=["real_index", "real_posterior"])
+def problems(request):
     rng = np.random.default_rng(20261113)
-    return [_problem(rng) for _ in range(15)]
+    return [_problem(rng, request.param) for _ in range(15)]
+
+
+def test_both_ways_of_naming_the_real_result_give_the_same_track():
+    by_index = [_problem(np.random.default_rng(3), "real_index") for _ in range(3)]
+    by_posterior = [_problem(np.random.default_rng(3), "real_posterior") for _ in range(3)]
+    for (_, _, _, _, _, a), (_, _, _, _, _, b) in zip(by_index, by_posterior):
+        for node in a:
+            np.testing.assert_allclose(b[node], a[node], rtol=0, atol=1e-12)
 
 
 def test_corrected_beliefs_are_a_martingale_under_the_world_model(problems):

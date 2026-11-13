@@ -29,13 +29,31 @@ Stateless step, same reader. Project (q_1, q_2) against b_t: a_1 = 1/2, a_2 = 3/
     c_{t+1}(1) = 0.5 t / (0.5 t + 0.5) = t / (t + 1) = 0.275305                 if outcome 1 arrives,
     c_{t+1}(1) = (3/11) t / ((3/11) t + 8/11) = 3t / (3t + 8) = 0.124695        if outcome 2 arrives,
 and (0.275305 + 0.124695)/2 = 0.2 = b_t(1).
+
+A real result that was not imagined. The real result arrives and the reader's belief after it is
+q_real = (0.9, 0.1), which is neither q_1 nor q_2. SPEC 5.9 needs only that belief.
+    Stateful:  rho_real = q_real / b_t = (4.5, 0.125), c_t rho_real = (2.25, 0.0625), and with
+               u_t proportional to (1, sqrt6), c_{t+1} is proportional to (2.25, 0.0625 sqrt6):
+               c_{t+1}(1) = 2.25 / (2.25 + 0.0625 sqrt6) = 36 / (36 + sqrt6) = 0.936293.
+    Stateless: with t = u_t(1)/u_t(2) = 0.379891, c_{t+1} is proportional to (0.9 t, 0.1):
+               c_{t+1}(1) = 9t / (9t + 1) = 0.773705.
 """
 import math
 
 import numpy as np
 import pytest
 
-from tiicee.cee import Projection, ScaleResult, Step, project, scale, stateful_step, stateless_step
+from tiicee.cee import (
+    Projection,
+    ScaleResult,
+    Step,
+    apply_scale_to_real,
+    apply_to_real,
+    project,
+    scale,
+    stateful_step,
+    stateless_step,
+)
 
 SQRT6 = math.sqrt(6.0)
 TIGHT = dict(tol=1e-13, max_iter=20000)
@@ -49,6 +67,12 @@ T_ROOT = (-3.3 + math.sqrt(26.25)) / 4.8
 def _floor(p):
     p = np.maximum(np.asarray(p, dtype=float), 1e-6)
     return p / p.sum(-1, keepdims=True)
+
+
+def _kl(p, q):
+    p, q = np.asarray(p, dtype=float), np.asarray(q, dtype=float)
+    m = p > 0
+    return float((p[m] * np.log(p[m] / q[m])).sum())
 
 
 def _random_step(rng):
@@ -216,6 +240,144 @@ def test_scale_stage_falls_back_when_its_projection_does_not_converge():
     step = stateless_step(T_B, T_P, T_Q, 0, scale=(0.01, "two-sided"), max_iter=0)
     assert step.fallback is True and step.scale is not None and step.scale.converged is False
     np.testing.assert_allclose(step.belief, T_Q[0], atol=1e-15)
+
+
+# ------------------------------------------------------------------------------------------------
+# The real result given as the reader's posterior (real_posterior=) instead of an index
+# ------------------------------------------------------------------------------------------------
+def _over_reactive(rng, gamma=1.7):
+    """A coherent pair, its power-distorted reader, the true budget, and a reaction to an outcome nobody imagined."""
+    b, P, q0, J = _coherent_pair(rng)
+    q = b * (q0 / b) ** gamma
+    q = q / q.sum(1, keepdims=True)
+    budget = float((J * np.log(J / np.outer(P, b))).sum())
+    unseen0 = b * np.exp(rng.normal(scale=0.5, size=len(b)))        # what a coherent reader would hold
+    unseen0 = unseen0 / unseen0.sum()
+    unseen = b * (unseen0 / b) ** gamma                              # what this reader reports
+    return b, P, q0, q, budget, unseen0, unseen / unseen.sum()
+
+
+def test_anchor_t_real_result_that_was_not_imagined():
+    assert 36 / (36 + SQRT6) == pytest.approx(0.936293, abs=5e-7)
+    assert 9 * T_ROOT / (9 * T_ROOT + 1) == pytest.approx(0.773705, abs=5e-7)
+    stateful = stateful_step(T_C, T_B, T_P, T_Q, real_posterior=[0.9, 0.1], **TIGHT)
+    np.testing.assert_allclose(stateful.belief, [36 / (36 + SQRT6), SQRT6 / (36 + SQRT6)], atol=1e-11)
+    assert stateful.fallback is False and stateful.scale is None
+    assert stateful.projection.u[1] / stateful.projection.u[0] == pytest.approx(SQRT6, abs=1e-10)   # u_t is unchanged
+    stateless = stateless_step(T_B, T_P, T_Q, real_posterior=[0.9, 0.1], **TIGHT)
+    np.testing.assert_allclose(stateless.belief, [9 * T_ROOT / (9 * T_ROOT + 1), 1 / (9 * T_ROOT + 1)], atol=1e-11)
+    assert stateless.projection.u[0] / stateless.projection.u[1] == pytest.approx(T_ROOT, abs=1e-10)
+
+
+@pytest.mark.parametrize("stage", [None, "two-sided", "shrink-only"])
+def test_real_posterior_equals_real_index_when_the_real_result_was_imagined(stage):
+    rng = np.random.default_rng(11)
+    for _ in range(25):
+        c, b, w, Q = _random_step(rng)
+        kwargs = {} if stage is None else {"scale": (0.5 * float(w @ [_kl(row, _floor(b)) for row in _floor(Q)]) + 1e-3, stage)}
+        for o in range(len(w)):
+            by_index = stateless_step(b, w, Q, o, **kwargs)
+            by_posterior = stateless_step(b, w, Q, real_posterior=Q[o], **kwargs)
+            np.testing.assert_allclose(by_posterior.belief, by_index.belief, rtol=0, atol=1e-13)
+            assert by_posterior.fallback == by_index.fallback
+            np.testing.assert_array_equal(by_posterior.projection.u, by_index.projection.u)
+            by_index = stateful_step(c, b, w, Q, o, **kwargs)
+            by_posterior = stateful_step(c, b, w, Q, real_posterior=Q[o], **kwargs)
+            np.testing.assert_allclose(by_posterior.belief, by_index.belief, rtol=0, atol=1e-13)
+            assert by_posterior.fallback == by_index.fallback
+            if stage is not None:
+                assert by_posterior.scale.tau_b == by_index.scale.tau_b and by_posterior.scale.path == by_index.scale.path
+
+
+def test_real_posterior_formulas_for_a_result_outside_the_proposals():
+    rng = np.random.default_rng(12)
+    for _ in range(40):
+        c, b, w, Q = _random_step(rng)
+        q_real = rng.dirichlet(np.ones(len(b)))                     # raw reader output, not one of the q_o
+        bf, qf = _floor(b), _floor(q_real)
+        stateless = stateless_step(b, w, Q, real_posterior=q_real)
+        expected = stateless.projection.u * qf                      # c_{t+1} proportional to u_t x q_real
+        np.testing.assert_allclose(stateless.belief, expected / expected.sum(), atol=1e-13)
+        np.testing.assert_allclose(stateless.belief, apply_to_real(stateless.projection.u, q_real)[0], atol=1e-13)
+        np.testing.assert_array_equal(stateless.projection.u, project(b, w, Q).u)       # the projection ignores the real result
+        stateful = stateful_step(c, b, w, Q, real_posterior=q_real)
+        expected = stateful.projection.u * c * (qf / bf)            # c_{t+1} proportional to u_t x c_t x (q_real / b_t)
+        np.testing.assert_allclose(stateful.belief, expected / expected.sum(), atol=1e-13)
+        np.testing.assert_array_equal(stateful.projection.u, stateful_step(c, b, w, Q, 0).projection.u)
+
+
+def test_scale_stage_tempers_the_real_increment_by_the_same_tau_b():
+    rng = np.random.default_rng(13)
+    error_scaled, error_projected = [], []
+    for _ in range(10):
+        b, P, q0, q, budget, unseen0, unseen = _over_reactive(rng)
+        stateless = stateless_step(b, P, q, real_posterior=unseen, scale=(budget, "two-sided"))
+        tau, u = stateless.scale.tau_b, stateless.scale.u
+        assert stateless.scale.path == "solved" and abs(tau / 1.7 - 1.0) <= 0.01 and stateless.fallback is False
+        expected = u * b * (unseen / b) ** (1.0 / tau)              # u_t x b_t x (q_real / b_t)^(1/tau_B)
+        np.testing.assert_allclose(stateless.belief, expected / expected.sum(), atol=1e-12)
+        np.testing.assert_allclose(stateless.belief, apply_scale_to_real(b, unseen, tau, u)[0], atol=1e-12)
+        np.testing.assert_allclose(stateless.belief, unseen0, atol=0.02)                # the coherent reader's belief, to the 1% tolerance
+        error_scaled.append(np.abs(stateless.belief - unseen0).max())
+        error_projected.append(np.abs(stateless_step(b, P, q, real_posterior=unseen).belief - unseen0).max())
+
+        c = _floor(rng.dirichlet(np.ones(len(b)) * 5.0))
+        stateful = stateful_step(c, b, P, q, real_posterior=unseen, scale=(budget, "shrink-only"))
+        tau, u = stateful.scale.tau_b, stateful.scale.u
+        expected = u * c * (unseen / b) ** (1.0 / tau)              # u_t x c_t x (q_real / b_t)^(1/tau_B)
+        np.testing.assert_allclose(stateful.belief, expected / expected.sum(), atol=1e-12)
+        assert stateful.scale.tau_b == stateful_step(c, b, P, q, 0, scale=(budget, "shrink-only")).scale.tau_b   # tau_B ignores the real result
+    assert np.mean(error_scaled) < 0.2 * np.mean(error_projected)                       # projection alone does not repair scale
+
+
+@pytest.mark.parametrize("stage", [None, "two-sided", "shrink-only"])
+def test_martingale_under_the_world_model_with_real_posteriors(stage):
+    # SPEC 5.12 (i): averaging c_{t+1} over the world model's own outcomes, each fed back as the
+    # reader's posterior, returns c_t (stateful) or b_t (stateless), scale stage or not.
+    rng = np.random.default_rng(14)
+    for _ in range(25):
+        c, b, w, Q = _random_step(rng)
+        kwargs = dict(tol=1e-13, max_iter=200000) if stage is None else dict(tol=1e-13, max_iter=200000, scale=(0.02, stage))
+        stateful = [stateful_step(c, b, w, Q, real_posterior=Q[o], **kwargs) for o in range(len(w))]
+        stateless = [stateless_step(b, w, Q, real_posterior=Q[o], **kwargs) for o in range(len(w))]
+        assert all(s.projection.converged and not s.fallback for s in stateful + stateless)
+        np.testing.assert_allclose(sum(w[o] * stateful[o].belief for o in range(len(w))), c, rtol=0, atol=1e-12)
+        np.testing.assert_allclose(sum(w[o] * stateless[o].belief for o in range(len(w))), _floor(b), rtol=0, atol=1e-12)
+
+
+def test_real_posterior_falls_back_to_the_raw_reader_when_the_projection_does_not_converge():
+    stateless = stateless_step(T_B, T_P, T_Q, real_posterior=[0.9, 0.1], max_iter=0)
+    assert stateless.fallback is True and stateless.projection.converged is False
+    np.testing.assert_allclose(stateless.belief, [0.9, 0.1], atol=1e-15)                 # the raw posterior
+    stateful = stateful_step(T_C, T_B, T_P, T_Q, real_posterior=[0.9, 0.1], max_iter=0)
+    assert stateful.fallback is True
+    np.testing.assert_allclose(stateful.belief, [2.25 / 2.3125, 0.0625 / 2.3125], atol=1e-15)   # c_t x rho_real, uncorrected
+    scaled = stateless_step(T_B, T_P, T_Q, real_posterior=[0.9, 0.1], scale=(0.01, "two-sided"), max_iter=0)
+    assert scaled.fallback is True and scaled.scale is not None
+    np.testing.assert_allclose(scaled.belief, [0.9, 0.1], atol=1e-15)                    # untempered as well
+
+
+def test_real_posterior_is_a_reader_vector_and_is_floored():
+    step = stateless_step(T_B, T_P, T_Q, real_posterior=[1.0, 0.0], **TIGHT)
+    expected = step.projection.u * _floor([1.0, 0.0])
+    np.testing.assert_allclose(step.belief, expected / expected.sum(), atol=1e-15)
+    assert 0 < step.belief[1] < 1e-5
+    stateful = stateful_step(T_C, T_B, T_P, T_Q, real_posterior=[1.0, 0.0], **TIGHT)
+    assert np.all(stateful.belief > 0) and stateful.belief.sum() == pytest.approx(1.0, abs=1e-15)
+
+
+def test_real_index_and_real_posterior_are_mutually_exclusive():
+    for step, args in ((stateless_step, (T_B, T_P, T_Q)), (stateful_step, (T_C, T_B, T_P, T_Q))):
+        with pytest.raises(ValueError):
+            step(*args)                                              # neither
+        with pytest.raises(ValueError):
+            step(*args, 0, real_posterior=[0.5, 0.5])                # both
+        with pytest.raises(ValueError):
+            step(*args, real_posterior=[0.2, 0.3, 0.5])              # wrong number of classes
+        with pytest.raises(ValueError):
+            step(*args, real_posterior=[0.9, 0.2])                   # not a probability vector
+        with pytest.raises(ValueError):
+            step(*args, real_posterior=[[0.9, 0.1], [0.5, 0.5]])     # one result, one vector
 
 
 def test_bad_input_is_rejected():

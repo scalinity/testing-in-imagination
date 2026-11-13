@@ -37,8 +37,8 @@ All logarithms are natural and information is in nats.
 | `commit(belief, utility, net_values, eligible=None, budget_reached=False)` | decision | 5.7 | `(True, diagnosis)` or `(False, None)` |
 | `gate_allows(kl_inc, eps_prior, eps_wm)` | gate | 5.8 | KL_inc > eps_prior + eps_wm |
 | `bootstrap_upper_bound(values, groups, rng, level=0.90, n_boot=10000, absolute=False)` | gate | 5.8, 15 | one-sided upper percentile bound of a mean, resampling groups |
-| `stateful_step(c_t, b_t, weights, posteriors, real_index, scale=None)` | tracks | 5.9 | `Step`: `belief` c_{t+1}, `projection`, `scale`, `fallback` |
-| `stateless_step(b_t, weights, posteriors, real_index, scale=None)` | tracks | 5.9 | `Step` |
+| `stateful_step(c_t, b_t, weights, posteriors, real_index=None, scale=None, *, real_posterior=None)` | tracks | 5.9 | `Step`: `belief` c_{t+1}, `projection`, `scale`, `fallback` |
+| `stateless_step(b_t, weights, posteriors, real_index=None, scale=None, *, real_posterior=None)` | tracks | 5.9 | `Step` |
 | `multistep_accounting(paths, truth, path_probs, leaf_beliefs, prefix_beliefs)` | multistep | 5.12 | `MultiStepAccounting`: m_0, the three terms of (iii), martingale and tower residuals |
 | `audit_record(point)`, `audit_point(reader, world_model, history, test, k, rng, budget)` | card | 9.1, 16 | one audit record |
 | `python -m tiicee.cee.audit FILE.json [--json]` | audit | 9.1 | the audit card |
@@ -74,7 +74,7 @@ specification's.
 floor, so a second pass moves it again by a relative amount of about 1e-6. The floor is therefore
 applied exactly once, to reader output, on entry:
 
-- Floored: `prior`, `posteriors`, `q_real`, `b_t` wherever a public function takes them
+- Floored: `prior`, `posteriors`, `q_real`, `b_t`, `real_posterior` wherever a public function takes them
   (`project`, `apply_to_real`, the audit quantities, `temper`, `projected_responsiveness`,
   `tau_budget`, `scale`, `apply_scale_to_real`, `tau_ratio`, `raw_voi_score`, both track steps).
   Pass raw reader output to these. The vectors actually used are on the result (`Projection.prior`,
@@ -84,6 +84,20 @@ applied exactly once, to reader output, on entry:
   which must stay exact for the martingale of SPEC 5.12 (i); the inputs of `gain_terms`,
   `realized_gain`, `coherent_voi`, `phi`, `select`, `commit`, `multistep_accounting`. Pass
   projection outputs to these, for instance `coherent_voi(p.prior, p.weights, p.corrected, U)`.
+
+## Naming the real result to a track
+
+Give exactly one of `real_index` (the position of the real outcome among the outcomes the world
+model proposed) or `real_posterior` (the reader's belief after the real result, q_real). The
+projection and tau_B depend only on the imagined outcomes, so both give the same u_t. With
+`real_posterior` the step applies them to a result that was never imagined, which is the usual case
+for a sampled world model:
+
+- stateless: c_{t+1} ∝ u_t × q_real; with a scale stage, u_t × b_t (q_real / b_t)^(1/tau_B)
+- stateful: c_{t+1} ∝ u_t × c_t × (q_real / b_t); with a scale stage, u_t × c_t (q_real / b_t)^(1/tau_B)
+
+When q_real equals one of the imagined posteriors the two ways agree. `real_posterior` is a reader
+vector and is floored. Giving both, or neither, is an error.
 
 ## Non-convergence
 
