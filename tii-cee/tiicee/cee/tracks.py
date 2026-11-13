@@ -25,7 +25,9 @@ class Step:
     belief        c_{t+1}, the belief carried forward after the real result
     projection    the projection record of the step (at tau_B when a scale stage ran)
     scale         the CEE-Scale record, or None when no scale stage was asked for
-    fallback      True when the projection did not converge and the raw update was used (SPEC 5.3)
+    fallback      True when the projection did not converge and the raw update was used (SPEC 5.3); with a
+                  scale stage this is the projection at tau_B, and the search's own convergence is
+                  scale.search_converged
     """
 
     belief: np.ndarray

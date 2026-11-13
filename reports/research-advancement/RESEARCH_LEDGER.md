@@ -333,3 +333,31 @@ exported before Python starts (differences below 1e-14 relative otherwise; no ru
 GATE_DECISIONS/G2b-addendum-1.md and G2c-addendum-1.md give their writing time as "about 7:15 AM
 EST"; both were written and committed at 6:36 AM EST (commit 478841f). The records stay unchanged;
 their content is unaffected.
+
+### Review of the M2 code, November 13, 2026
+
+Independent review of the CEE library (tii-cee/tiicee/cee) and the E1 decision rules
+(tii-cee/tiicee/experiments/e1/rules.py) over 632bd18..5112ce0, by Gemini 4 Argon High through
+NativePeers (task 37d17f20, read-only, no commands run). A Codex reviewer was refused by
+NativePeers' compatibility check (CAPABILITY_MISMATCH on an untested Codex CLI) and was not
+forced. Verdict: approve with suggestions; no critical finding; every definition of specification
+section 5, PROOF_GAIN_IDENTITY.md and the E1 card checked with the right signs, argument orders and
+exponents.
+
+rules.py was pre-registered before E1 ran. The changes below alter only how incomplete inputs are
+refused and how bootstrap keys are assigned; on the committed E1 tables every decision and every
+interval is unchanged, checked by re-running the rules from a copy of the tables.
+
+| ID | Severity | Finding | Disposition | Evidence |
+|---|---|---|---|---|
+| F001 | Warning | Rules could decide on partial tables (a seed missing one acquisition rule was averaged over the other; KeyError, ZeroDivisionError, vacuous passes) | Fixed, 99b6800 | Every cell a rule reads must hold every seed and both acquisition rules, else "incomplete"; a gate that never opens is vacuous (verdict None). verdicts.json byte-identical (sha256 d7d8c8e1…); 7 tests |
+| F002 | Warning | multistep_accounting divided 0 by 0 below a zero-mass world-model branch, and on m_0(y) = 0 | Fixed, 315a468 | Unreachable prefixes leave both residuals; an uncovered class leaves the likelihood term (the prior term is +inf). 2 tests fail on the old code with FloatingPointError |
+| F003 | Warning | selected_layer fell back to projection-only when G2c was not evaluated | Fixed, c54cded | The layer carries a status; part-a refuses, and Figure 1 skips, an undecided layer. Decisions unchanged; verdicts.json gains only "status": "evaluated" on the layer |
+| F004 | Suggestion | A non-converged search projection can steer the choice of tau_B's bracket while converged reports True | Method unchanged; semantics documented in the commit that adds this record | Measured on E1 part D, card configuration, base variant, seeds 0 to 3 (28.0 million rows): a search projection failed to converge in 213,872 rows (0.76%); excluding those points would move the bracket in 2,541 rows (0.009%; 2,445 of them in seed 3). The rule is the pre-registered one E1 ran and G2c was decided on; changing it now would be a post-hoc method change. Any later result that rests on tau_B, first among them the D-REGIME coordinate, reports search_converged beside it |
+| F005 | Suggestion | One key counter across rules: an early stop shifted later rules' bootstrap streams | Fixed, f21daa4 | KEY_BLOCKS gives each rule the keys of a complete evaluation. With one rule stopping early, the old code drew keys 6 to 24 where the complete run drew 9 to 27; now 9 to 27. verdicts.json byte-identical (sha256 82deee8b…) |
+
+Found while verifying: three file appends in tests/test_pipeline_manifest.py were never closed,
+so the suite failed under -W error whenever garbage collection ran inside that test (338c110).
+tiicee/experiments/e1/tree.py repeats the multistep arithmetic on arrays, including the m_0
+division; its beliefs come from floored readers or projections, so m_0 > 0 there and it was left
+as is. Full suite after the fixes: 883 passed, 23 skipped, under -W error.

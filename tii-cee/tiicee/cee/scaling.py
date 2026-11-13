@@ -65,7 +65,10 @@ class TauBudget:
                      "clipped_high": r' meets the budget at the upper end; tau is the upper end
                      "fallback": r' rose somewhere on the grid; the last crossing was bisected
     monotone         r' non-increasing in tau over the converged grid points
-    converged        every projection used in the search converged
+    converged        every projection used in the search converged. When one did not, its r' still
+                     enters the choice of bracket (the method as specified and as E1 ran it); in
+                     E1 part D that changed the bracket in about 1 row in 11,000 (RESEARCH_LEDGER.md,
+                     review F004), so a result that rests on tau_B reports this flag
     grid, r_grid     the tau grid (factor 2 apart, plus the upper end) and r' on it
     grid_converged   which grid projections converged
     """
@@ -165,7 +168,8 @@ class ScaleResult:
 
     @property
     def converged(self):
-        """Whether the projection at tau_b converged; when False the raw reader is used."""
+        """Whether the projection at tau_b converged; when False the raw reader is used. It says nothing about
+        the search: whether every projection that chose tau_b converged is search_converged."""
         return self.projection.converged
 
 
