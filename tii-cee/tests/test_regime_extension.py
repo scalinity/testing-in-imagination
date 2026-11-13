@@ -77,6 +77,8 @@ def test_shifted_world_models_scale_the_class_pointing_findings(ctx, first):
             ratio = (w[mask].sum() / w[~mask].sum()) / (w0[mask].sum() / w0[~mask].sum())
             assert ratio == pytest.approx(factor)
             assert np.allclose(w[mask] / w[mask].sum(), w0[mask] / w0[mask].sum())
+        with pytest.raises(ValueError, match="unknown world model"):
+            ext.weights(ctx, "W1", test)
 
 
 @pytest.mark.parametrize("world", ext.JUDGED)

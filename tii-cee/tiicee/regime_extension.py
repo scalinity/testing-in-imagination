@@ -98,6 +98,8 @@ def reactions(model, t: int, powers: np.ndarray) -> np.ndarray:
 
 def weights(ctx: Context, world: str, test: str) -> np.ndarray:
     """The world model's outcome probabilities at the empty history, over model.outcomes."""
+    if world not in WORLD_MODELS:
+        raise ValueError(f"unknown world model {world!r}")
     twin = ctx.twin("full")
     m = twin.model
     found = ctx.fitted("full", "W2") if world == "W2" else wm.w0(twin)
@@ -193,10 +195,12 @@ def world_result(rows: list, cfg: config.Config, w: int, world: str) -> dict:
         readers[name] = {"a": a, "b": b, "expected_side": side, "tau_b": _interval(values, cfg, KEY + 100 * w + 2 * i),
                          "relative_to_r0": relative, "side_holds": holds,
                          "p_abnormal": _mean(r["p_abnormal"] for r in mine), "p_normal": _mean(r["p_normal"] for r in mine)}
-    lines = [{"vary": "a", "fixed": b, "tau_b": [float(np.exp(means[(a, b)])) for a in POWERS]} for b in POWERS]
-    lines += [{"vary": "b", "fixed": a, "tau_b": [float(np.exp(means[(a, b)])) for b in POWERS]} for a in POWERS]
-    for line in lines:
-        line["rises"] = bool((np.diff(np.log(line["tau_b"])) > 0).all())
+    lines = []
+    for vary, keys in (("a", [[(a, b) for a in POWERS] for b in POWERS]), ("b", [[(a, b) for b in POWERS] for a in POWERS])):
+        for line in keys:
+            logs = [means[key] for key in line]
+            lines.append({"vary": vary, "fixed": line[0][1] if vary == "a" else line[0][0],
+                          "tau_b": [float(np.exp(v)) for v in logs], "rises": bool((np.diff(logs) > 0).all())})
     return {"judged": world in JUDGED, "r0": _interval(r0, cfg, KEY + 100 * w + 99), "readers": readers,
             "ordering": {"holds": all(line["rises"] for line in lines), "lines": lines},
             "sides_hold": all(entry["side_holds"] for entry in readers.values() if entry["expected_side"]),
