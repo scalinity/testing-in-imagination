@@ -99,15 +99,19 @@ def test_the_search_agrees_with_the_validated_first_point(ctx, first, world):
 
 
 def synthetic_rows(cfg, shift=None):
-    """Rows at log tau_B = a-and-b-weighted log power with a small seed jitter, R0 at 0."""
+    """Rows at log tau_B = 0.6 log a + 0.4 log b with a small jitter, plus an offset per world model and
+    seed that R0 shares, so only a reading paired with R0 by seed cancels it. A shift is a number or a
+    function of the seed."""
     rng = np.random.default_rng(0)
     rows = []
     for seed in cfg.seeds:
-        for world in ext.WORLD_MODELS:
+        for w, world in enumerate(ext.WORLD_MODELS):
+            offset = 0.5 * w + 0.3 * seed
             for selector in points.SELECTORS:
-                names = [("r0", 1.0, 1.0)] + [(ext.reader_name(a, b), a, b) for a, b in ext.READERS]
-                for name, a, b in names:
-                    value = 0.6 * np.log(a) + 0.4 * np.log(b) + 0.0005 * rng.standard_normal() + (shift or {}).get((world, name), 0.0)
+                for name, a, b in [("r0", 1.0, 1.0)] + [(ext.reader_name(a, b), a, b) for a, b in ext.READERS]:
+                    extra = (shift or {}).get((world, name), 0.0)
+                    extra = extra(seed) if callable(extra) else extra
+                    value = offset + 0.6 * np.log(a) + 0.4 * np.log(b) + 0.0005 * rng.standard_normal() + extra
                     rows.append({"seed": seed, "variant": cfg.primary_variant, "selector": selector, "world_model": world,
                                  "reader": name, "test": "CT", "abnormal_share": 0.5, "log_tau_b": value,
                                  "path": "solved", "converged": True, "p_abnormal": a, "p_normal": b})
@@ -119,18 +123,28 @@ def test_criteria_support_ordered_readers_and_fail_when_moved():
     good = ext.evaluate(synthetic_rows(cfg), cfg)
     assert good["outcome"] == "supported"
     assert all(good["world_models"][w]["judged"] == (w in ext.JUDGED) for w in ext.WORLD_MODELS)
+    relative = good["world_models"]["W2"]["readers"]["a0.5:b1"]["relative_to_r0"]   # the shared offset cancels
+    assert np.log(relative["estimate"]) == pytest.approx(0.6 * np.log(0.5), abs=0.005)
 
-    # (1, 0.5) only just below R0: inside the band, so the side fails under W2 alone
-    inside = ext.evaluate(synthetic_rows(cfg, {("W2", "a1:b0.5"): 0.4 * np.log(2) - 0.5 * ext.BAND}), cfg)
-    assert inside["outcome"] == "scope limit"
-    assert inside["world_models"]["W0"]["sides_hold"] and not inside["world_models"]["W2"]["sides_hold"]
-    assert inside["world_models"]["W2"]["ordering"]["holds"]
+    def side_fails_alone(world, name, shift):
+        found = ext.evaluate(synthetic_rows(cfg, {(world, name): shift}), cfg)
+        here, other = found["world_models"][world], found["world_models"]["W2" if world == "W0" else "W0"]
+        assert found["outcome"] == "scope limit", name
+        assert here["readers"][name]["side_holds"] is False and not here["sides_hold"] and here["ordering"]["holds"]
+        assert other["sides_hold"] and other["ordering"]["holds"]
 
-    # (2, 1) pushed below (1, 1): the line over a at b = 1 no longer rises
-    hump = ext.evaluate(synthetic_rows(cfg, {("W0", "a2:b1"): -0.6 * np.log(2) - 0.01}), cfg)
-    assert not hump["world_models"]["W0"]["ordering"]["holds"]
+    third, half_band = 0.4 * np.log(2), 0.5 * ext.BAND
+    side_fails_alone("W2", "a1:b0.5", third - half_band)          # inside the band, below R0
+    side_fails_alone("W0", "a1:b2", -third + half_band)            # inside the band, above R0
+    side_fails_alone("W0", "a1:b2", lambda seed: -third + ext.BAND + 0.02 * (-1) ** seed)    # straddles +band
+    side_fails_alone("W2", "a1:b0.5", lambda seed: third - ext.BAND + 0.02 * (-1) ** seed)   # straddles -band
+
+    # (2, 1) moved above (2, 2): every side still holds, the line over b at a = 2 does not rise
+    hump = ext.evaluate(synthetic_rows(cfg, {("W0", "a2:b1"): 0.5 * np.log(2)}), cfg)
+    assert hump["outcome"] == "scope limit"
+    assert hump["world_models"]["W0"]["sides_hold"] and not hump["world_models"]["W0"]["ordering"]["holds"]
     broken = [(line["vary"], line["fixed"]) for line in hump["world_models"]["W0"]["ordering"]["lines"] if not line["rises"]]
-    assert broken == [("a", 1.0), ("b", 2.0)]
+    assert broken == [("b", 2.0)]
 
     # a shifted world model is reported, never decided on
     shifted = ext.evaluate(synthetic_rows(cfg, {("W0-abnormal-x2", "a2:b2"): -3.0}), cfg)
