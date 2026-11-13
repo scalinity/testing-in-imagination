@@ -1,0 +1,967 @@
+===== FILE: SPEC_RESEARCH_ADVANCEMENT.md =====
+
+# Testing in Imagination: Research Advancement Specification
+
+Version: 2.0 — revised after REVIEW_HANDOFF.md
+Revision date: November 12, 2026
+Repository: scalinity/testing-in-imagination
+Owner: Daniel Escalante
+Team: Daniel Escalante, Hugo Resendez, Edwin Salcedo
+Advisor: Professor Xuefeng Liu
+Course: CAI6734, University of Florida
+Status: Canonical successor to the earlier advancement specification. Execution plan, not a completion claim.
+
+This version incorporates the supplied independent review. Its repository observations refer to the
+November 11, 2026 Eastern-time snapshot and must be checked against current evidence. Authoring this
+specification does not execute it. Implementation begins when Daniel supplies it with the kickoff as
+an execution instruction. A current read-only instruction always takes precedence.
+
+## 1. Mission and scientific objective
+
+Execute an end-to-end research cycle that repairs scientific measurement, identifies the actual
+performance bottleneck, implements one evidence-driven improvement, and produces research evidence
+and understandable professor-facing reports throughout the work.
+
+Preserve the original project: a world model predicts what diagnostic evidence could reveal, and a
+selector uses those imagined outcomes to choose real acquisitions. Study both when this helps and
+when a flawed model makes decisions worse. Do not replace this with a larger-backbone-only project,
+an unrelated classification benchmark, or a new orchestration platform.
+
+Central question:
+“When does improving a world model improve diagnostic decisions, and which prediction errors,
+evidence-update errors, or acquisition assumptions make imagination ineffective or harmful?”
+
+Separate three outcomes:
+- Engineering validity: the code computes the declared quantities and enforces the protocol.
+- Empirical benefit: the intervention improves a predeclared accuracy–cost objective against strong controls.
+- Publication evidence: the contribution is differentiated, explained, and supported beyond its development setting.
+
+Passing tests establishes neither the second nor the third. A negative or inconclusive experiment
+can complete a milestone when it answers its question honestly. No accuracy gain or ICML acceptance
+is guaranteed or required to justify reporting completed work.
+
+Execute, rather than stopping at recommendations. When permission or access blocks an experiment,
+complete independent authorized work, prepare the exact request, and deliver a useful partial packet.
+Do not bypass a scientific gate, repeatedly broaden the search, or wait indefinitely for a positive result.
+
+## 2. Canonical inputs, historical evidence, and current-state verification
+
+Read this specification, KICKOFF_RESEARCH_ADVANCEMENT.txt, and REVIEW_HANDOFF.md completely.
+Use the review as evidence and recommendations, not as proof that every finding is still open.
+The earlier advancement documents are superseded by this version; frozen historical studies are not.
+
+Historical review anchors:
+
+| Resource | Reviewed identity |
+|---|---|
+| main | e5ad93fad5345f211cedc05c3dc491b101c63fa5 |
+| PR #9, content implementation | acf5254bb624ed881f864e84149fc4d983dc048a |
+| PR #7, content design | 75c50a725655ad4cbe69d4ab79677c40ed4b309e |
+| PR #1, Edwin's synthetic study | df467eadd07fe2bc761b618dafce8ed9f198641a |
+| PR #8 merge | 3a564ddee135277e7adf2caebfa560a4409e76f3 |
+| PR #10 head / merge | b1e93ac23e28800a968296f537285e7708f098e7 / reviewed main |
+
+Starting findings, not newly reproduced results:
+
+| Observation | Required interpretation |
+|---|---|
+| Phase A test T5: original 73.09%, V1 fallback 84.45%, V3 guards 81.83% | Answer recovery is a strong simple reference. V3−V1 was not significant: −2.62 points [−6.16, 0.76]. |
+| Phase B validation oracle−uniform: −0.11 points [−2.56, 2.38], Holm p=0.9736; unavailable requests 203→66 | Behavior changed without a detectable T5 benefit for this fixed planner and cohort. |
+| Nine validation dose-response arms; reported 4.384 GPU-hours; slope −2.46 [−7.28, 2.26] | Completed recorded experiment. “Flat” does not establish equality or rule out modest effects. |
+| Content CPU premise: 68/240 admissions, 158 lab requests | Broad opportunity count, not the number of errors a valid intervention can correct. |
+| C1 posterior NLL: prior 0.68999; uncorrected all-lab 2.48502; A+B 0.63720 | Development evidence. A+B ECE 0.07046 remained above prior ECE 0.04554, although below uncorrected 0.29465. |
+| Content quality, preflight, action/thought, synthetic split/cost, and provenance findings | Verify at current refs; repair confirmed defects before relying on affected paths or claims. |
+| Clinical test benchmark previously examined; subject grouping unresolved | A new freeze does not create an untouched test set. Missing identifiers do not establish zero person-level overlap. |
+
+Do not mix validation and test endpoints. Do not discard completed clinical studies because a
+successor needs stronger controls. Do not declare all synthetic results leaked: the identified
+likelihood sample and the offset-seed main utility sample require separate adjudication.
+
+Inspect current instructions and relevant evidence, including:
+- AGENTS.md files if present, ONBOARDING.md, the full standing onboarding prompt, README.md,
+  REPRODUCTION.md, and applicable decision records.
+- cdm-extension/daniel-escalante/SPEC.md, SPEC_CONTENT_WM.md, DECISIONS.md, protocol files,
+  amendments A4–A7 and C1, approvals, schemas, manifests, run receipts, and aggregate results.
+- tim/content.py, labs.py, runner.py, approvals.py, cli.py, access.py, publish.py, diagnostics.py,
+  analysis.py, and relevant tests.
+- PRs #1, #7, #8, #9, and #10, including review discussions and subsequent fixes.
+- extension/ environments, collection, world models, planners, experiment runners, and synthetic results.
+- reports/week11_individual_progress_Daniel_Escalante.tex and later reports actually present.
+
+Record current branch/commit identities and distinguish merged code, unmerged code, reported runs,
+verified fixes, and planned work. A merge-preview SHA does not establish a merge. Remote absence
+cannot prove there is no unpushed work. If a relevant source is unavailable, state that limitation.
+
+Source entry points:
+https://github.com/scalinity/testing-in-imagination
+https://github.com/scalinity/testing-in-imagination/pull/1
+https://github.com/scalinity/testing-in-imagination/pull/7
+https://github.com/scalinity/testing-in-imagination/pull/8
+https://github.com/scalinity/testing-in-imagination/pull/9
+https://github.com/scalinity/testing-in-imagination/pull/10
+
+Resolve conflicting status using pinned code, artifacts, and execution receipts. Preserve the review's
+attribution: Edwin's recorded synthetic implementation, Daniel's recorded review comments, automated
+Codex findings, and agent-generated planning are distinct contributions. Do not infer Hugo's work
+or lack of work from incomplete records.
+
+## 3. Execution authority, instruction precedence, and preservation
+
+### 3.1 Current instructions control
+
+When this spec is supplied for implementation, ordinary repository edits on a dedicated task branch,
+local commits, documentation, local CPU/synthetic testing, and analysis of authorized aggregates are
+permitted within the execution environment's permissions. This is not automatic authority for all
+credentialed computation, spending, publication, or test access.
+
+Current task-specific restrictions govern over historical delegations and obsolete next-action lists.
+In particular, the older DECISIONS.md authorization to commit approval files on Daniel's behalf does
+not authorize signing or manufacturing approvals for this task's new experiments. Existing approvals
+apply only if their exact scope, budget, code/configuration, and other bindings still match.
+
+Retain old instructions as historical records and document precedence. Do not restart completed
+archaeology or training because old onboarding still calls it the next step. The read-only boundary
+in REVIEW_HANDOFF.md describes that review; it does not prohibit tests in a later explicitly authorized
+implementation task. Conversely, a current read-only request overrides this execution plan.
+
+### 3.2 Repository changes
+
+Confirm exactly scalinity/testing-in-imagination and inspect the working tree first. Preserve unrelated
+uncommitted work. Use a dedicated task branch/worktree and record its base. Select a base or scoped
+local integration that includes the needed implementation without rewriting another contributor's
+branch. Preserve authorship and document dependency commits and conflict resolutions.
+
+Do not merge or close existing PRs, force-push, rewrite collaborators' history, or edit Edwin's branch
+in place. Do not push, publish, email the professor, contact teammates, submit coursework, or submit
+a paper without separate explicit authorization. Local report creation is not permission to publish it.
+
+Prefer small changes and shared interfaces. Do not introduce an unrelated infrastructure rewrite.
+Accepted choices remain accepted unless concrete evidence or a clearly identified new experiment
+justifies revisiting them.
+
+### 3.3 Credentialed execution and resources
+
+Patient computations must use the approved private workflow and declared stage-by-split permissions.
+Before a credentialed CPU job, confirm that its data access and execution are within current authority.
+Adding a stage to code does not itself grant access. New or expanded protected-data access, external
+data acquisition, new test access, and clinical GPU work require the applicable explicit approval.
+
+New policy training and resource-intensive expansions require a specific measured/requested budget.
+Do not infer permission from a draft request, a broad historic delegation, available quota, or an
+approval for different code. Confirm current permitted accounts and backbones from authoritative
+project records; do not assume the original Qwen backbone is permitted.
+
+When blocked, prepare the exact stage, purpose, inputs, component contract, resource estimate,
+uncertainties, commands, and expected outputs for approval. Continue independent work. Never insert
+Daniel's signature or convert a request into approval. Queueing, launching, and successful completion
+are different states. Retries and failed jobs consume resources and must stay in the ledger.
+
+### 3.4 Protected data
+
+Patient-level records, identifiers, histories, measurements, trajectories, generated clinical text,
+private logs, and patient-derived fitted parameters stay in approved private storage. Do not expose
+them to hosted coding agents, external APIs, this conversation, public artifacts, or cloud-synced folders.
+
+Code, invented fixtures, approved aggregate outputs, scheduler metadata, and approved error codes are
+the agent's inspection surface. Record-level investigations must execute privately and export only
+schema-approved aggregates under existing disclosure controls. Keep export guards intact; do not
+weaken them to publish a diagnostic. Private identifiers or hashes are not automatically safe exports.
+
+### 3.5 Historical studies versus successor research
+
+Preserve frozen comparisons, protocols, result identities, and historical outputs. A correction gets
+an explicit erratum and versioned result; it does not silently overwrite the original experiment.
+
+Distinguish:
+- Legacy-conformance repairs: make code compute what the existing study actually specified.
+- New interventions: change representation, model, reader, objective, controls, stopping, or scope.
+
+New interventions require a successor study ID, separate outputs, a prospective experiment card,
+and applicable new approvals. The original four-repair allowance does not authorize arbitrary new
+arms. Reusing the old stage name or a new protocol hash must never bypass test-admission restrictions.
+
+For the availability-null interpretation, retain the old record and add a linked clarification:
+“This fixed planner showed no detectable T5 benefit from true availability over the uniform control
+on this validation cohort; modest effects and benefits from other planners remain unresolved.”
+Keep the request reduction visible. The old 4.15-point MDE is not a practical-equivalence margin.
+
+## 4. Artifacts, status, and reporting cadence
+
+Use reports/research-advancement/ for the new workflow and a separate versioned experiment-output
+namespace consistent with the repository's data boundary. Preserve existing reports.
+
+Maintain:
+- STATUS.md: milestone, current evidence, blockers, next executable action, and pending decisions.
+- RESEARCH_LEDGER.md: claim/evidence register, review dispositions, experiment register, and decisions.
+- M0_EVIDENCE_AUDIT.md through M5_PUBLICATION_READINESS.md: immutable milestone snapshots.
+- PROFESSOR_BRIEF.md: approximately two printable pages, current rather than cumulative.
+- PLAIN_ENGLISH_GUIDE.md: explanations and glossary grounded in actual work.
+- MEETING_TALK_TRACK.md: 90-second explanation, five-minute outline, likely questions, and claims to avoid.
+
+The experiment manifest and machine-readable results are canonical for numbers; the ledger is
+canonical for claims and interpretation. Human-facing documents reference those experiment IDs and
+sources. Do not independently maintain conflicting copies of a result.
+
+After a material finding or blocker, update the ledger and STATUS. Refresh the brief and explanatory
+guide when the interpretation changes. Produce an immutable milestone report at milestone closure
+or a genuinely decision-changing event, not after every minor status update.
+
+At the first M0 checkpoint and subsequent meeting/session checkpoints, provide a dated provisional
+individual progress report in the existing LaTeX style. It must cover technical progress, reasoning
+and lessons, supported individual contributions, observations, and reasonable next steps. Reuse the
+canonical evidence; do not create near-duplicate weekly reports or invent the reporting week. Use
+milestone/date filenames when the course week is unverified. Aim for 1–3 pages where practical.
+
+Compile and visually inspect PDFs when tools are available. Otherwise provide source and explicitly
+state the missing verification. PDF tooling must not block the research packet. Nothing is submitted.
+
+Every milestone report states: question, comparison, work performed, inspected/changed SHAs, commands
+actually executed, findings and uncertainty, alternative explanations, limitations, next decision,
+and a plain-English explanation.
+
+Separate status dimensions:
+- Milestone: NOT STARTED, IN PROGRESS, COMPLETE, or BLOCKED, with remaining acceptance items.
+- Experiment: PLANNED, APPROVAL BLOCKED, QUEUED, RUNNING, INTERRUPTED, FAILED, or COMPLETED.
+- Scientific outcome: NOT EVALUATED, BENEFIT DETECTED, NO DETECTABLE BENEFIT, INCONCLUSIVE, or
+  another precisely stated result. Completion does not require a benefit.
+
+Evidence labels:
+- VERIFIED_CODE: inspected implementation, not executed behavior.
+- REPORTED_RUN: historical execution supported by records, not repeated in this task.
+- EXECUTED_EXPERIMENT: a fresh experiment actually executed and checked in this task.
+- REANALYZED_FIXED_DATA: new analysis of existing episodes/observations, not new inference or training.
+- RENDERED_EXISTING_RESULTS: formatting existing results without new analysis or execution.
+- HYPOTHESIS, PLANNED, or BLOCKED: not an established empirical result.
+
+Use “reproduced” only with an explicit reproduction target, actual repeated operation, and comparison.
+Do not label regenerated tables as reproduced training. Separately label evaluation provenance:
+in-sample, validation-tuned, partially out of fold, fully outer-fold evaluated, or independently held out.
+
+Attribute ownership, code authorship, run operation, automated review, and agent assistance separately.
+A Git author field alone does not prove manual implementation. Missing teammate evidence is not proof
+of no contribution. Never recast a bot finding as Daniel's independent discovery.
+
+## 5. M0 — Establish the evidence, controls, and novelty baseline
+
+Inspect the current sources in §2 and produce the first professor packet before expensive work.
+
+Create a claim-to-evidence register with source/ref, evidence type, evaluation split, exposure status,
+strongest competing explanation, affected conclusion, and the next discriminating check. Identify
+already-fixed findings so no work is duplicated. Treat REVIEW-001 through REVIEW-014 as items to
+adjudicate, not findings that must be reproduced regardless of current code.
+
+Record input document hashes, repository refs, available execution access, and instruction precedence.
+Do not use this new M0–M5 numbering interchangeably with older course or content-study milestones.
+
+Create a compact arm-component registry and bounded experiment register. Before execution, each
+experiment card must specify:
+- Study/experiment ID, hypothesis, estimand, versioned outputs, and source revision.
+- Arm-component contracts from §8, comparators, split/exposure provenance, and pairing unit.
+- Primary and secondary measurements, uncertainty/multiplicity plan, and eligibility rules.
+- Operational go/no-go rule, meaningful effect/cost target, or explicitly descriptive status.
+- Candidate set, maximum development runs, budget basis, approval requirements, and dependencies.
+
+A threshold is an operational decision rule, not a significance claim or a universal scientific law.
+Choose it before the relevant new outcomes; do not borrow an unrelated MDE as a success threshold.
+
+Perform a focused primary-source positioning check. Leads include LA-CDM, Generative Surrogate Models,
+Acquisition Conditioned Oracle, Learning-to-Measure, ACTMED, LDTL, CaRDI, and calibrated value-aware
+model learning. Verify identities, versions, publication status, methods, and information assumptions.
+Do not inherit unverified novelty or cross-paper score comparisons from the review.
+
+Produce a short matrix of the closest methods, overlap, proposed distinction, and the experiment that
+would establish it. Bound the initial search to the closest decision-relevant work; unresolved novelty
+questions remain explicit rather than delaying known correctness repairs indefinitely. Revisit the
+matrix when selecting the actual intervention.
+
+Acceptance: traceable current status, review dispositions, instruction precedence, initial control
+registry, bounded next experiments, and the first brief/teaching packet. No new patient experiment
+is required for M0. This review is input to M0, not evidence that implementation has already completed it.
+
+## 6. M1 — Repair clinical and synthetic integrity before selecting a method
+
+### 6.1 Matched predictive scoring and reference distributions
+
+Check REVIEW-001 at the current content ref. For the declared per-item metric, learned and reference
+models must score identical item targets with identical inclusion, conditioning, smoothing conventions,
+and aggregation weights:
+
+NLL = -(1/N) × sum over evaluated items of log q(observed outcome | permitted history, panel).
+
+Use the mixture's per-item predictive probabilities for learned item NLL. Fit the declared reference
+separately from pooled TRAIN outcomes under the matching chart-availability condition. A population
+class-prior mixture is not automatically the pooled charted-data marginal.
+
+Keep joint-panel likelihood only as a separately named metric with a comparable reference. Do not
+silently change missing-item inclusion or target weighting while describing a metric repair. Skill is
+undefined when its reference denominator is undefined or zero; reject nonfinite gate statistics.
+
+Required independent fixtures: hand-computed single- and multi-item cases; identical predictive
+distributions giving equal losses and zero skill where defined; diagnosis-dependent chart availability;
+rare/unseen/absent outcomes; and explicit NLL/Brier/ECE denominators. Do not merely compare production
+code with another helper implementing the same mistake. Single-item fixtures cannot catch the
+joint-versus-item defect. Do not predict whether corrected clinical skill will remain positive.
+
+### 6.2 Synthetic split, cost, and source-provenance repairs
+
+Bring REVIEW-002, REVIEW-006, and REVIEW-011 into M1, not M5.
+
+Namespace environment and behavior-policy RNG streams by purpose/split. Verify underlying generated
+cases, not just IDs containing different split names. Preserve identical evaluation realizations
+across arms while separating training, development, and test streams. Use synthetic case fingerprints;
+private clinical identifiers/fingerprints are not automatically exportable.
+
+Adjudicate old likelihood evaluation separately from old utility evaluation: the identified same-seed
+likelihood sample repeats training cases, while the default utility evaluation used an offset seed.
+A finite-sample learned-model score exceeding an oracle is not itself proof of leakage.
+
+For the existing synthetic one-step information objective with diagnosis-independent missingness and
+free unavailable results, expected monetary cost is p_available × cost. The matching score is:
+
+score(a) = p_available(a) × [IG(a) − lambda × provided_cost(a)].
+
+Account for consumed actions/horizon separately. Do not silently introduce a request penalty or
+claim that a free request consumes no step. For future informative-missingness environments, include
+the unavailable observation's information where the model assumes it; the simple expression above
+must not be generalized without checking those assumptions.
+
+Test p=0, p=1, intermediate availability, action ranking, and stopping against enumerated outcomes.
+Preserve legacy outputs, regenerate affected evidence in a new namespace, and record a clean source
+revision or an explicit immutable source snapshot/patch digest. A base SHA that omits executable
+working-tree changes is insufficient provenance.
+
+Register the matched-information comparator needed for REVIEW-007 before any general planning-
+superiority claim. Its performance study can follow in M3; it need not block deterministic M1 checks.
+
+### 6.3 Scientific preflight and immutable artifact binding
+
+Repair REVIEW-003. One shared preflight must validate content readiness before scheduling and again
+before execution; dry-run command display must clearly say it grants no execution authority.
+
+Require a completed, compatible CPU-quality report, applicable premise/quality passes, finite metrics,
+and matching input/split/configuration provenance. A compute approval cannot override a failed or
+missing scientific gate. Preserve existing frozen gate definitions; stronger successor gates must
+be prospective and separately identified.
+
+Before the first episode, bind the exact loaded content model, diagnosis prior, bins/representation,
+availability model, policy checkpoint, protocol/study/configuration, evaluator, and compatible CPU
+report in an immutable run manifest. Include relevant dependency/runtime identities. A path, filename,
+mtime, or code SHA alone does not identify fitted content.
+
+Use content-addressed or equivalent immutable run-local artifacts. Verify the bytes actually consumed,
+not a mutable file that can be replaced between validation and loading. Validate the same manifest
+before every resume. Do not resume a run with a changed model under unchanged code.
+
+Reject missing/failed/nonfinite/stale reports; changed fitted bytes; mismatched availability or policy;
+and incompatible resumed runs. An unchanged interrupted run may resume through the existing ledger.
+A mismatch must not automatically generate a fresh test key or reopen completed admissions. A genuinely
+new test study needs its own explicit authorization and exposure disclosure.
+
+### 6.4 Trajectory consistency and information boundaries
+
+Repair REVIEW-008 where still present. For content action replacements, serialize the specified
+neutral thought explicitly instead of retaining reasoning about the old request. Test the assembled
+text, token mask, completion IDs, and subsequent prompt. Handle empty candidate sets explicitly.
+Preserve the planner-off comparator and byte-identical untriggered behavior where specified.
+
+Add metamorphic tests holding permitted observations, fitted artifacts, and RNG identity fixed:
+- Changing an unrevealed result cannot change an ordinary learned arm's action.
+- Changing the hidden diagnosis cannot change an ordinary learned arm's action.
+- Oracle and misleading controls receive only their explicitly declared privileged inputs.
+- Re-exposing the same observation does not fabricate new information in an identity-aware updater.
+- Unrelated records cannot affect episode inference except through an explicitly fitted shared model.
+
+The historical broad planner object contains privileged fields; that is an exposure risk, not proof
+that the normal path used them. Prefer capability-separated inputs at a small component boundary when
+practical, without a system rewrite. Treat tests as proposals until actually executed.
+
+### 6.5 Validation and preservation
+
+Run the relevant authorized unit/integration tests and synthetic path, then regenerate affected CPU
+aggregates through permitted private execution. Record exact operations and preserve failed checks.
+Use versioned errata for old quality, likelihood, and cost claims; do not rewrite historical outcomes.
+
+Acceptance: reference cases agree with implementation; confirmed scoring/split/cost/preflight/trajectory
+defects are repaired or specifically adjudicated; artifact swaps cannot silently alter a run; protected
+data remain private; affected claims are appropriately qualified. If corrected model quality fails,
+report the failure and block that planning path while continuing independent diagnostics.
+
+## 7. M2 — Measure headroom, diagnose mechanisms, and supply a reader probe
+
+### 7.1 Actual intervention opportunities and errors
+
+Privately audit authorized validation evidence for nonanswers, invalid/repeated requests, class-specific
+errors, correct-to-incorrect regressions, and intervention opportunities. Define an opportunity using
+the actual pre-divergence baseline path, guard precedence, turn/token limits, valid candidates, and a
+permitted nontrivial replacement—not simply “a lab request occurred.”
+
+For the unchanged lab-only intervention, calculate the optimistic recall-gain bound:
+
+G_max = (100/4) × sum over classes k of E_k_eligible / N_k.
+
+E_k_eligible counts baseline errors in class k where this intervention can act; N_k is that class's
+cohort size. The bound assumes every eligible error is corrected and no correct case regresses.
+State deterministic/shared-path assumptions and report eligible baseline-correct cases as regression
+exposure. Do not apply this bound after changing the reader, stopping, or intervention scope.
+
+Assign error-mechanism categories only when the evidence supports them. A difficult error is not
+necessarily an ambiguous case. Small intervention headroom limits the current treatment, not every
+possible future method.
+
+### 7.2 Evidence identity, support, and missingness
+
+Audit actual panel mappings and observation provenance before asserting empirical double counting.
+Export aggregate overlap statistics only. Where panels expose the same underlying measurement,
+introduce a canonical unique-evidence representation using identity, units, and occurrence/time when
+available. Preserve genuinely distinct repeats. State uncertainty when the dataset lacks identity.
+
+Test idempotent re-exposure and preservation of distinct observations. An order-invariant updater
+must be order invariant; a temporal model must instead document its legitimate time dependence.
+Keep legacy full-target scoring separate from a prospective new-information metric that excludes
+already revealed measurements.
+
+Check whether item-independence sampling assigns mass to impossible “given available” combinations,
+including all-absent panels, and inconsistent shared items. Quantify the mass in enumerable fixtures
+and authorized aggregates before claiming empirical harm. Distinguish unseen, unreported-within-panel,
+unavailable-panel, and observed values.
+
+Missingness may encode historical workup. Do not assume it is intrinsically uninformative, equivalent
+to normal physiology, or automatically usable as a transportable clinical signal. A lexical HPI screen
+is limited evidence, not proof of no copying/leakage. Inspect observation access and timing/provenance
+within the protected workflow. Distributional tertiles are not clinical normal/abnormal flags.
+
+### 7.3 Gain semantics and truth-referenced usefulness
+
+Check predictive/update consistency after absent-factor exclusion or likelihood tempering. In a tiny
+enumerable model, compare the implemented gain with exact calculations and quantify Monte Carlo error.
+For coherent Bayesian prediction, expected posterior belief equals prior belief and expected entropy
+reduction has the mutual-information interpretation. An arbitrary normalized tempered update does not
+establish that identity.
+
+Either justify a coherent pair or explicitly retain an expected entropy-change surrogate. Do not
+silently clip negatives. A realized entropy increase may be legitimate; estimated negatives can also
+reflect Monte Carlo error or inconsistent updates. The historical implementation already advances a
+single RNG across draws: do not “repair” a repeated-seeding bug absent from current code.
+
+Alongside entropy diagnostics, measure correct-label log-probability change, Brier change, diagnostic
+accuracy change, selected-action utility, and synthetic decision regret. Labels are used only privately
+for permitted training/evaluation, never ordinary action selection. Correlation of ten gain-bin means
+with the same updater's entropy changes is not probability calibration or proven diagnostic benefit.
+
+Evaluate new-information prediction and action rankings on policy-relevant histories where possible.
+Eight permutations of one admission do not create eight independent people.
+
+### 7.4 Full tuning-path audit
+
+Track prior temperature, likelihood temperature, model/representation selection, thresholds, and any
+use of label-informed development results. C1's tau cross-validation does not isolate the entire tuned
+pipeline. Keep the historical 0.637 result labeled developmental and partially out of fold.
+
+For a successor generalization estimate, isolate all applicable tuning in inner training partitions
+or a full outer-fold design. Keep every prefix/order/derived observation from an admission together;
+use subjects when available. Document exposure of fixed components as well. Choosing a candidate on
+out-of-fold scores still requires later independent evaluation of that selection process.
+
+### 7.5 Bounded reader probe — prerequisite for M3
+
+Implement at most one initial CPU reader-probe candidate after the representation/metric repairs.
+This is explicitly allowed before M3 and is not the integrated M4 method. A calibrated, regularized
+partial-evidence classifier is the default probe unless the audit supports a better modest choice.
+Use train-only fitting/tuning with the exposure labels above; do not call the candidate “improved”
+until a comparison establishes the relevant improvement.
+
+Replay existing authorized acquired evidence with a fixed endpoint and stopping convention. Match
+permissible information. If one reader omits imaging/exam content or uses coarse bins while another
+uses richer text, label the comparison representation-plus-reader, not a pure reader ablation.
+Provide a matched-information comparison where feasible, or state the narrower estimand.
+
+An all-available-evidence probe is separate, privileged, and not a guaranteed upper bound or deployable
+method. Structured replay may be CPU-only; LLM replay may require GPU approval. Never assume all-evidence
+inference is free or that unavailable outcomes exist.
+
+Acceptance: quantified headroom, overlap/support assessment, gain/tuning diagnostics, ranked bottleneck
+hypotheses, and a runnable bounded reader probe for M3—or an explicit blocker and the independent
+synthetic/CPU results. The integrated architecture is not selected merely because one probe looks good.
+
+## 8. M3 — Isolate prediction, acquisition, updating, and final interpretation
+
+### 8.1 Mandatory arm-component contract
+
+Every arm declares all of the following before running:
+
+| Component | Required declaration |
+|---|---|
+| Outcome predictor | Model identity, conditioning, outcome support, sampling budget |
+| Belief updater | Update semantics, evidence identity, calibration/tempering |
+| Final diagnosis reader | Input information, representation, decision rule |
+| Availability information | Learned, population, observed, or privileged; update behavior |
+| Acquisition | Trigger, eligible actions, replacement and tie rules |
+| Stopping/guards | Unchanged or explicitly intervened upon |
+| Budgets | Provided-test cost, request/action horizon, tokens, computational allowance |
+| Information access | All ordinary and privileged inputs |
+| Pairing/provenance | Cases, seeds by purpose, source and fitted-artifact identities |
+
+A comparison advertised as changing only selection holds all other relevant components fixed. If
+changing the updater also changes the reader or stopping behavior, name that joint treatment.
+Matching function names across adapters is not enough; observation, cost, and termination semantics
+must match or be explicitly distinguished.
+
+### 8.2 Efficient experimental sequence
+
+Use the M2 alternative reader, without assuming it is better:
+
+| Acquisition | Existing reader | Alternative reader |
+|---|---|---|
+| Strong simple selection | Reference | Interpretation/representation probe |
+| Learned content selection | Selection probe | Integrated interaction probe |
+| Precisely defined privileged selection | Privileged control | Privileged joint control |
+
+Proceed in three steps:
+1. Fixed-evidence replay: compare interpretation at identical evidence and endpoints.
+2. Fixed-component acquisition: compare selectors with updater, reader, availability, eligibility,
+   stopping, and budgets held fixed for the intended contrast.
+3. Closed-loop integration: evaluate feedback and reader-by-selector interactions separately.
+
+Report paired contrasts and the interaction when the design identifies it. Do not infer clean main
+effects from a table whose other components also change. Do not execute every cell by default if a
+smaller staged design answers the question; freeze which cells and contrasts are required first.
+
+Include V1 fallback and V3 guards as prospectively declared whole-system references. Preserve their
+historical primary comparisons. Do not present V1 and V3 as identical acquisition mechanisms.
+
+Retain the existing synthetic model-free comparator with an accurate name: coarse, model-dependent,
+one-step value baseline. Before a broad planning-superiority claim, add one matched-information
+non-planning value/policy comparator using the same allowed belief/history and acquisition mask,
+comparable training episodes, and an explicitly justified observed task-return target. A learned
+belief-based reward is not an independent terminal-return baseline.
+
+### 8.3 Oracle and population-control interpretation
+
+Keep the historical clinical oracle identified as a true-outcome AND true-availability, fixed-updater
+control. It is not an optimal diagnostician or a guaranteed task-performance ceiling.
+
+A content-only control holds availability information fixed where outcome support allows identification.
+In retrospective clinical charts, unavailable outcomes remain unknown. Restricting all arms to known
+charted support gives all of them additional support information: label that restricted privileged
+subexperiment, not an ordinary deployable comparison. Never fill unknown outcomes with model samples
+and score them as observed truth. Use synthetic data for clean fully counterfactual separation.
+
+Distinguish a ground-truth generative model from advance knowledge of realized outcomes. A genuine
+small-environment optimum must obey the same observation access and budget as its comparator; exact
+search/dynamic programming under known dynamics does not grant clairvoyance.
+
+Separate population-predictor-only controls from population-belief-policy controls. Preserve the
+patient-specific evaluator belief when only the predictor is being ablated. Separate synthetic oracle
+selection from oracle updating; the historical joint oracle cannot identify either effect alone.
+
+### 8.4 Decision and acceptance
+
+Interpret outcomes prospectively:
+- A better reader on identical information supports an interpretation intervention.
+- Privileged selection helping while learned selection does not supports prediction/ranking investigation.
+- Only joint improvement supports an interaction, not a selector-only claim.
+- Feasible headroom without gains prompts inspection of objective, updater, and evidence support.
+- Little headroom argues against expensive tuning of the unchanged lab-only intervention.
+
+Clinical GPU cells require valid scientific gates and exact approval. A failed content gate blocks
+that path, not independent CPU reader probes or synthetic work. A bounded M4 CPU model repair may be
+brought forward if needed; record the dependency and recheck rather than looping indefinitely.
+
+Acceptance: the frozen comparisons are completed and interpretable, or a precise null/blocker narrows
+the uncertainty. Engineering completion, experiment completion, and a beneficial outcome are reported
+separately. Do not select an intervention by an unregistered post-hoc comparison.
+
+## 9. M4 — Integrate one targeted performance improvement
+
+Choose the smallest coherent intervention justified by M2/M3. The default hypothesis is a unique-
+evidence state, calibrated partial-evidence reader, and decision-relevant selector. This is not a
+compulsory architecture and does not establish novelty by combining familiar components.
+
+### 9.1 Bounded models and training
+
+Retain the repaired current method as an interpretable baseline. The M2 probe counts toward an initial
+maximum of two additional reader candidates; a compact masked-evidence/set-based alternative is
+conditional on evidence that it addresses a demonstrated limitation. Initially compare at most one
+correlation-aware content-model alternative. A larger search requires a documented new decision.
+
+Train on partial histories, randomized train prefixes, and train-only policy histories when authorized.
+Group derived observations by admission. Predict genuinely unobserved evidence conditionally on unique
+observations. Do not use test trajectories or mistake correlated/duplicate observations for new samples.
+
+### 9.2 Declare the planning quantity and target reader
+
+Every selector must identify its objective: coherent mutual information, expected entropy-change
+surrogate, one-step task-risk reduction, or a specified finite-horizon return.
+
+A useful initial decision-value prototype is:
+
+Q_hat(a | h) = R_hat(h)
+              − E_[o ~ p_phi(. | h,a)] R_hat(h plus a,o)
+              − lambda × E[actual charged acquisition cost | h,a].
+
+Freeze before evaluation: loss, class weighting, final reader/decision rule, risk-estimation procedure,
+outcome support, unavailable-result behavior, monetary normalization, remaining horizon, and stopping.
+R_hat targets the error/loss of the reader actually used, not an unrelated model's confidence.
+
+For example, a calibrated label distribution can estimate the loss of that reader's committed action,
+or an error model can estimate conditional reader loss. Both require validation; normalization alone
+does not make either estimate correct. Class weights must be chosen from permitted training/design
+information, not hidden test labels used at action time. Report any difference between the optimized
+utility and historical macro-recall T5.
+
+Include UNAVAILABLE in the expected transition where applicable. Charge provided-test dollars only
+when the environment does so; represent consumed steps separately. One-step risk reduction is not
+silently treated as optimal multistep value. Under a lab-only rerank, compare candidate advantage with
+the proposed baseline lab action; do not introduce an unauthorized stop action.
+
+Compare against the existing information-gain rule and the strong controls needed to distinguish the
+hypothesis. Changing readers, stopping, imaging scope, or cost semantics is a named intervention with
+its own ablation, not a hidden implementation detail.
+
+### 9.3 Selective intervention and further capability
+
+When justified, estimate action-advantage disagreement across a small ensemble of permitted training
+fits. Compare no override, mean-only override, and disagreement-aware override under declared
+information and compute budgets. Choose the threshold outside the scored evaluation cases.
+
+Disagreement is not automatically a calibrated confidence bound or a safety guarantee. Record the
+number of beneficial and harmful overrides and when the selector falls back to the baseline.
+
+Investigate deeper lookahead or broader actions only if headroom/complementary-evidence diagnostics
+show the current scope is limiting and the model supports meaningful rollouts. Propose and freeze
+that extension separately. Do not expand to imaging or multi-step search merely to add complexity.
+
+Policy fine-tuning/distillation is conditional on demonstrated useful teacher/planner behavior, a
+train-only supervision design, strong controls, and any required compute approval. Do not spend on
+broad retraining while the mechanism or metric remains unresolved.
+
+### 9.4 Bounded development and study identity
+
+Before each candidate series, freeze the candidate set, primary comparison, effect/cost target or
+descriptive status, maximum runs, stop rule, and budget. Count retries and record every failed or
+negative run. Respect the current experiment's allowance; do not inherit the old content study's
+repair allowance as a new research budget.
+
+Use separate successor identities for new arms and estimands. Preserve legacy definitions and errata.
+If the bounded attempt fails, report it and identify what was learned; do not expand the search until
+a favorable result appears.
+
+Acceptance: a tested integrated candidate and its consequential ablations, honest comparisons against
+strong simple methods, and an explicit mechanism-level conclusion—or a completed bounded negative
+result with the remaining uncertainty localized. No invented performance forecast.
+
+## 10. M5 — Establish robustness, independent evidence, and publication readiness
+
+### 10.1 Mechanistic synthetic study
+
+Use shared core selector/updater components through thin documented adapters, preserving Edwin's
+contributions. Add semantic conformance fixtures for observation, cost, and stopping. Do not rewrite
+his branch or assume common interfaces make the experiments equivalent.
+
+Predeclare a compact matrix covering:
+- Learned, true-model, corrupted, and matched-information non-planning controls.
+- Prediction error separated from calibration error where the perturbation design permits it.
+- Correlated/redundant evidence and informative-missingness changes.
+- Comparable aggregate predictive loss with different errors on decision-critical outcomes.
+- At least one held-out mechanism/shift outside the fitted model's assumptions.
+
+Use exact optima only in tractable settings with matched information and horizon. Else name the
+reference as an approximation, not a regret-zero optimum. Report predictive loss, task performance,
+cost, action-ranking error, intervention harm, and decision regret together where defined.
+
+Pair cases within comparisons. Namespace independent generation, behavior, fitting, corruption,
+Monte Carlo, and policy-training seeds. Verify that arm-dependent RNG consumption does not change
+evaluation patients. Retain paired per-seed differences and sufficient approved aggregate evidence
+for uncertainty; unpaired standard deviations do not establish significance.
+
+Do not manufacture an error–gain crossover by tuning a single corruption family or using a simulator
+that exactly favors the method. A finite-sample non-oracle win is not inherently a bug; inspect the
+objective, reference optimality, sampling, and controls.
+
+### 10.2 Clinical statistics and compute
+
+Maintain historical T5 comparability and separately define successor estimands. Report mean class
+recall, per-class recall, relevant accuracy/F1, nonanswers, regressions, calibration/proper scores,
+provided-test cost, requests, and inference/planning runtime. Diagnostic-test dollars and GPU-hours
+are different quantities. Compare accuracy–cost frontiers, not only a favorable isolated point.
+
+Prespecify contrasts, multiplicity, pairing, uncertainty, seeds, and operational stop rules. Resample
+admissions—or subjects when available—not repeated items/orders as independent people. Separate
+case-sampling uncertainty from model-fit and policy-training variability. Name the null actually
+tested; a sign-flip exchangeability test is not automatically an exact test of every weak mean null.
+
+Power/MDE analysis must match the contrast and use permitted development information. An MDE is
+not an equivalence margin. Cost-saving claims with acceptable performance loss need a prospectively
+chosen meaningful margin and suitable analysis. Nonsignificance does not prove equality.
+
+After mechanistic promise, request independent policy seeds and a second permitted backbone only
+where needed by the claim. Cost the actual training/evaluation graph from measurements. The historic
+approximately 105-GPU-hour replication seed included four training arms; do not automatically repeat
+all four if only the primary policy is required. No new resource estimate is established by this spec.
+Benchmark content overhead before extrapolating earlier availability-stage timings.
+
+### 10.3 Independent evaluation and scope
+
+A new protocol or reshuffled split does not erase prior benchmark exposure. Seek a genuinely independent
+authorized cohort or suitable evaluation source without acquiring data or expanding access without
+permission. Another synthetic dataset supports breadth, not independent real-world clinical validation.
+
+State closed-differential scope, retrospective chart availability, unknown counterfactual outcomes,
+possible informative workup, subject-grouping limitations, and backbone/runtime deviations. Make no
+clinical deployment or safety claim from these experiments.
+
+If external data are unavailable, finish the reproducible mechanism study, honest evidence assessment,
+and exact request. Do not claim external confirmation or mark software failed solely for missing access.
+
+### 10.4 Contribution and publication assessment
+
+Update the primary-source novelty matrix against the actual intervention. Generic imagined test
+outcomes, calibrated acquisition, risk objectives, or model-based planning are not sufficient novelty.
+
+The leading hypothesis is a mechanism-and-repair contribution: decision-relevant model errors and
+incoherent/redundant updates explain planning harm better than pooled predictive loss, and a targeted
+intervention improves decisions under meaningful controlled shifts. Establish each clause empirically.
+
+An evaluation contribution is an alternative only if the protocol reveals useful reproducible insights
+beyond this repository's bugs. A single null contrast on a reused cohort is not a broad general result.
+Do not add decorative theory or claim elementary ranking-error arguments as novel.
+
+Acceptance: separate judgments for measurement soundness, demonstrated mechanism, method benefit,
+robustness, independent evidence, and differentiation from prior work. List remaining requirements.
+A positive experiment is not an acceptance guarantee; a rigorous negative finding is not a failure
+to do research. Verify any actual conference policy/deadline when needed rather than inheriting an estimate.
+
+## 11. Teaching and professor discussion requirements
+
+The professor packet must answer: What did we try? Why? What was held fixed? What happened? What does
+that imply, what does it not prove, and what decision or advice do we need next?
+
+Keep PROFESSOR_BRIEF about two pages. Put the question, two or three important findings, uncertainty,
+and next decisive experiment on the first page. Use one compact result table and at most one or two
+useful figures. Link every numerical result to an experiment ID and evidence source; show the as-of date.
+
+For each major finding, PLAIN_ENGLISH_GUIDE includes:
+1. The question in ordinary language.
+2. The comparison and what remained unchanged.
+3. The actual observation, without an invented success story.
+4. Why it matters and what alternative explanation remains.
+5. A sentence Daniel could naturally say in class.
+
+Explain world model, selector, reader, belief updater, T5, log-loss, calibration, EIG versus entropy
+surrogates, oracle controls, ablations, confidence intervals, practical equivalence, holdout, and leakage.
+T5 is the average of four disease-specific recalls, not simply overall accuracy. More confidence need
+not mean greater correctness. Calibration and NLL are different measurements.
+
+Use clearly invented examples only. Repeating the same witness statement is an analogy for counting
+one observation twice, not a proof that actual panels overlap. Imagined measurements are predictions,
+not patient observations. “No detectable benefit” is not “no benefit is possible.”
+
+MEETING_TALK_TRACK includes a 90-second explanation, a five-minute outline, likely professor questions,
+three decision-relevant questions for Professor Liu, and “what I should not claim.” It must help Daniel
+understand the mechanism, not memorize jargon or imply unsupported ownership.
+
+Keep these core distinctions visible as the evidence evolves:
+- The recorded large gain came from recovering answers already present in the hypothesis component.
+- Fair prediction scoring and more confident beliefs do not by themselves establish better decisions.
+- Fixed-evidence reader comparisons and controlled acquisition comparisons identify different bottlenecks.
+
+Do not claim valid content-quality acceptance before repair, end-to-end gains from CPU calibration,
+fully out-of-fold C1 evaluation, an optimal clinical oracle, universal availability uselessness, or
+that every synthetic result leaked. Update claims only when new evidence warrants it.
+
+## 12. Reproducibility, completion, and handoff
+
+Every experiment has a manifest tying together:
+- Study/experiment ID; legacy repair or new intervention; source SHA and clean-tree status or snapshot digest.
+- Protocol, experiment-card, configuration, analysis, dependency/runtime, and relevant hardware identities.
+- Dataset/split provenance and exposure status without exporting private records or identifiers.
+- Full arm-component contract and digests of all fitted inputs and evaluated artifacts.
+- Seeds by purpose, pairing unit, sample counts, aggregation weights, and uncertainty method.
+- Applicable approval and budget, actual command, job IDs, runtime/resource receipts, and exit/completion state.
+- Immutable input/result locations, compatible gate report, resume history, and approved aggregate outputs.
+
+Bind identity before execution; verify it on resume. A test-key mismatch is a refusal, not a way to
+silently create another evaluation. Keep frozen historical numbers and report corrections transparently.
+Use existing tools rather than creating a second experiment-management platform.
+
+Track every review finding to: confirmed and repaired, already fixed, not applicable with evidence,
+accepted limitation with bounded claims, prospective improvement, or blocked with an exact dependency.
+Supported risks become defects only when evidence establishes them.
+
+| Review findings | Primary disposition location |
+|---|---|
+| 001: likelihood/reference | M1 §6.1 |
+| 002, 006, 011: synthetic split/cost/provenance | M1 §6.2; M5 confirmation |
+| 003: preflight/artifact/resume | M1 §6.3; manifests |
+| 004, 007: controls/comparator | M3 component contracts and baselines |
+| 005: gain identity/usefulness | M2 §7.3; M4 objective definition |
+| 008: replacement consistency | M1 §6.4 |
+| 009: tuning/evaluation scope | M2 §7.4; M5 independent evidence |
+| 010: null overstatement | §3.5 erratum; all reports |
+| 012: reader dependency/successor freeze | M2 §7.5; M3; M4 §9.4 |
+| 013: authorization precedence | §3; kickoff |
+| 014: reporting duplication | §4 and §11 |
+
+At milestone/session handoff, provide actual artifacts and clearly state:
+- What changed, what actually ran, and what was only inspected, reanalyzed, or rendered.
+- The strongest supported conclusion and the most important unresolved question.
+- Milestone acceptance items met and outstanding; experiment state; scientific outcome.
+- Report/guide/manifest paths, exact authorized continuation commands, and separate approval requests.
+- Whether implementation is valid, benefit is demonstrated, and publication evidence is sufficient.
+
+Do not mark future milestones complete because their plan exists, or unstarted work failed because it
+has not run. Do not turn analysis of old episodes into a claim of new experimental replication.
+
+Final safeguards: no protected-data export, fabricated attribution, hidden failed runs, unauthorized
+compute/test access, rewritten historical study, automatic public push, or course/conference submission.
+Deliver a useful professor packet even when the correct conclusion is negative, incomplete, or blocked.
+
+
+===== FILE: KICKOFF_RESEARCH_ADVANCEMENT.txt =====
+
+You are the lead research engineer and scientific collaborator for Daniel Escalante's Testing in
+Imagination project, repository scalinity/testing-in-imagination, advised by Professor Xuefeng Liu
+for UF CAI6734.
+
+Execute SPEC_RESEARCH_ADVANCEMENT.md version 2.0, revised after REVIEW_HANDOFF.md. This is an
+implementation-and-research assignment, not another request for a plan or independent review.
+Read the complete spec and review before acting. If the spec is supplied inline, save it faithfully;
+do not silently replace its requirements with a shorter interpretation.
+
+MISSION
+
+Repair scientific validity, identify the actual bottleneck, implement one evidence-driven improvement,
+and evaluate it under the permitted protocol. Produce useful professor discussion materials early
+and throughout execution, including explanations Daniel can understand and defend in class.
+
+Preserve world-model-based testing in imagination and the question of when flawed imagination hurts.
+Do not substitute a larger-backbone-only project, unrelated benchmark chase, or infrastructure rewrite.
+Do not require positive results, promise a dramatic accuracy gain, or promise ICML acceptance.
+
+START NOW
+
+1. Confirm the exact repository, current branch/HEAD, local instructions, and working-tree state.
+   Preserve unrelated work. Establish a dedicated task branch/worktree and record its base and any
+   scoped dependency integration without modifying collaborators' branches or merging their PRs.
+2. Read the spec, review, relevant protocols, decision records, existing reports, current code,
+   PR discussions, approved aggregate results, and execution receipts. Treat the November 11
+   snapshot as historical. Verify what is already fixed, implemented, or completed.
+3. Record instruction precedence, available permissions, input identities, current evidence, and
+   REVIEW-001 through REVIEW-014 dispositions. Do not restart completed work because stale onboarding
+   says it is next. Do not claim absent remote files prove there is no unpushed work.
+4. Complete M0 and the first professor brief, status/claim ledger, and plain-English guide before
+   expensive work. Then proceed directly to the first confirmed M1 repair. Do not stop after an audit,
+   issue list, new proposal, or request for routine implementation choices.
+
+DEPENDENCY-AWARE EXECUTION
+
+M0: Establish the evidence, novelty context, component registry, and bounded experiment cards.
+
+M1: Repair and verify clinical AND synthetic integrity. Address matched per-item losses and the pooled
+reference; synthetic split isolation and missing-test expected cost; source-bound results; content
+preflight and fitted-artifact identity at launch/resume; action/thought consistency; and information
+boundaries. Do not defer the known synthetic defects to M5. Adjudicate old likelihood and utility
+samples separately rather than calling all synthetic results leaked.
+
+M2: Measure actual pre-divergence intervention opportunities and eligible-error headroom, privately
+audit overlap/support, validate gain semantics and the complete tuning path, and implement one bounded
+CPU reader-probe candidate. This prototype explicitly precedes M3; it is not yet the integrated method
+and is not called improved until the comparison supports that description.
+
+M3: Separate fixed-evidence interpretation, fixed-component acquisition, and closed-loop interaction.
+Freeze the complete arm contracts, including availability, updater, final reader, evidence
+representation, triggers, stopping, budgets, and privileged access. Include strong simple baselines.
+Keep content-only, population-predictor, population-belief, and jointly privileged controls distinct.
+Use synthetic data when chart-limited outcomes prevent a clean clinical comparison.
+
+M4: Integrate only the changes supported by the preceding evidence. Specify the actual risk/objective,
+reader, horizon, cost semantics, and override criterion before evaluation. Preserve the bounded
+candidate/run budget. Bring forward only a bounded CPU repair when needed to clear a failed content
+gate; do not bypass it or enter an indefinite tuning loop.
+
+M5: Establish controlled robustness, appropriate independent seed variability, independent evaluation
+when authorized, and a differentiated publication argument. Cost only the training/evaluation graph
+needed for the claim—not every arm of the historical replication by default.
+
+Reorder independent permitted work when productive, but record dependencies. A failed clinical gate
+or missing approval does not prevent independent CPU/synthetic work. Do not execute every proposed
+factorial cell when a smaller prospectively specified sequence answers the question.
+
+NONNEGOTIABLE SCIENTIFIC CHECKS
+
+For confirmed defects, first establish failing tests or hand-computable reference cases where practical.
+Use independent mathematical expectations, not a second helper with the same implementation error.
+Inspect complete serialized trajectories and run identity, not merely selected actions or test counts.
+
+A passing compute approval does not override failed scientific readiness. Verify compatible CPU
+evidence and the exact artifacts consumed by the run. Bind content, prior/bins, availability, policy,
+protocol/configuration, and evaluation identities before the first episode and on every resume.
+Changed fitted bytes under unchanged code are a changed treatment. Refuse a mismatch; never silently
+create a new test key to rerun completed admissions.
+
+Record the estimated quantity honestly: mutual information, entropy-change surrogate, task-risk
+reduction, or finite-horizon return. More confidence and gain-bin correlation are not proof of better
+diagnosis. A true-outcome/true-availability fixed-updater control is not an optimal clinical ceiling.
+
+Do not claim a reader-only effect when input information or representation also changes. Do not treat
+unknown chart outcomes as ground truth after generating them. Do not call tau-only cross-validation
+independent evaluation of the full tuned pipeline. Do not use a borrowed MDE as an equivalence margin.
+
+AUTHORITY AND PRESERVATION
+
+Ordinary local implementation, commits, documentation, CPU/synthetic testing, and authorized aggregate
+analysis are permitted under the spec and environment permissions. Credentialed computation must use
+the approved private workflow and current stage/split authority. Clinical GPU work, new policy training,
+expanded protected-data access, external data acquisition, and new test access require applicable
+explicit authorization.
+
+Current task-specific restrictions override historical delegation. In particular, the older permission
+to commit approvals on Daniel's behalf is not authority to sign or manufacture approvals here. Existing
+approvals apply only when scope and bindings still match. Prepare new requests, do not approve them.
+
+Keep patient-level records, private logs, generations, identifiers, measurements, and patient-derived
+fitted parameters in approved private storage. Inspect code, invented fixtures, approved aggregates,
+scheduler metadata, and approved error codes. Preserve export guards and disclosure controls.
+
+Preserve frozen studies and historical results. Keep legacy-conformance fixes separate from new
+representations, readers, objectives, and controls. Freeze a successor experiment card and new study/
+output identity before new interventions; the old repair-run allowance is not a general research budget.
+Add explicit errata without silently rewriting history.
+
+Do not push/publicly publish, merge PRs, force-push, contact the professor/team, or submit anything
+without separate authorization. Preserve Edwin's attribution, Hugo's documented work, Daniel's
+contributions, automated reviewers' findings, and your own assistance accurately.
+
+If blocked, produce the exact request, rationale, components, inputs, resource estimate and assumptions,
+commands, outputs, and decision required. Continue independent work. Ask only for genuinely missing
+permissions or consequential decisions—not choices already resolved by the spec.
+
+REPORTING AND TEACHING
+
+Maintain one canonical experiment/result record and claim ledger. After material findings or blockers,
+update STATUS. Refresh the professor brief and guide when interpretation changes. Create immutable
+milestone reports at closure or decision-changing events, not after every routine update. Compile the
+meeting-facing LaTeX/PDF at meeting/session checkpoints when possible; disclose unavailable compilation
+or visual inspection rather than blocking substantive work.
+
+Every report explains what was tried, why, what was held fixed, what happened, uncertainty, alternative
+explanations, and the next decisive action. Provide technical and plain-English layers, a glossary,
+invented examples, a 90-second talk track, likely professor questions, and claims Daniel should avoid.
+Keep the current brief approximately two pages and source all numbers to experiment identities.
+
+Distinguish VERIFIED_CODE, REPORTED_RUN, EXECUTED_EXPERIMENT, REANALYZED_FIXED_DATA,
+RENDERED_EXISTING_RESULTS, and HYPOTHESIS/PLANNED/BLOCKED. Separately label evaluation exposure.
+Never turn report regeneration into reproduced training, a queued job into completion, or missing
+contribution evidence into a claim that a teammate did nothing. Keep failed and negative runs visible.
+
+FINISH WITH EVIDENCE
+
+Continue through all feasible authorized milestones. At completion or a genuine access/session limit,
+deliver actual changes and evidence, the professor packet, review dispositions, exact continuation
+commands, and separate authorization requests. State independently:
+1. Is the implementation technically and scientifically valid for its declared purpose?
+2. Have the relevant experiments completed, and has a performance benefit actually been demonstrated?
+3. What mechanism, generalization, and novelty evidence is still missing for the publication claim?
+
+Do not mark unstarted work failed or proposed experiments completed. A useful bounded negative result
+is legitimate progress. Begin with repository inspection and M0, then execute the first confirmed repair.
