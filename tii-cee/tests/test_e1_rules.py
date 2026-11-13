@@ -436,6 +436,20 @@ def test_evaluate_chains_the_rules_and_derives_the_layer():
     assert out["e1c_supported"]["status"] == "incomplete"
     partial = rules.evaluate({"B_reduced_horizon": b_table(textbook)}, CFG, interval=spread)
     assert set(partial) == {"track_selection", "repair_present", "negative_controls", "no_harm", "e1c_supported", "selected_layer"}
+    # review F003: without G2c the track is known but the layer is not decided, never a silent projection-only layer
+    assert partial["selected_layer"]["status"] == "incomplete" and partial["selected_layer"]["label"] is None
+    assert partial["selected_layer"]["track"] == "stateful" and partial["selected_layer"]["scale"] is None
+    assert out["selected_layer"]["status"] == "evaluated"
+    no_heldout = rules.evaluate({key: table[key] for key in ("B_reduced_horizon", "D_horizon")}, CFG, interval=spread)
+    assert "usable_outside" not in no_heldout and no_heldout["selected_layer"]["status"] == "incomplete"
+
+
+def test_part_a_refuses_a_layer_that_waits_on_g2c(tmp_path):
+    from tiicee.experiments.e1 import run
+    partial = rules.evaluate({"B_reduced_horizon": b_table(textbook)}, CFG, interval=spread)
+    (tmp_path / "verdicts.json").write_text(__import__("json").dumps(partial))
+    with pytest.raises(SystemExit, match="waits on G2c"):
+        run.main(["part-a", "--config", "tiny", "--out", str(tmp_path)])
 
 
 def test_default_intervals_come_from_the_statistics_module():

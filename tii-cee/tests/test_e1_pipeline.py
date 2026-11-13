@@ -200,7 +200,8 @@ def test_rules_are_also_evaluated_on_the_other_variants_and_part_c_is_marked_pen
     assert verdicts["track_selection"]["verdict"] == "stateful"
     other = verdicts["other_variants"]
     assert other["verdicts"]["duplicated_panel"]["track_selection"]["verdict"] == "stateless"       # stateful is worse there
-    assert other["differs_from_primary"] == {"duplicated_panel": ["selected_layer", "track_selection"]}
+    assert other["differs_from_primary"] == {"duplicated_panel": ["track_selection"]}       # without part D no layer is decided
+    assert verdicts["selected_layer"]["status"] == "incomplete" and other["verdicts"]["duplicated_panel"]["selected_layer"]["track"] == "stateless"
     assert "e1c_supported" not in other["verdicts"]["duplicated_panel"]
     assert verdicts["e1c_supported"]["status"] == "incomplete" and verdicts["e1c_supported"]["note"] == run.PENDING
     assert "pending interval" in run.PENDING

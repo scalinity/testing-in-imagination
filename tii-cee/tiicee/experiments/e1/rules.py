@@ -363,10 +363,15 @@ def evaluate(tables: dict, cfg: Config, interval=None, c_intervals=None) -> dict
         if scale and "D_heldout" in tables:
             out["usable_outside"] = ev.usable_outside(d, tables["D_heldout"], track, scale)
     if track:
-        usable = out.get("usable_outside", {}).get("verdict")
-        layer = part_a.Layer(track, scale, "heldout") if usable else part_a.Layer(track)
-        out["selected_layer"] = {"track": layer.track, "scale": layer.scale, "budget": layer.budget, "label": layer.label(),
-                                 "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"}
+        g2c = out.get("usable_outside", {"status": "incomplete"})
+        if g2c["status"] == "evaluated":
+            layer = part_a.Layer(track, scale, "heldout") if g2c["verdict"] else part_a.Layer(track)
+            out["selected_layer"] = {"status": "evaluated", "track": layer.track, "scale": layer.scale, "budget": layer.budget,
+                                     "label": layer.label(),
+                                     "reason": "CEE-Scale with the held-out budget is used only if it is usable outside the twin (G2c)"}
+        else:                                       # the track is known; whether CEE-Scale joins it is not
+            out["selected_layer"] = {"status": "incomplete", "track": track, "scale": None, "budget": None, "label": None,
+                                     "reason": "the layer waits on G2c (usable_outside), which is not evaluated"}
     if "A_values" in tables:
         out["attribution"] = ev.attribution(tables["A_values"])
     for name in RESTS_ON_SEED_INTERVAL:

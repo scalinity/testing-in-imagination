@@ -192,7 +192,9 @@ def main(argv=None) -> int:
             else:
                 print(f"  {name}: {_outcome(verdict)}" + ("" if verdict.get("status", "evaluated") == "evaluated" else f"  ({verdict.get('note', 'not evaluated')})"))
     elif args.stage == "part-a":
-        layer = json.loads((out / "verdicts.json").read_text())["selected_layer"]
+        layer = json.loads((out / "verdicts.json").read_text()).get("selected_layer", {})
+        if layer.get("status") != "evaluated":
+            raise SystemExit("part-a needs the selected layer, which waits on G2c (usable_outside): run part D, then the rules")
         chosen = (layer["track"], layer["scale"], layer["budget"])
         _run("part_a", _part_a_job, [(cfg, s, cfg.primary_variant, str(out), chosen) for s in seeds], out, args.jobs, args.force)
     elif args.stage == "harm":

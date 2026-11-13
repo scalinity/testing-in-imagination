@@ -192,7 +192,7 @@ def write(out: Path, figure: Path, cfg: Config) -> list:
     table["D_horizon"] = tables.read_table(out, "D_final")        # the final-horizon rows are all the markers need
     figure.mkdir(parents=True, exist_ok=True)
     written = []
-    if "selected_layer" in verdicts and table["B_points"]:
+    if verdicts.get("selected_layer", {}).get("status") == "evaluated" and table["B_points"]:
         (figure / "regime_map.json").write_text(json.dumps(regime_map(table, verdicts, cfg), indent=1) + "\n")
         written.append(figure / "regime_map.json")
         if table["F_harmful_grid"]:
