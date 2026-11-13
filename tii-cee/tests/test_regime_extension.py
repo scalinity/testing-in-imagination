@@ -165,4 +165,13 @@ def test_command_line_runs_every_seed_and_decides(tmp_path):
     ext.main(["evaluate", "--out", str(tmp_path), "--config", "tiny"])
     verdict = json.loads((tmp_path / "verdict.json").read_text())
     assert verdict["outcome"] in ("supported", "scope limit") and set(verdict["world_models"]) == set(ext.WORLD_MODELS)
+    for row in rows:                    # cell() gives a to the class-pointing findings and b to the rest
+        if row["reader"] != "r0":
+            a, b = (float(x[1:]) for x in row["reader"].split(":"))
+            assert (row["p_abnormal"], row["p_normal"]) == pytest.approx((a, b), abs=1e-9), row["reader"]
+    for world in ext.WORLD_MODELS:
+        for a, b in ext.READERS:
+            entry = verdict["world_models"][world]["readers"][ext.reader_name(a, b)]
+            assert (entry["a"], entry["b"]) == (a, b)
+            assert (entry["p_abnormal"], entry["p_normal"]) == pytest.approx((a, b), abs=1e-9)
     assert len(verdict["code"]["regime_extension_sha256"]) == 64
