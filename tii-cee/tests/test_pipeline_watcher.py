@@ -394,9 +394,10 @@ def test_fresh_lock_is_respected_and_a_stale_one_is_taken_and_recorded(study):
     assert s.status_json()["watcher"]["lock"] == "stale_taken"
 
     s.paths.lock.mkdir()
-    s.cycle()  # a cycle that finds the lock held says so and changes nothing else
-    held = s.status_json()
-    assert held["watcher"]["lock"] == "held" and held["watcher"]["cycle"] == 1 and len(s.calls("squeue")) == 1
+    written = {path.name: path.read_bytes() for path in s.paths.state.iterdir() if path.is_file()}
+    assert "another cycle holds the lock" in s.cycle()  # said in the watcher's own log, and only there
+    assert {path.name: path.read_bytes() for path in s.paths.state.iterdir() if path.is_file()} == written
+    assert len(s.calls("squeue")) == 1  # a cycle without the lock asks the scheduler nothing and writes no file
     s.paths.lock.rmdir()
     s.cycle()
     assert s.status_json()["watcher"] == dict(s.status_json()["watcher"], lock="ok", cycle=2)
@@ -468,8 +469,13 @@ def test_ordinary_queue_wait_does_not_reroute(study):
     assert {job["name"]: job["account"] for job in s.cluster.jobs()}["tii-g2"] == "cai6734"
 
 
+TRAINING = {"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "CUBLAS_WORKSPACE_CONFIG": None}
+EVALUATION = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
+
+
 def test_generated_scripts_follow_the_project_conventions(study):
-    s = study([stage("g", gpus=1, time_hours=24, mem_gb=16), stage("c", time_hours=0.5)])
+    s = study([stage("g", gpus=1, time_hours=24, mem_gb=16, env=EVALUATION), stage("c", time_hours=0.5),
+               stage("train", gpus=1, env=TRAINING), stage("plain", gpus=1)])
     s.cycle()
     gpu, cpu = s.script("g").splitlines(), s.script("c").splitlines()
     for line in ("#SBATCH --job-name=tii-g", "#SBATCH --account=cai6734", "#SBATCH --qos=cai6734",
@@ -481,6 +487,55 @@ def test_generated_scripts_follow_the_project_conventions(study):
         assert line in gpu, line
     assert "#SBATCH --qos=cai6734-b" in cpu and "#SBATCH --time=00:30:00" in cpu
     assert not any("gres" in line or "partition" in line or "CUBLAS" in line for line in cpu)
+
+    # A stage runs with its own environment and no other stage's. Training, as the replication
+    # trained: the allocator setting, and CUBLAS_WORKSPACE_CONFIG explicitly not set.
+    train = s.script("train").splitlines()
+    assert "export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True" in train
+    assert "unset CUBLAS_WORKSPACE_CONFIG" in train and not any("export CUBLAS" in line for line in train)
+    assert not any("PYTORCH_CUDA_ALLOC_CONF" in line for line in gpu)
+    # Nothing is exported for a GPU stage just because it is a GPU stage.
+    assert not any("CUBLAS" in line or "PYTORCH" in line for line in s.script("plain").splitlines())
+
+
+PROBE = """import json, os
+from tiicee.pipeline.stages import register
+
+
+@register("env_probe")
+def env_probe(ctx):
+    (ctx.out_dir / "env.json").write_text(json.dumps({name: os.environ.get(name) for name in ctx.args}))
+"""
+
+
+def test_stage_registered_by_a_listed_module_runs_with_its_own_environment(study):
+    names = ["PYTORCH_CUDA_ALLOC_CONF", "CUBLAS_WORKSPACE_CONFIG", "CDM_WORK_DIR"]
+    s = study()
+    (s.paths.package / "probe_stages.py").write_text(PROBE)  # a module that registers a stage
+    s.write_graph([stage("train", ["env_probe"] + names, env=TRAINING),
+                   stage("evaluate", ["env_probe"] + names, env=EVALUATION),
+                   stage("other", ["env_probe"] + names)], stage_modules=["probe_stages"])
+    # What watcher.env would hold: the baseline work directory for every job, and (by mistake) a
+    # CUBLAS setting that training must still not see.
+    s.env.update(CDM_WORK_DIR="/blue/baseline", CUBLAS_WORKSPACE_CONFIG=":16:8")
+    s.run_to_end()
+    seen = {name: json.loads((s.paths.stage_out(name) / "env.json").read_text()) for name in ("train", "evaluate", "other")}
+    assert seen["train"] == {"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+                             "CUBLAS_WORKSPACE_CONFIG": None, "CDM_WORK_DIR": "/blue/baseline"}
+    assert seen["evaluate"] == {"PYTORCH_CUDA_ALLOC_CONF": None, "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+                                "CDM_WORK_DIR": "/blue/baseline"}
+    assert seen["other"]["CUBLAS_WORKSPACE_CONFIG"] == ":16:8"  # no map: only what the watcher's settings give
+    # The environment is bound: the manifest records it.
+    assert json.loads(s.paths.manifest("train").read_text())["env"] == TRAINING
+    assert json.loads(s.paths.manifest("other").read_text())["env"] == {}
+
+
+def test_stage_whose_module_is_not_listed_fails_and_is_not_run_blind(study):
+    s = study()
+    (s.paths.package / "probe_stages.py").write_text(PROBE)
+    s.write_graph([stage("a", ["env_probe"])])  # the module is there but graph.json does not list it
+    s.run_to_end()
+    assert s.status("a") == "FAILED" and [a["exit_code"] for a in s.state("a")["attempts"]] == [1, 1]
 
 
 # ---- gates --------------------------------------------------------------------------------------

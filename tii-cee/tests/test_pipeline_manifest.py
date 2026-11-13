@@ -35,6 +35,7 @@ def study(tmp_path):
     spec = stage("a", ["noop", "--count", "2"], experiment="E4", gpus=1, estimate=7, bind=BIND)
     spec["manifest"].update(seeds={"sampling": 11, "bootstrap": 12}, pairing_unit="admission",
                             intervention="legacy repair")
+    spec["env"] = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
     s = Study(tmp_path, [spec])
     (s.code / "cards").mkdir()
     (s.code / "cards" / "E4.md").write_text("card\n")
@@ -63,10 +64,11 @@ def test_manifest_binds_every_field_of_the_specification(study):
     graph, a = load(study)
     manifest = manifests.build(study.paths, graph, a)
     assert {key: manifest[key] for key in ("study", "experiment", "stage", "kind", "intervention",
-                                           "seeds", "pairing_unit", "command")} == {
+                                           "seeds", "pairing_unit", "command", "env")} == {
         "study": "TII-CEE-1", "experiment": "E4", "stage": "a", "kind": "normal",
         "intervention": "legacy repair", "seeds": {"sampling": 11, "bootstrap": 12},
-        "pairing_unit": "admission", "command": ["noop", "--count", "2"]}
+        "pairing_unit": "admission", "command": ["noop", "--count", "2"],
+        "env": {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}}
     assert manifest["allowance"] == {"key": "E4", "gpu_hours": 400, "estimate_gpu_hours": 7}
     assert manifest["authorization"] == {
         "sha256": AUTHORIZATION_SHA, "expires": "2027-03-31",
@@ -137,6 +139,11 @@ def test_changed_stage_definition_or_edited_manifest_is_a_refusal(study):
     assert code_of(lambda: manifests.verify(study.paths, graph, changed)) == (20, "stage_changed", "command")
     changed = dict(a, seeds={"sampling": 99, "bootstrap": 12})
     assert code_of(lambda: manifests.verify(study.paths, graph, changed)) == (20, "stage_changed", "seeds")
+    # The environment a stage was bound with is part of what it is: training cannot quietly gain
+    # the evaluation setting, or lose its own.
+    for env in ({}, {"CUBLAS_WORKSPACE_CONFIG": None}, {"CUBLAS_WORKSPACE_CONFIG": ":4096:8", "EXTRA": "1"}):
+        changed = dict(a, env=env)
+        assert code_of(lambda: manifests.verify(study.paths, graph, changed)) == (20, "stage_changed", "env")
 
     path = study.paths.manifest("a")
     edited = json.loads(path.read_text())
@@ -265,6 +272,31 @@ def test_allowances_file_mirrors_the_authorization():
     assert (allowances["E2"]["allowance_gpu_hours"], allowances["E5"]["allowance_gpu_hours"]) == (200, 800)
 
 
+def test_graph_keeps_env_and_stage_modules(tmp_path):
+    study = Study(tmp_path)
+    modules = ["tiicee.clinical.folds", "tiicee.clinical.train", "tiicee.clinical.rollout",
+               "tiicee.clinical.bench", "tiicee.clinical.acceptance"]
+    training = {"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "CUBLAS_WORKSPACE_CONFIG": None}
+    study.write_graph([stage("train", gpus=1, env=training), stage("plain")], stage_modules=modules)
+    graph = graphs.load(study.paths)
+    assert graph.stage_modules == modules
+    assert graph.by_id["train"]["env"] == training and graph.by_id["plain"]["env"] == {}
+
+
+def test_the_clinical_stage_modules_register_through_stage_modules():
+    """The modules the study's graph will list. Skipped where their own imports are not installed."""
+    from tiicee.pipeline import stages
+    wanted = {"tiicee.clinical.folds": ["clinical_data", "clinical_folds"], "tiicee.clinical.train": ["clinical_train"],
+              "tiicee.clinical.rollout": ["clinical_rollout"], "tiicee.clinical.bench": ["clinical_bench"],
+              "tiicee.clinical.acceptance": ["clinical_acceptance"]}
+    for module, names in wanted.items():
+        for name in names:
+            try:
+                assert callable(stages.resolve(name, [module]))
+            except ImportError as error:
+                pytest.skip("%s cannot be imported here: %s" % (module, type(error).__name__))
+
+
 def test_committed_noop_graph_loads_and_paths_follow_the_design(tmp_path):
     study = Study(tmp_path)
     study.paths.graph.write_text((PACKAGE / "tiicee" / "pipeline" / "noop_graph.json").read_text())
@@ -293,6 +325,12 @@ def test_committed_noop_graph_loads_and_paths_follow_the_design(tmp_path):
     (lambda g: g["stages"][0].update(id="has space"), "bad stage id"),
     (lambda g: g["stages"][0].update(command="noop"), "command"),
     (lambda g: g["stages"][0].update(manifest={"bind": {"two words": "x"}}), "role names"),
+    (lambda g: g["stages"][0].update(env={"NOT A NAME": "1"}), "env must map"),
+    (lambda g: g["stages"][0].update(env={"THREADS": 4}), "env must map"),
+    (lambda g: g["stages"][0].update(env={"TII_CODE": "/elsewhere"}), "env must map"),
+    (lambda g: g["stages"][0].update(env={"LINES": "one\ntwo"}), "env must map"),
+    (lambda g: g.update(stage_modules="tiicee.clinical.train"), "stage_modules"),
+    (lambda g: g.update(stage_modules=["tiicee/clinical/train.py"]), "stage_modules"),
     (lambda g: g["stages"].append(dict(g["stages"][1])), "duplicate stage id"),
     (lambda g: g["gates"][0].update(rule="../elsewhere.py"), "rule"),
     (lambda g: g["gates"][0].update(reads=["../private/rows.csv"]), "reads"),

@@ -48,7 +48,7 @@ def pin(monkeypatch):
 
 
 def stage(name, command=("noop",), depends_on=(), gate=None, gpus=0, experiment="benches",
-          estimate=None, kind="normal", bind=None, mem_gb=1, time_hours=1):
+          estimate=None, kind="normal", bind=None, mem_gb=1, time_hours=1, env=None):
     spec = {"id": name, "experiment": experiment, "kind": kind, "command": list(command),
             "resources": {"gpus": gpus, "cpus": 1, "mem_gb": mem_gb, "time_hours": time_hours},
             "depends_on": list(depends_on), "allowance_key": experiment,
@@ -57,6 +57,8 @@ def stage(name, command=("noop",), depends_on=(), gate=None, gpus=0, experiment=
         spec["gate"] = gate
     if bind:
         spec["manifest"] = {"bind": bind}
+    if env is not None:
+        spec["env"] = env
     return spec
 
 
@@ -91,10 +93,10 @@ class Study:
             process.kill()
             process.wait()
 
-    def write_graph(self, stages, gates=()):
+    def write_graph(self, stages, gates=(), stage_modules=()):
         self.paths.graph.parent.mkdir(parents=True, exist_ok=True)
-        self.paths.graph.write_text(json.dumps({"study": "TII-CEE-1", "milestone": "M0",
-                                                "stages": list(stages), "gates": list(gates)}))
+        self.paths.graph.write_text(json.dumps({"study": "TII-CEE-1", "milestone": "M0", "stages": list(stages),
+                                                "gates": list(gates), "stage_modules": list(stage_modules)}))
 
     def set_allowance(self, key, gpu_hours):
         allowances = json.loads(self.paths.allowances.read_text())
