@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 8:40 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 9:15 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -15,8 +15,8 @@ Updated November 13, 2026, about 8:40 PM EST. Times are US Eastern.
   admission at every step as the uninterrupted run. Launch check 7.4a is
   accepted: 240 of 240 final answers and digests match (LAUNCH_CHECKS.md). REVIEW-001 (for E3) and
   REVIEW-008 (for E5) are not started.
-- M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, running locally
-  (about 20 hours). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
+- M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, which the Mac stopped
+  at about 9:08 PM EST, about 15 hours in, for low memory; its restart waits on the study lead. G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
   charts get projection only, stateful track). G2a waits for E1-C. D-REGIME's coordinate (tau_B at
   the first decision point) is VALIDATED in the twin under W0 and W2 (RESEARCH_LEDGER.md, "D-REGIME
   validation"); for the twin's readers the ordering is an identity. The two open questions are
@@ -40,8 +40,8 @@ Updated November 13, 2026, about 8:40 PM EST. Times are US Eastern.
   is built, reviewed and installed (graph_training_m4.json, 7:19 PM EST) and runs after the five fold
   rollouts; the per-policy probe conformance of section 10.1 is built, reviewed and installed
   (graph_training_m5.json, 8:38 PM EST): P's probe runs now as the bench, each other policy's after
-  its rollout; the E1-C interval finishes locally (about 20
-  hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; E2's analysis
+  its rollout; the E1-C interval is restarted (about 20 hours, from a checkout of a4f34bd), then
+  the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
 

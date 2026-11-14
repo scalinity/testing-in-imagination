@@ -773,3 +773,16 @@ p-rollout-val's record carries all four, and its split digest is the current val
 graph_training_m5.json (m4's stages and a probe for each of the thirteen policies, P's first as the
 bench) was installed at 8:38 PM EST from ab13f5c.
 
+### Operations, November 13, 2026, about 9:08 PM EST: E1-C stopped by the Mac
+
+The E1-C interval run (part C's pooled bootstrap, started 5:58 AM EST at a4f34bd on the Mac, expected
+to end about 2 AM EST) was stopped by Claude Code when the Mac ran critically low on memory, about 15
+hours in; 8% of 48 GB was free afterwards. Its inputs survive: 320 cell files under the session's
+scratch (C_rows, 434 MB, written by 5:50 AM EST). The interval computation kept nothing on disk, so
+a restart takes about 20 hours again. Five commits since a4f34bd changed E1-related code (99b6800,
+315a468, c54cded, f21daa4, d12b2d7), so a faithful restart runs from a checkout of a4f34bd, not from
+the working tree. G2a waits on E1-C. Restarting is left to the study lead. The probe's watch loop
+and the wake-up timer were stopped at the same time; the p-probe job on HiPerGator was unaffected
+(running since 9:06 PM EST, moved to cai5724 under the watcher's lock after the watcher had put it
+behind cai6734's full CPU limit, start forecast 10:32 AM EST).
+
