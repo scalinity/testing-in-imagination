@@ -127,19 +127,34 @@ def test_the_reading_sums_every_continuation_token_after_the_logged_prompt():
     continuation, or keeping only the shared first, picks another disease."""
     step = {"role": "hypothesis", "index": 0, "prompt": "P", "prompt_ids_sha256": digest([1, 2, 3]),
             "text": "Hypothesis: cholecystitis\nConfidence: 7", "token_ids": [10, 22, 23, 9]}
-    (record,) = probe.score(ToyEngine(), {7: [step]}, DISEASES, {})
+    (record,) = probe.score(ToyEngine(), {7: [step]}, DISEASES, {}, 4352)
     assert record["stored"] == "cholecystitis" and record["canonical"]
     assert record["logprobs"] == pytest.approx({"appendicitis": -1.3, "cholecystitis": -0.6,
                                                 "diverticulitis": -2.3, "pancreatitis": -3.5})
     assert max(record["logprobs"], key=record["logprobs"].get) == "cholecystitis"
 
 
+def test_a_step_that_would_not_fit_the_engine_is_not_scored_and_fails_closed():
+    """Prompt [1, 2, 3], the longest continuation four tokens, one generated token: 8 tokens."""
+    step = {"role": "hypothesis", "index": 0, "prompt": "P", "prompt_ids_sha256": digest([1, 2, 3]),
+            "text": "Hypothesis: cholecystitis\nConfidence: 7", "token_ids": [10, 22, 23, 9]}
+    engine = ToyEngine()
+    (fits,) = probe.score(engine, {7: [step]}, DISEASES, {}, 8)
+    (over,) = probe.score(engine, {7: [step]}, DISEASES, {}, 7)
+    assert not fits["too_long"] and fits["logprobs"] is not None
+    assert over["too_long"] and over["logprobs"] is None and engine.batches == [4]  # never sent
+    found = {"replay": SimpleNamespace(calls=1, prompts=1, digests=1, other_pair=0),
+             "log": SimpleNamespace(admissions=1, rows=1, unused=0), "steps": [over]}
+    report = probe.report(found, 1)
+    assert report["unscoreable_length"] == 1 and report["matched"] == 0 and report["outcome"] == "investigate"
+
+
 def test_scoring_in_batches_gives_every_step_its_own_sums():
     """Prompt "Q" lowers every continuation token by one, so each step's sums are its own."""
     steps = [{"role": "hypothesis", "index": i, "prompt": "PQ"[i % 2], "prompt_ids_sha256": digest([1, 2, 3 + i % 2]),
               "text": "Hypothesis: cholecystitis\nConfidence: 7", "token_ids": [10, 22, 23, 9]} for i in range(5)]
-    whole, engine = probe.score(ToyEngine(), {7: steps}, DISEASES, {}), ToyEngine()
-    assert probe.score(engine, {7: steps}, DISEASES, {}, batch=2) == whole
+    whole, engine = probe.score(ToyEngine(), {7: steps}, DISEASES, {}, 4352), ToyEngine()
+    assert probe.score(engine, {7: steps}, DISEASES, {}, 4352, batch=2) == whole
     assert engine.batches == [8, 8, 4]  # two steps of four requests, twice, then the fifth step
     for record in whole:
         expected = {"appendicitis": -1.3, "cholecystitis": -0.6, "diverticulitis": -2.3, "pancreatitis": -3.5}

@@ -120,13 +120,16 @@ class ReplayLog:
         self.unused += self.replay.position != len(self.replay.steps)
 
 
-def score(model, logged, diseases, sampling_params, batch=BATCH):
+def score(model, logged, diseases, sampling_params, limit, batch=BATCH):
     """Per hypothesis step: the stored hypothesis and the log probability of each canonical
-    continuation after the logged prompt. Steps whose prompt ids cannot be reproduced are not scored.
+    continuation after the logged prompt. Steps whose prompt ids cannot be reproduced are not scored,
+    nor are steps whose prompt with its longest continuation and one generated token would exceed the
+    engine's context `limit` (marked too_long): the prompt is never cut, since that would change it.
     The engine is asked for `batch` steps at a time; each call's outputs, which hold a log
     probability for every prompt position, are reduced to the continuation sums and dropped."""
     tokenizer = model.get_tokenizer()
     continuation = {d: list(tokenizer.encode(f"Hypothesis: {d}", add_special_tokens=False)) for d in diseases}
+    longest = max(len(ids) for ids in continuation.values())
     records, pending = [], []
     for patient_id, entries in logged.items():
         for step in entries:
@@ -135,9 +138,10 @@ def score(model, logged, diseases, sampling_params, batch=BATCH):
             stored = stored_hypothesis(step["text"], diseases)
             ids = prompt_ids(tokenizer, step["prompt"], step["prompt_ids_sha256"])
             record = {"patient_id": patient_id, "index": step["index"], "stored": stored, "logprobs": None,
-                      "canonical": stored is not None and list(step["token_ids"][:len(continuation[stored])]) == continuation[stored]}
+                      "canonical": stored is not None and list(step["token_ids"][:len(continuation[stored])]) == continuation[stored],
+                      "too_long": ids is not None and len(ids) + longest + 1 > limit}
             records.append(record)
-            if ids is not None:
+            if ids is not None and not record["too_long"]:
                 pending.append((record, ids))
     params = type(sampling_params)(max_tokens=1, temperature=0.0, prompt_logprobs=1)
     for first in range(0, len(pending), batch):
@@ -165,7 +169,8 @@ def evaluator(found, logged, stored):
         runner.make_evaluator(runner.VARIANTS["V0"], dataset, None, log,
                               runner.Limits(**runner.CONFIG["limits"]))(cfg, dataset, replay, sampling_params)
         diseases = [d.lower() for d in cfg.dataset.disease_list]
-        found.update(replay=replay, log=log, steps=score(model, logged, diseases, sampling_params))
+        limit = cfg.environment.max_length + cfg.training.max_completion_length  # gpu.evaluate's max_model_len
+        found.update(replay=replay, log=log, steps=score(model, logged, diseases, sampling_params, limit))
         return []
 
     return evaluate
@@ -183,7 +188,7 @@ def report(found, total_steps) -> dict:
             "rebuilt_identical": replay.prompts, "token_digests_identical": replay.digests,
             "v0_identical": log.rows, "admissions_with_unused_steps": log.unused,
             "hypothesis_steps": len(steps), "aligned": len(aligned), "matched": matched, "rate": rate,
-            "canonical_tokens": sum(s["canonical"] for s in aligned),
+            "canonical_tokens": sum(s["canonical"] for s in aligned), "unscoreable_length": sum(s["too_long"] for s in steps),
             "outcome": "conforms" if reproduced and rate is not None and rate >= RATE else "investigate"}
 
 
