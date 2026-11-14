@@ -41,6 +41,7 @@ from tiicee.clinical.rollout import SPLIT
 from tiicee.pipeline.stages import register
 
 RATE = 0.99  # specification 10.1
+BATCH = 64  # hypothesis steps per scoring call, four requests each
 HYPOTHESIS = re.compile(r"Hypothesis: (.*)")  # upstream's Environment._generate_hypothesis
 
 
@@ -119,39 +120,38 @@ class ReplayLog:
         self.unused += self.replay.position != len(self.replay.steps)
 
 
-def score(model, logged, diseases, sampling_params):
+def score(model, logged, diseases, sampling_params, batch=BATCH):
     """Per hypothesis step: the stored hypothesis and the log probability of each canonical
-    continuation after the logged prompt. Steps whose prompt ids cannot be reproduced are not scored."""
+    continuation after the logged prompt. Steps whose prompt ids cannot be reproduced are not scored.
+    The engine is asked for `batch` steps at a time; each call's outputs, which hold a log
+    probability for every prompt position, are reduced to the continuation sums and dropped."""
     tokenizer = model.get_tokenizer()
     continuation = {d: list(tokenizer.encode(f"Hypothesis: {d}", add_special_tokens=False)) for d in diseases}
-    steps, requests = [], []
+    records, pending = [], []
     for patient_id, entries in logged.items():
         for step in entries:
             if step["role"] != "hypothesis":
                 continue
             stored = stored_hypothesis(step["text"], diseases)
             ids = prompt_ids(tokenizer, step["prompt"], step["prompt_ids_sha256"])
-            record = {"patient_id": patient_id, "index": step["index"], "stored": stored, "scored": ids is not None,
+            record = {"patient_id": patient_id, "index": step["index"], "stored": stored, "logprobs": None,
                       "canonical": stored is not None and list(step["token_ids"][:len(continuation[stored])]) == continuation[stored]}
+            records.append(record)
             if ids is not None:
-                record["start"] = len(ids)
-                requests += [{"prompt_token_ids": ids + continuation[d]} for d in diseases]
-            steps.append(record)
+                pending.append((record, ids))
     params = type(sampling_params)(max_tokens=1, temperature=0.0, prompt_logprobs=1)
-    outputs = iter(model.generate(requests, sampling_params=params, use_tqdm=False) if requests else [])
-    for record in steps:
-        if not record.pop("scored"):
-            record["logprobs"] = None
-            continue
-        start = record.pop("start")
-        record["logprobs"] = {}
-        for d in diseases:
-            out, ids = next(outputs), continuation[d]
-            total = 0.0
-            for offset, token in enumerate(ids):
-                total += out.prompt_logprobs[start + offset][token].logprob
-            record["logprobs"][d] = total
-    return steps
+    for first in range(0, len(pending), batch):
+        chunk = pending[first:first + batch]
+        requests = [{"prompt_token_ids": ids + continuation[d]} for _, ids in chunk for d in diseases]
+        outputs = model.generate(requests, sampling_params=params, use_tqdm=False)
+        if len(outputs) != len(requests):
+            raise RuntimeError("the engine returned a different number of outputs than it was asked for")
+        for i, (record, ids) in enumerate(chunk):
+            record["logprobs"] = {d: sum(outputs[i * len(diseases) + j].prompt_logprobs[len(ids) + k][token].logprob
+                                         for k, token in enumerate(continuation[d]))
+                                  for j, d in enumerate(diseases)}
+        del outputs
+    return records
 
 
 def evaluator(found, logged, stored):

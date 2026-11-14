@@ -89,13 +89,14 @@ def test_the_stored_hypothesis_is_read_as_the_environment_reads_it():
 
 
 class Toy:
-    """A tokenizer with continuations of unequal length; prompt "P" is [1, 2, 3] (with special tokens [0, 1, 2, 3])."""
+    """A tokenizer with continuations of unequal length; prompts "P" and "Q" are [1, 2, 3] and [1, 2, 4]
+    (with special tokens, a leading 0)."""
 
     words = {"Hypothesis: appendicitis": [10, 21], "Hypothesis: cholecystitis": [10, 22, 23],
              "Hypothesis: diverticulitis": [10, 24], "Hypothesis: pancreatitis": [10, 25, 26, 27]}
 
     def encode(self, text, add_special_tokens=True):
-        return self.words.get(text) or ([0] if add_special_tokens else []) + [1, 2, 3]
+        return self.words.get(text) or ([0] if add_special_tokens else []) + [1, 2, 3 if text == "P" else 4]
 
 
 # log P(token | the continuation so far); the shared first token scores the same for every disease
@@ -116,7 +117,7 @@ class ToyEngine:
         for request in requests:
             ids = request["prompt_token_ids"]
             outputs.append(SimpleNamespace(prompt_logprobs=[None] + [
-                {token: SimpleNamespace(logprob=0.0 if j < 3 else CAUSAL[tuple(ids[3:j])][token])}
+                {token: SimpleNamespace(logprob=0.0 if j < 3 else CAUSAL[tuple(ids[3:j])][token] - (ids[2] == 4))}
                 for j, token in enumerate(ids) if j > 0]))
         return outputs
 
@@ -133,6 +134,20 @@ def test_the_reading_sums_every_continuation_token_after_the_logged_prompt():
     assert max(record["logprobs"], key=record["logprobs"].get) == "cholecystitis"
 
 
+def test_scoring_in_batches_gives_every_step_its_own_sums():
+    """Prompt "Q" lowers every continuation token by one, so each step's sums are its own."""
+    steps = [{"role": "hypothesis", "index": i, "prompt": "PQ"[i % 2], "prompt_ids_sha256": digest([1, 2, 3 + i % 2]),
+              "text": "Hypothesis: cholecystitis\nConfidence: 7", "token_ids": [10, 22, 23, 9]} for i in range(5)]
+    whole, engine = probe.score(ToyEngine(), {7: steps}, DISEASES, {}), ToyEngine()
+    assert probe.score(engine, {7: steps}, DISEASES, {}, batch=2) == whole
+    assert engine.batches == [8, 8, 4]  # two steps of four requests, twice, then the fifth step
+    for record in whole:
+        expected = {"appendicitis": -1.3, "cholecystitis": -0.6, "diverticulitis": -2.3, "pancreatitis": -3.5}
+        if record["index"] % 2:
+            expected = {"appendicitis": -3.3, "cholecystitis": -3.6, "diverticulitis": -4.3, "pancreatitis": -7.5}
+        assert record["logprobs"] == pytest.approx(expected), record["index"]
+
+
 @cpu_stack
 def test_a_probe_of_a_cpu_rollout_conforms_and_leaves_the_rollout_untouched(tmp_path, rolled, monkeypatch):
     before = {path.name: path.read_bytes() for path in rolled.out.iterdir()}
@@ -147,8 +162,8 @@ def test_a_probe_of_a_cpu_rollout_conforms_and_leaves_the_rollout_untouched(tmp_
     export_guard.check_aggregate(report)
     scores = lines(ctx.out_dir / "scores.jsonl")
     assert len(scores) == report["hypothesis_steps"] and all(set(s["logprobs"]) == set(DISEASES) for s in scores)
-    (params,) = engine.calls  # one batch, scoring only
-    assert params == {"max_tokens": 1, "temperature": 0.0, "prompt_logprobs": 1}
+    assert engine.calls and all(params == {"max_tokens": 1, "temperature": 0.0, "prompt_logprobs": 1}
+                                for params in engine.calls)  # scoring only
     assert {path.name: path.read_bytes() for path in rolled.out.iterdir()} == before  # the probe never writes a trajectory
 
 
