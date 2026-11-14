@@ -1,4 +1,4 @@
-"""The training track's graphs (graph_training_m1.json, then m2 to m5), checked against
+"""The training track's graphs (graph_training_m1.json, then m2 to m6), checked against
 the pipeline's own loader and against what each clinical stage reads."""
 import importlib
 import json
@@ -16,6 +16,7 @@ SECOND = FRAGMENT.with_name("graph_training_m2.json")
 THIRD = FRAGMENT.with_name("graph_training_m3.json")
 FOURTH = FRAGMENT.with_name("graph_training_m4.json")
 FIFTH = FRAGMENT.with_name("graph_training_m5.json")
+SIXTH = FRAGMENT.with_name("graph_training_m6.json")
 ROLES = {  # the roles and seeds each stage takes from its manifest
     "clinical_data": (set(), set()), "clinical_folds": (set(), set()),
     "clinical_bench": ({"data"}, {"training"}), "clinical_train": ({"data"}, {"training"}),
@@ -37,12 +38,12 @@ def graph():
     return load(FRAGMENT)
 
 
-@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD, FOURTH, FIFTH], ids=["m1", "m2", "m3", "m4", "m5"])
+@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD, FOURTH, FIFTH, SIXTH], ids=["m1", "m2", "m3", "m4", "m5", "m6"])
 def either(request):
     return load(request.param)
 
 
-@pytest.fixture(scope="module", params=[SECOND, THIRD, FOURTH, FIFTH], ids=["m2", "m3", "m4", "m5"])
+@pytest.fixture(scope="module", params=[SECOND, THIRD, FOURTH, FIFTH, SIXTH], ids=["m2", "m3", "m4", "m5", "m6"])
 def trained(request):
     """Each graph that holds trainings."""
     return load(request.param)
@@ -262,3 +263,20 @@ def test_each_probe_reads_its_own_rollout_on_that_rollouts_inputs_after_the_benc
         assert stage["seeds"] == rollout["seeds"] and stage["env"] == rollout["env"]
         assert rid in stage["depends_on"] and ("p-probe" in stage["depends_on"]) == (rid != "p-rollout-val")
         assert stage["allowance_key"] == "benches" and stage["gate"] is None
+
+
+# ---- graph_training_m6.json: stage modules every export still in use has ----
+
+
+def test_the_sixth_graph_keeps_the_fifth_stages_and_lists_only_modules_the_training_exports_have():
+    """The trainings resume from the export of their first submission, which imports every module the
+    installed graph lists; their exports were cut under m2 (E8, E10) and m3 (E9)."""
+    second, fifth, sixth = (json.loads(path.read_text()) for path in (SECOND, FIFTH, SIXTH))
+    assert sixth["stages"] == fifth["stages"] and sixth["gates"] == fifth["gates"]
+    assert sixth["stage_modules"] == second["stage_modules"] == json.loads(THIRD.read_text())["stage_modules"]
+
+
+def test_every_command_of_the_sixth_graph_resolves():
+    graph = load(SIXTH)
+    for name in {stage["command"][0] for stage in graph.stages}:
+        assert callable(registry.resolve(name, graph.stage_modules)), name

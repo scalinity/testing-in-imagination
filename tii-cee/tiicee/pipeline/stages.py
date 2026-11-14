@@ -5,6 +5,12 @@ is complete. When ctx.stop turns true it saves what it needs and raises StageInt
 also raise StageInterrupted by itself to continue in a fresh process (exit 10, never counted as a retry).
 A stage's command in graph.json is [registered name, arguments...]; modules that register further
 stages are listed in graph.json under "stage_modules" and imported before the lookup.
+
+A stage that continues in a new job runs from the code export of its first submission, while the
+graph it reads is the one installed now. Every export imports every listed module, so an installed
+graph lists only modules that every export still running a stage has; a listed module this export
+lacks is skipped. A stage whose module is newer than an export still in use is found through
+MODULES, by its own name, instead of through the graph.
 """
 from __future__ import annotations
 
@@ -15,6 +21,10 @@ import time
 from pathlib import Path
 
 REGISTRY = {}
+
+# Stages added while trainings from older exports were still resuming (RESEARCH_LEDGER.md,
+# "Operations, November 14, 2026").
+MODULES = {"clinical_cohort_x": "tiicee.clinical.cohort_x", "clinical_probe": "tiicee.clinical.probe"}
 
 
 class StageInterrupted(Exception):
@@ -30,7 +40,13 @@ def register(name):
 
 def resolve(name, modules=()):
     for module in modules:
-        importlib.import_module(module)
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as error:
+            if error.name != module:
+                raise  # the module exists here and fails inside: a real fault
+    if name not in REGISTRY and name in MODULES:
+        importlib.import_module(MODULES[name])
     return REGISTRY[name]
 
 

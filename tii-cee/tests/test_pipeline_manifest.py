@@ -317,6 +317,25 @@ def test_the_clinical_stage_modules_register_through_stage_modules():
                 pytest.skip("%s cannot be imported here: %s" % (module, type(error).__name__))
 
 
+def test_a_listed_module_this_export_lacks_is_skipped_and_one_that_fails_inside_is_not(tmp_path, monkeypatch):
+    """A resumed stage runs from an older export than the installed graph, which may list newer modules."""
+    from tiicee.pipeline import stages
+    assert stages.resolve("noop", ["tiicee.clinical.not_in_this_export"]) is stages.noop
+    (tmp_path / "broken_stage_module.py").write_text("import a_dependency_that_is_not_installed\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    with pytest.raises(ModuleNotFoundError, match="a_dependency_that_is_not_installed"):
+        stages.resolve("noop", ["broken_stage_module"])
+
+
+def test_stages_newer_than_an_export_in_use_are_found_by_name():
+    from tiicee.pipeline import stages
+    for name, module in stages.MODULES.items():
+        try:
+            assert callable(stages.resolve(name, []))
+        except ImportError as error:
+            pytest.skip("%s cannot be imported here: %s" % (module, type(error).__name__))
+
+
 def test_committed_noop_graph_loads_and_paths_follow_the_design(tmp_path):
     study = Study(tmp_path)
     study.paths.graph.write_text((PACKAGE / "tiicee" / "pipeline" / "noop_graph.json").read_text())
