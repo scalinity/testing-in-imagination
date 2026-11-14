@@ -751,3 +751,25 @@ tim's scripted policy and an invented tokenizer; then the bench, P's probe, runs
 Stage clinical_probe, one GPU job per policy after its rollout, charged to the benches allowance
 ("Benches and conformance", specification 14.3: 10 GPU-hours); about 0.25 GPU-hours each.
 
+### Reader probe conformance, November 13, 2026: built, reviewed, installed
+
+Built per D-PROBE: tii-cee/tiicee/clinical/probe.py, stage clinical_probe (6810752), with CPU tests on
+a real scripted rollout. Reviewed by GPT-6.1 Sol (Codex, xhigh, read-only, NativePeers task
+529f085a) against a75d51a: no critical finding, four warnings and one suggestion, all accepted and
+fixed, each with a test that fails without the fix:
+
+| Finding | Disposition | Evidence |
+|---|---|---|
+| F001: a resumed rollout's confidence pairs are drawn afresh, so a faithful rollout read investigate | fixed and verified | ab13f5c; the replay records the candidate pairs at each draw and accepts a logged confidence prompt the upstream builder makes from another of them (confidence_other_pair); in a CPU rollout interrupted at its tenth admission, 3 of 272 prompts were such, all confidence prompts |
+| F002: a prompt plus a continuation could exceed the engine's context | fixed and verified | e45aead; such a step is not sent, is counted as unscoreable_length and cannot match |
+| F003: duplicate records were overwritten unseen | fixed and verified | e4d874a; duplicate admissions in the log, the V0 results or the split are errors |
+| F004: the test fake leaked the disease into the shared token's probability | fixed and verified | 753ddcc; a causal fake and an exact-sum test where dropping any token changes the winner |
+| F005: one scoring call held every position's log probability | fixed and verified | 41cff4a; 64 steps per call, outputs reduced and dropped |
+
+Also taken from the review's provenance note (304f97b): the probe refuses to run unless the
+rollout.json beside the prompt log records the split, adapter, seed and backbone bound to it.
+p-rollout-val's record carries all four, and its split digest is the current val.csv's. Suites:
+966 passed, 37 skipped (tii-cee); 152 clinical tests passed on the replication's CPU stack.
+graph_training_m5.json (m4's stages and a probe for each of the thirteen policies, P's first as the
+bench) was installed at 8:38 PM EST from ab13f5c.
+

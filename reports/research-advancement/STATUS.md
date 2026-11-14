@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 7:25 PM EST. Times are US Eastern.
+Updated November 13, 2026, about 8:40 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -38,7 +38,9 @@ Updated November 13, 2026, about 7:25 PM EST. Times are US Eastern.
 - Next executable actions: the E8, E9 and E10 trainings run, each in two parts of about 14 hours,
   and each rolls out on its validation or held-out admissions after; E10's cohort-X integrity check
   is built, reviewed and installed (graph_training_m4.json, 7:19 PM EST) and runs after the five fold
-  rollouts; the per-policy probe conformance of section 10.1 is built before any E4 use; the E1-C interval finishes locally (about 20
+  rollouts; the per-policy probe conformance of section 10.1 is built, reviewed and installed
+  (graph_training_m5.json, 8:38 PM EST): P's probe runs now as the bench, each other policy's after
+  its rollout; the E1-C interval finishes locally (about 20
   hours from 5:58 AM), then the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
