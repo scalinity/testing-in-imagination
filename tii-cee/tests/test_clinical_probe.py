@@ -33,14 +33,18 @@ class Scoring:
         return self.tokenizer
 
     def generate(self, requests, sampling_params=None, use_tqdm=False):
+        """Causal: a position's log probability depends only on the tokens before it, so the shared
+        "Hypothesis:" token scores the same whatever disease follows it."""
         self.calls.append(sampling_params)
         outputs = []
         for request in requests:
             ids = request["prompt_token_ids"]
             (d, tail), = [(d, c) for d, c in self.continuation.items() if ids[-len(c):] == c]
             start, best = len(ids) - len(tail), self.favoured(digest(ids[:-len(tail)]))
+            shared = len(tail) - 1  # the scripted tokenizer: "Hypothesis:" then one word
             outputs.append(SimpleNamespace(prompt_logprobs=[
-                {token: SimpleNamespace(logprob=0.0 if j < start else (-0.1 if d == best else -2.0))}
+                {token: SimpleNamespace(logprob=0.0 if j < start else -0.05 if j < start + shared
+                                        else (-0.1 if d == best else -2.0))}
                 for j, token in enumerate(ids)]))
         return outputs
 
@@ -82,6 +86,51 @@ def test_the_stored_hypothesis_is_read_as_the_environment_reads_it():
     assert probe.stored_hypothesis("Hypothesis: unsure\nConfidence: 3", DISEASES) is None
     assert probe.stored_hypothesis("Hypothesis: appendicitis \nConfidence: 7", DISEASES) is None  # upstream reads "unknown"
     assert probe.stored_hypothesis("I think appendicitis", DISEASES) is None
+
+
+class Toy:
+    """A tokenizer with continuations of unequal length; prompt "P" is [1, 2, 3] (with special tokens [0, 1, 2, 3])."""
+
+    words = {"Hypothesis: appendicitis": [10, 21], "Hypothesis: cholecystitis": [10, 22, 23],
+             "Hypothesis: diverticulitis": [10, 24], "Hypothesis: pancreatitis": [10, 25, 26, 27]}
+
+    def encode(self, text, add_special_tokens=True):
+        return self.words.get(text) or ([0] if add_special_tokens else []) + [1, 2, 3]
+
+
+# log P(token | the continuation so far); the shared first token scores the same for every disease
+CAUSAL = {(): {10: -0.3}, (10,): {21: -1.0, 22: -0.2, 24: -2.0, 25: -0.1}, (10, 22): {23: -0.1},
+          (10, 25): {26: -0.1}, (10, 25, 26): {27: -3.0}}
+
+
+class ToyEngine:
+    def __init__(self):
+        self.batches = []
+
+    def get_tokenizer(self):
+        return Toy()
+
+    def generate(self, requests, sampling_params=None, use_tqdm=False):
+        self.batches.append(len(requests))
+        outputs = []
+        for request in requests:
+            ids = request["prompt_token_ids"]
+            outputs.append(SimpleNamespace(prompt_logprobs=[None] + [
+                {token: SimpleNamespace(logprob=0.0 if j < 3 else CAUSAL[tuple(ids[3:j])][token])}
+                for j, token in enumerate(ids) if j > 0]))
+        return outputs
+
+
+def test_the_reading_sums_every_continuation_token_after_the_logged_prompt():
+    """cholecystitis wins only when every token is counted: dropping the last token of each
+    continuation, or keeping only the shared first, picks another disease."""
+    step = {"role": "hypothesis", "index": 0, "prompt": "P", "prompt_ids_sha256": digest([1, 2, 3]),
+            "text": "Hypothesis: cholecystitis\nConfidence: 7", "token_ids": [10, 22, 23, 9]}
+    (record,) = probe.score(ToyEngine(), {7: [step]}, DISEASES, {})
+    assert record["stored"] == "cholecystitis" and record["canonical"]
+    assert record["logprobs"] == pytest.approx({"appendicitis": -1.3, "cholecystitis": -0.6,
+                                                "diverticulitis": -2.3, "pancreatitis": -3.5})
+    assert max(record["logprobs"], key=record["logprobs"].get) == "cholecystitis"
 
 
 @cpu_stack
