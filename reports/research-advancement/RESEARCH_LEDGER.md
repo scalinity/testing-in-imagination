@@ -685,8 +685,9 @@ at 53 minutes, most likely minutes before its pass ended; the error cost about 0
 E10's allowance and about 70 minutes of fold 2's schedule. Undone: fold 2's retry budget, since the
 cancel was not a failure of the stage (state retries.other from 1 to 0, under the watcher's lock at
 7:10 PM EST); and the 2-CPU request as the study lead chose it (3a14968, a revert of aa0f9bb,
-installed 7:11 PM EST). Attempt 2 runs with 4 CPUs; its pass should end at about 7:35 PM EST. A
-training is judged stalled only after its stack has been read with py-spy.
+installed 7:11 PM EST). Attempt 2 runs with 4 CPUs; its pass ended at 7:39 PM EST, 64 minutes
+after it started, and it logged its first optimizer step at 7:40 PM EST. A training is judged
+stalled only after its stack has been read with py-spy.
 
 ### E10's cohort-X integrity check, November 13, 2026
 
