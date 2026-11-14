@@ -123,11 +123,11 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 14, 2026, about 3:30 PM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 14, 2026, about 4:25 PM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
-it was submitted to when a pending job was moved. The E9 s271 fourth attempt's start is from sacct; the
-watcher records it on its next cycle.
+it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
+sacct.
 
 | Stage | Attempt | Job ID | Account | Started | State | Exit | Elapsed | GPU-hours |
 |---|---|---|---|---|---|---|---|---|
@@ -162,20 +162,20 @@ watcher records it on its next cycle.
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | FAILED (planned continuation) | 10 | 51,506 s | 14.307 |
 | e8-train-s273 | 2 | 51285177 | cai6734 | Nov 14, 5:52 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e8-train-s273 | 3 | 51286204 | cai6734 | Nov 14, 6:06 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e8-train-s273 | 4 | 51335548 | cai6734 |  | PENDING |  |  |  |
+| e8-train-s273 | 4 | 51335548 | cai6734 | Nov 14, 4:18 PM | RUNNING |  |  |  |
 | e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | FAILED (planned continuation) | 10 | 41,849 s | 11.625 |
 | e10-train-f0 | 2 | 51278842 | cai6734 | Nov 14, 5:10 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f0 | 3 | 51282233 | cai6734 | Nov 14, 5:27 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e10-train-f0 | 4 | 51335549 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f0 | 4 | 51335549 | cai5724 | Nov 14, 4:23 PM | RUNNING |  |  |  |
 | e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | FAILED (planned continuation) | 10 | 41,565 s | 11.546 |
 | e10-train-f1 | 2 | 51278003 | cai5724 | Nov 14, 4:36 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f1 | 3 | 51280189 | cai5724 | Nov 14, 4:49 AM | FAILED (import error; Operations, November 14) | 1 | 3 s | 0.001 |
-| e10-train-f1 | 4 | 51335550 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f1 | 4 | 51335550 | cai5724 | Nov 14, 4:23 PM | RUNNING |  |  |  |
 | e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (in error, during its initial validation pass) | 0 | 3,181 s | 0.884 |
 | e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | FAILED (planned continuation) | 10 | 37,890 s | 10.525 |
 | e10-train-f2 | 3 | 51282234 | cai6734 | Nov 14, 5:28 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f2 | 4 | 51283855 | cai6734 | Nov 14, 5:37 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e10-train-f2 | 5 | 51335551 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f2 | 5 | 51335551 | cai5724 | Nov 14, 4:23 PM | RUNNING |  |  |  |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,416 s | 11.504 |
 | e10-train-f3 | 2 | 51268186 | cai6734 | Nov 14, 4:18 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e10-train-f3 | 3 | 51278844 | cai6734 | Nov 14, 5:12 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
@@ -888,4 +888,15 @@ used in E4. The approved report export/approved/p-probe.json keeps the result un
 written (investigate, 605/613); this entry records the reading under A1 beside it. The remaining
 three disagreements are the step at 0.0019 nats and the two at about 0.12, the length effect
 specification 10.1 anticipates.
+
+### Operations, November 14, 2026, about 4:23 PM EST: three E10 folds moved to cai5724
+
+At 4:22 PM EST E10 folds 0 to 3 (second parts) waited on cai6734's shared GPU limit (QOSGrpGRES): the
+class pool's 8 GPUs were all in use, 4 of them by E8's second parts. cai5724 had 5 of 8 GPUs, 12 of 32
+CPUs and 86 of 250 GB in use, with no job of anyone's waiting on it. At 4:23 PM EST, under the watcher's
+lock (state/lock), folds 0, 1 and 2 (jobs 51335549, 51335550, 51335551) were each checked to be pending
+on cai6734 with matching stage state, moved with scontrol update (Account and QOS cai5724), and their
+stage state's account and QOS set to cai5724 and read back. All three started at 4:23:17 PM EST. Fold 3
+(51335552) waits on cai6734. This is the same manual step used for fold 2 and the P probe on November
+13; the watcher's routing chooses an account only at submission.
 
