@@ -786,3 +786,40 @@ and the wake-up timer were stopped at the same time; the p-probe job on HiPerGat
 (running since 9:06 PM EST, moved to cai5724 under the watcher's lock after the watcher had put it
 behind cai6734's full CPU limit, start forecast 10:32 AM EST).
 
+### Operations, November 14, 2026: every training's second part failed at import; fixed
+
+Overnight, unattended (the session's timer had been stopped with the E1-C run at 9:08 PM EST), all
+twelve trainings finished their first parts at the epoch boundary between 2:17 and 6:06 AM EST
+(exit 10, 10.5 to 14.9 GPU-hours each). Every second part then failed within 3 to 6 seconds (exit
+1), twice, and the watcher marked all twelve FAILED; from about 6:34 AM EST nothing trained. Read
+through the strict log filter: ModuleNotFoundError: No module named 'tiicee.clinical.cohort_x'.
+
+Cause, an error of this lead session: a stage that continues in a new job runs from the code export
+of its first submission (e3f98b8 for E8 and E10, 87799de for E9), and its runner imports every
+module the installed graph lists (tiicee/pipeline/stages.py, resolve). graph_training_m4.json,
+installed at 7:19 PM EST, added tiicee.clinical.cohort_x (m5 added tiicee.clinical.probe); the
+trainings' exports do not have it. The first parts had started before; every resume after was bound
+to fail. Each export on the cluster, run against m4's list, reproduces the error; against the five
+original modules, each resolves clinical_train.
+
+Fixed (04513dc, installed 10:26 AM EST as graph_training_m6.json): the installed graph lists only
+the five modules every export in use has; the two new stages are found by name (stages.MODULES); the
+resolver skips a listed module its export lacks, so a later graph cannot stop a resume this way
+again, while a module that exists and fails inside still raises. At 10:27 AM EST, under the
+watcher's lock, the twelve trainings went from FAILED to INTERRUPTED and their retry budgets back
+to 0, since the failures were the graph's, not the stages'. The idle time, about 4 to 8 hours per
+training, is lost; no checkpoint is.
+
+P's probe (the bench): outcome investigate, rate 605/613 = 0.987. Replay exact: 1,800 of 1,800
+prompts and token digests, 240 of 240 V0 rows. The eight disagreements: three exact ties (equal sums;
+max() took the other disease by list order; three matched steps were exact ties broken the stored
+way), three near-ties under 0.002 nats, two at 0.12 nats; the stored hypothesis held 36% to 48% of
+the four in each. Decision on tie handling and on P's use is the study lead's.
+
+E1-C: restarted on HiPerGator as the study lead chose (job 51313205, cai6734-b, 1 CPU, 64 GB,
+started 10:18 AM EST) from an export of a4f34bd's tii-cee/tiicee and tii-cee/vendor (78 files,
+checksum-identical to the archive) over the 320 cell files (checksum-identical to the Mac's), with
+the cluster runtime's Python 3.12.14 and numpy 1.26.4, as the Mac ran. A first submission failed at
+import because the vendored snapshot was missing from the export; macOS metadata files the copy
+created were removed before it ran.
+
