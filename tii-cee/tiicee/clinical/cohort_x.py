@@ -2,13 +2,15 @@
 decision rule).
 
 Stage: clinical_cohort_x
-Manifest: role "folds" (e10-folds' output directory) and, for each fold k, roles "policy_fk"
+Manifest: role "folds" (e10-folds' output directory: the fold files and folds.jsonl, the cohort as
+clinical_folds recorded it when it cut the folds) and, for each fold k, roles "policy_fk"
 (e10-train-fk's output directory) and "rollout_fk" (e10-rollout-fk's). CPU only, standard library.
 
 Integrity only, by fingerprints: every admission of cohort X is scored by exactly one fold policy,
 and that policy's training and monitoring sets do not contain it. folds.check_folds verified the
 plan when the folds were cut; this stage verifies what ran:
-  fold_partition      the fold directories still partition the admissions (folds.check_folds);
+  fold_partition      the fold directories still partition the admissions (folds.check_folds) and
+                      hold, fold by fold, the cohort folds.jsonl recorded;
   fk:policy_data      policy k recorded training and monitoring on fold k's files: its digests of
                       train.csv, val.csv, heldout.csv and the lab mapping are those of fold k's;
   fk:rollout_split    rollout k rolled out fold k's heldout.csv;
@@ -18,7 +20,8 @@ plan when the folds were cut; this stage verifies what ran:
   fk:missing          rollout k left one of fold k's held-out admissions unscored;
   fk:leak             rollout k scored an admission policy k trained on or monitored;
   fk:v0_count         rollout k's V0 results do not number its scored admissions;
-  not_once            across the five rollouts, an admission is not scored exactly once.
+  not_once            across the five rollouts, an admission of the recorded cohort is not scored
+                      exactly once, or one outside it is scored.
 A failed check is the result, outcome "killed" with its codes: leakage kills cohort X. A missing or
 unreadable output, a malformed V0 result among them, is an error, not a result.
 
@@ -34,6 +37,7 @@ from tiicee.clinical import admissions, bound, folds, sha256
 from tiicee.pipeline.stages import register
 
 FILES = (*(f"{part}.csv" for part in folds.PARTS), folds.MAPPING)
+INVENTORY = "folds.jsonl"  # folds.write_folds: one line per admission, with its fingerprint and fold
 
 
 def _json(path):
@@ -59,16 +63,33 @@ def _v0_results(path):
     return count
 
 
+def _inventory(folds_dir):
+    """fingerprint -> held-out fold, as clinical_folds recorded them when it cut the folds: the cohort
+    the check expects, independent of the fold files it checks."""
+    found = {}
+    with open(Path(folds_dir) / INVENTORY) as handle:
+        for line in handle:
+            if line.strip():
+                record = json.loads(line)
+                if record["fingerprint"] in found:
+                    raise ValueError("the fold inventory lists an admission twice")
+                found[record["fingerprint"]] = int(record["fold"])
+    return found
+
+
 def check(folds_dir, policies, rollouts) -> dict:
     """The integrity report. policies and rollouts list fold k's output directories at index k."""
     folds_dir = Path(folds_dir)
     parts = [{part: admissions.read((folds_dir / f"fold-{k}" / f"{part}.csv").read_bytes()).admissions
               for part in folds.PARTS} for k in range(folds.FOLDS)]
+    expected = _inventory(folds_dir)
     union = [a for fold in parts for a in fold["heldout"]]
-    everyone = {a.fingerprint for a in union}
+    held_in = {a.fingerprint: k for k, fold in enumerate(parts) for a in fold["heldout"]}
     reasons, rows, scored_anywhere = [], [], Counter()
     try:
         folds.check_folds(folds_dir, union, (folds_dir / "fold-0" / folds.MAPPING).read_bytes())
+        if held_in != expected:
+            raise ValueError("the held-out files do not hold the recorded cohort")
     except ValueError:
         reasons.append("fold_partition")
 
@@ -97,10 +118,10 @@ def check(folds_dir, policies, rollouts) -> dict:
         rows.append({"fold": k, "heldout": len(held), "scored": len(scored), "v0_results": v0_results,
                      "leaks": leaks, **found})
 
-    scored_once = sum(scored_anywhere[f] == 1 for f in everyone)
-    if scored_once != len(everyone) or set(scored_anywhere) - everyone:
+    scored_once = sum(scored_anywhere[f] == 1 for f in expected)
+    if scored_once != len(expected) or set(scored_anywhere) - set(expected):
         reasons.append("not_once")
-    return {"outcome": "killed" if reasons else "intact", "reasons": reasons, "admissions": len(everyone),
+    return {"outcome": "killed" if reasons else "intact", "reasons": reasons, "admissions": len(expected),
             "scored_once": scored_once, "folds": rows}
 
 

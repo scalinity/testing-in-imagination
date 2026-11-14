@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from test_clinical_support import approved, context, prepared
+from test_clinical_support import approved, context, prepared, split_bytes
 from tiicee.clinical import admissions, cohort_x, folds, sha256
 from tiicee.clinical.train import inspect_data
 from tiicee.pipeline import export_guard
@@ -148,7 +148,8 @@ def refused_without_a_report(tmp_path, bound, error):
 
 
 @pytest.mark.parametrize("missing", ["rollout_f2", "rollout_f2/rollout.json", "rollout_f2/steps.jsonl",
-                                     "rollout_f2/rows.jsonl", "policy_f0/policy.json", "folds/fold-3/heldout.csv"])
+                                     "rollout_f2/rows.jsonl", "policy_f0/policy.json", "folds/fold-3/heldout.csv",
+                                     "folds/folds.jsonl"])
 def test_a_missing_output_is_an_error_not_a_result(tmp_path, ran, missing):
     role, _, name = missing.partition("/")
     path = ran[role] / name if name else ran[role]
@@ -163,3 +164,43 @@ def test_a_malformed_v0_result_is_an_error_not_a_count(tmp_path, ran, damage):
     lines[-1] = lines[-1][:len(lines[-1]) // 2] + "\n" if damage == "truncated" else "[]\n"
     rows.write_text("".join(lines))  # the line count is unchanged
     refused_without_a_report(tmp_path, ran, ValueError)
+
+
+def test_an_admission_dropped_from_every_fold_file_kills_cohort_x(tmp_path):
+    """Consistent omission: every file, digest and log describes the shortened folds truthfully, and
+    only the inventory written when the folds were cut still knows the admission."""
+    folds_dir = tmp_path / "stages" / "e10-folds" / "out"
+    folds.write_folds(prepared(tmp_path), folds_dir)
+    gone = members(folds_dir / "fold-0", "heldout")[0].fingerprint
+    for k in range(folds.FOLDS):
+        for part in folds.PARTS:
+            path = folds_dir / f"fold-{k}" / f"{part}.csv"
+            table = admissions.read(path.read_bytes())
+            path.write_bytes(table.subset([a for a in table.admissions if a.fingerprint != gone]))
+    _, report = run(tmp_path, write_outputs(tmp_path / "stages", folds_dir))
+    assert report["outcome"] == "killed" and set(report["reasons"]) == {"fold_partition", "not_once"}
+    assert (report["admissions"], report["scored_once"]) == (120, 119)
+
+
+def test_an_admission_held_out_by_another_fold_than_recorded_kills_cohort_x(tmp_path, ran):
+    inventory = ran["folds"] / "folds.jsonl"
+    lines = inventory.read_text().splitlines(keepends=True)
+    record = json.loads(lines[0])
+    lines[0] = json.dumps({**record, "fold": (record["fold"] + 1) % folds.FOLDS}) + "\n"
+    inventory.write_text("".join(lines))
+    _, report = run(tmp_path, ran)
+    assert report["outcome"] == "killed" and report["reasons"] == ["fold_partition"]
+
+
+def test_an_admission_added_to_the_fold_files_kills_cohort_x(tmp_path):
+    """The other direction: an admission the inventory never recorded, held out by fold 0 and trained
+    on by the rest, every output describing it truthfully. The cohort stays the recorded one."""
+    folds_dir = tmp_path / "stages" / "e10-folds" / "out"
+    folds.write_folds(prepared(tmp_path), folds_dir)
+    extra = admissions.read(split_bytes(99000, ["appendicitis"])).admissions[0].raw
+    for k, part in [(0, "heldout")] + [(k, "train") for k in range(1, folds.FOLDS)]:
+        path = folds_dir / f"fold-{k}" / f"{part}.csv"
+        path.write_bytes(path.read_bytes() + extra)
+    _, report = run(tmp_path, write_outputs(tmp_path / "stages", folds_dir))
+    assert report["outcome"] == "killed" and set(report["reasons"]) == {"fold_partition", "not_once"}
+    assert (report["admissions"], report["scored_once"]) == (120, 120)
