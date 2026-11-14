@@ -138,7 +138,19 @@ def test_fold_files_that_no_longer_partition_the_admissions_kill_cohort_x(tmp_pa
     assert report["outcome"] == "killed" and "fold_partition" in report["reasons"]
 
 
-def test_a_missing_output_is_an_error_not_a_result(tmp_path, ran):
-    shutil.rmtree(ran["rollout_f2"])
-    with pytest.raises(FileNotFoundError):
-        run(tmp_path, ran)
+def refused_without_a_report(tmp_path, bound, error):
+    """The stage itself raises, and neither the private report nor the approved one is written."""
+    ctx = context(tmp_path, "e10-cohort-x", bound=bound)
+    with pytest.raises(error):
+        cohort_x.run(ctx)
+    assert not (ctx.out_dir / "integrity.json").exists()
+    assert not (ctx.paths.approved / "e10-cohort-x.json").exists()
+
+
+@pytest.mark.parametrize("missing", ["rollout_f2", "rollout_f2/rollout.json", "rollout_f2/steps.jsonl",
+                                     "rollout_f2/rows.jsonl", "policy_f0/policy.json", "folds/fold-3/heldout.csv"])
+def test_a_missing_output_is_an_error_not_a_result(tmp_path, ran, missing):
+    role, _, name = missing.partition("/")
+    path = ran[role] / name if name else ran[role]
+    shutil.rmtree(path) if path.is_dir() else path.unlink()
+    refused_without_a_report(tmp_path, ran, FileNotFoundError)
