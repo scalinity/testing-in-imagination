@@ -171,6 +171,7 @@ def test_a_probe_of_a_cpu_rollout_conforms_and_leaves_the_rollout_untouched(tmp_
     assert report["outcome"] == "conforms" and report["rate"] == 1.0
     assert report["steps"] == report["replayed"] == report["rebuilt_identical"] == report["token_digests_identical"] == steps
     assert report["admissions"] == report["v0_identical"] == 24 and report["admissions_with_unused_steps"] == 0
+    assert report["confidence_other_pair"] == 0  # one uninterrupted part: every pair drawn as the rollout drew it
     assert 0 < report["aligned"] < report["hypothesis_steps"]  # the no_hypothesis script answers "unsure"
     assert report["matched"] == report["canonical_tokens"] == report["aligned"]
     assert {key: report[key] for key in ("stage", "backbone", "seed")} == {"stage": "p-probe", "backbone": "nemotron", "seed": 269}
@@ -263,3 +264,53 @@ def test_inputs_other_than_the_rollouts_recorded_ones_are_an_error(tmp_path, rol
     path.write_text(json.dumps(record))
     with pytest.raises(ValueError, match="not the ones its rollout recorded"):
         run_probe(tmp_path, rolled, monkeypatch=monkeypatch)
+
+
+@pytest.fixture
+def resumed(tmp_path, baseline, adapter, monkeypatch):  # noqa: F811
+    """A CPU rollout interrupted during its tenth admission and finished by a second part, as the
+    rollout's own resume test makes one: the second part's environment starts its random draws afresh."""
+    from replication import gpu
+    from tiicee.pipeline.stages import StageInterrupted
+    from tim import fixture
+    rollout_environment(monkeypatch)
+    state = {"ctx": None, "episodes": 0}
+
+    class Interrupting(fixture.ScriptedPolicy):
+        def generate(self, prompts, sampling_params=None, use_tqdm=False):
+            for prompt in prompts:
+                if "Here is some context on the patient:" in prompt and \
+                        "\nAction: " not in prompt.split("Here is some context on the patient:")[1]:
+                    state["episodes"] += 1
+                    if state["episodes"] == 10:
+                        state["ctx"].stop = True
+            return super().generate(prompts, sampling_params, use_tqdm)
+
+    monkeypatch.setattr(gpu, "evaluate", fake_evaluate(Interrupting()))
+    state["ctx"] = rollout_stage(tmp_path / "rollout", baseline, adapter)
+    with pytest.raises(StageInterrupted):
+        rollout.run(state["ctx"])
+    state["ctx"] = ctx = rollout_stage(tmp_path / "rollout", baseline, adapter)
+    rollout.run(ctx)
+    stored = {step["prompt_ids_sha256"]: probe.stored_hypothesis(step["text"], DISEASES)
+              for entry in lines(ctx.out_dir / "steps.jsonl") for step in entry["steps"] if step["role"] == "hypothesis"}
+    return SimpleNamespace(out=ctx.out_dir, baseline=baseline, adapter=adapter, stored=stored, gpu=gpu)
+
+
+@cpu_stack
+def test_a_resumed_rollout_conforms_though_its_confidence_pairs_were_drawn_afresh(tmp_path, resumed, monkeypatch):
+    _, report, _ = run_probe(tmp_path, resumed, monkeypatch=monkeypatch)
+    assert report["outcome"] == "conforms", report
+    assert report["rebuilt_identical"] + report["confidence_other_pair"] == report["steps"]
+    assert report["confidence_other_pair"] > 0  # the resume did move some draws
+
+
+@cpu_stack
+def test_a_confidence_prompt_no_candidate_pair_builds_is_investigated(tmp_path, rolled, monkeypatch):
+    entries = lines(rolled.out / "steps.jsonl")
+    step = next(s for e in entries for s in e["steps"] if s["role"] == "confidence")
+    step["prompt"] = step["prompt"].replace("Hypothesis: ", "Hypothesis:  ")
+    write(rolled.out / "steps.jsonl", entries)
+    _, report, _ = run_probe(tmp_path, rolled, monkeypatch=monkeypatch)
+    assert report["outcome"] == "investigate" and report["confidence_other_pair"] == 0
+    assert report["rebuilt_identical"] == report["steps"] - 1

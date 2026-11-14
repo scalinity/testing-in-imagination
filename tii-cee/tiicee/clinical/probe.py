@@ -15,6 +15,11 @@ Two checks, with nothing substituted:
            generating, and keeps the prompts the environment builds. Each rebuilt prompt must equal
            the logged one byte for byte, the token ids derived from it must reproduce the logged
            prompt_ids_sha256, and each admission's replayed V0 row must equal the stored row.
+           One exception is counted apart: the environment draws the (hypothesis, prompt) pair for its
+           confidence prompt with a generator a resumed rollout restarts, so a resumed rollout and a
+           continuous replay can draw different pairs. A logged confidence prompt that the upstream
+           builder makes from another of that admission's candidate pairs is reproduced
+           (confidence_other_pair), and its token digest is checked on the logged prompt.
            A replay that asks for more generations than were logged is an error.
   Reading  at each hypothesis step, the log probability of each canonical continuation
            "Hypothesis: d", d one of the four diseases, after the logged prompt's token ids, from
@@ -77,14 +82,14 @@ class Replay:
     """A model that returns the logged outputs of one admission in order and keeps what it was asked."""
 
     def __init__(self, tokenizer):
-        self.tokenizer, self.steps, self.position = tokenizer, [], 0
-        self.prompts = self.digests = self.calls = 0
+        self.tokenizer, self.steps, self.position, self.alternatives = tokenizer, [], 0, set()
+        self.prompts = self.digests = self.calls = self.other_pair = 0
 
     def get_tokenizer(self):
         return self.tokenizer
 
     def load(self, steps):
-        self.steps, self.position = steps, 0
+        self.steps, self.position, self.alternatives = steps, 0, set()
 
     def generate(self, prompts, sampling_params=None, use_tqdm=False):
         outputs = []
@@ -94,8 +99,11 @@ class Replay:
             step = self.steps[self.position]
             self.position += 1
             self.calls += 1
-            self.prompts += prompt == step["prompt"]
-            ids = prompt_ids(self.tokenizer, prompt, step["prompt_ids_sha256"])
+            same = prompt == step["prompt"]
+            other = not same and step["role"] == "confidence" and step["prompt"] in self.alternatives
+            self.prompts += same
+            self.other_pair += other
+            ids = prompt_ids(self.tokenizer, step["prompt"] if other else prompt, step["prompt_ids_sha256"])
             self.digests += ids is not None
             outputs.append(SimpleNamespace(
                 prompt=prompt, prompt_token_ids=ids if ids is not None else list(self.tokenizer.encode(prompt)),
@@ -160,16 +168,41 @@ def score(model, logged, diseases, sampling_params, limit, batch=BATCH):
     return records
 
 
+def recording(sample_pair, replay):
+    """upstream Environment._sample_pair, unchanged in what it returns, that also hands the replay
+    the confidence prompt the upstream builder makes from each candidate pair it draws among."""
+
+    def _sample_pair(self, trajectories, forbidden_value="unknown"):
+        rng, seen = self._rng, []
+
+        class Recording:
+            def choice(_, candidates):
+                seen.extend(candidates)
+                return rng.choice(candidates)
+
+        self._rng = Recording()
+        try:
+            return sample_pair(self, trajectories, forbidden_value)
+        finally:
+            self._rng = rng
+            replay.alternatives = {self._generate_conf_cal_prompts(h, p, 1)[0] for h, p in seen}
+
+    return _sample_pair
+
+
 def evaluator(found, logged, stored):
     """A drop-in for replication.shim._evaluate_with_model: the replay over tim's V0 evaluator, then
     the reading on the engine gpu.evaluate built."""
 
     def evaluate(cfg, dataset, model, sampling_params):
+        from replication import shim
         from tim import runner
         replay = Replay(model.get_tokenizer())
         log = ReplayLog(replay, logged, stored)
-        runner.make_evaluator(runner.VARIANTS["V0"], dataset, None, log,
-                              runner.Limits(**runner.CONFIG["limits"]))(cfg, dataset, replay, sampling_params)
+        base = shim._environment_module().Environment
+        with patch.object(base, "_sample_pair", recording(base._sample_pair, replay)):
+            runner.make_evaluator(runner.VARIANTS["V0"], dataset, None, log,
+                                  runner.Limits(**runner.CONFIG["limits"]))(cfg, dataset, replay, sampling_params)
         diseases = [d.lower() for d in cfg.dataset.disease_list]
         limit = cfg.environment.max_length + cfg.training.max_completion_length  # gpu.evaluate's max_model_len
         found.update(replay=replay, log=log, steps=score(model, logged, diseases, sampling_params, limit))
@@ -184,10 +217,12 @@ def report(found, total_steps) -> dict:
     matched = sum(s["logprobs"] is not None and max(s["logprobs"], key=s["logprobs"].get) == s["stored"]
                   for s in aligned)
     rate = matched / len(aligned) if aligned else None
-    reproduced = (replay.calls == total_steps and replay.prompts == total_steps and replay.digests == total_steps
+    reproduced = (replay.calls == total_steps and replay.prompts + replay.other_pair == total_steps
+                  and replay.digests == total_steps
                   and log.rows == log.admissions and log.unused == 0)
     return {"admissions": log.admissions, "steps": total_steps, "replayed": replay.calls,
-            "rebuilt_identical": replay.prompts, "token_digests_identical": replay.digests,
+            "rebuilt_identical": replay.prompts, "confidence_other_pair": replay.other_pair,
+            "token_digests_identical": replay.digests,
             "v0_identical": log.rows, "admissions_with_unused_steps": log.unused,
             "hypothesis_steps": len(steps), "aligned": len(aligned), "matched": matched, "rate": rate,
             "canonical_tokens": sum(s["canonical"] for s in aligned), "unscoreable_length": sum(s["too_long"] for s in steps),
