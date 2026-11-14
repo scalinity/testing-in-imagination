@@ -20,7 +20,7 @@ plan when the folds were cut; this stage verifies what ran:
   fk:v0_count         rollout k's V0 results do not number its scored admissions;
   not_once            across the five rollouts, an admission is not scored exactly once.
 A failed check is the result, outcome "killed" with its codes: leakage kills cohort X. A missing or
-unreadable output is an error, not a result.
+unreadable output, a malformed V0 result among them, is an error, not a result.
 
 Outputs: integrity.json, private, and the same counts, flags and codes approved for export.
 """
@@ -46,9 +46,17 @@ def _fingerprints(steps):
         return [json.loads(line)["fingerprint"] for line in handle if line.strip()]
 
 
-def _count_lines(path):
+def _v0_results(path):
+    """How many V0 results a rollout wrote. Each must be a JSON object: a malformed or truncated
+    record raises, since what reads cohort X downstream could not read it either."""
+    count = 0
     with open(path) as handle:
-        return sum(1 for line in handle if line.strip())
+        for line in handle:
+            if line.strip():
+                if not isinstance(json.loads(line), dict):
+                    raise ValueError("a V0 result is not a JSON object")
+                count += 1
+    return count
 
 
 def check(folds_dir, policies, rollouts) -> dict:
@@ -78,7 +86,7 @@ def check(folds_dir, policies, rollouts) -> dict:
             "rollout_adapter": rollout["adapter_sha256"] == policy["adapter_sha256"],
         }
         leaks = len(set(scored) & seen)
-        v0_results = _count_lines(Path(rollouts[k]) / "rows.jsonl")
+        v0_results = _v0_results(Path(rollouts[k]) / "rows.jsonl")
         failed = [name for name, ok in found.items() if not ok]
         failed += [name for name, bad in (("duplicate", len(set(scored)) != len(scored)),
                                           ("outside_heldout", bool(set(scored) - held)),

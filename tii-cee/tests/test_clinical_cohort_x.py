@@ -154,3 +154,12 @@ def test_a_missing_output_is_an_error_not_a_result(tmp_path, ran, missing):
     path = ran[role] / name if name else ran[role]
     shutil.rmtree(path) if path.is_dir() else path.unlink()
     refused_without_a_report(tmp_path, ran, FileNotFoundError)
+
+
+@pytest.mark.parametrize("damage", ["truncated", "not_an_object"])
+def test_a_malformed_v0_result_is_an_error_not_a_count(tmp_path, ran, damage):
+    rows = ran["rollout_f1"] / "rows.jsonl"
+    lines = rows.read_text().splitlines(keepends=True)
+    lines[-1] = lines[-1][:len(lines[-1]) // 2] + "\n" if damage == "truncated" else "[]\n"
+    rows.write_text("".join(lines))  # the line count is unchanged
+    refused_without_a_report(tmp_path, ran, ValueError)
