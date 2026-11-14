@@ -25,7 +25,9 @@ Two checks, with nothing substituted:
            "Hypothesis: d", d one of the four diseases, after the logged prompt's token ids, from
            the engine's prompt log probabilities. The most likely d must match the stored greedy
            hypothesis, parsed as the environment parses it, on at least 99% of aligned steps
-           (steps whose stored hypothesis is one of the four).
+           (steps whose stored hypothesis is one of the four). The stored hypothesis matches when
+           it is within TOLERANCE of the most likely (D-PROBE, amendment A1): the greedy choice and
+           the scoring are computed by different kernels, whose floating-point results differ.
 Outcome "conforms" when every prompt and token digest reproduces, every row is identical and the
 rate is at least 0.99; otherwise "investigate". The probe reads the rollout's outputs and writes
 only its own: scores.jsonl (private: per step, the stored hypothesis and the four log
@@ -48,6 +50,7 @@ from tiicee.pipeline.stages import register
 from tiicee.pipeline.util import tree_digest
 
 RATE = 0.99  # specification 10.1
+TOLERANCE = 1e-3  # nats; D-PROBE amendment A1, chosen by the study lead on November 14, 2026
 BATCH = 64  # hypothesis steps per scoring call, four requests each
 HYPOTHESIS = re.compile(r"Hypothesis: (.*)")  # upstream's Environment._generate_hypothesis
 
@@ -211,11 +214,16 @@ def evaluator(found, logged, stored):
     return evaluate
 
 
+def matches(step) -> bool:
+    """A scored aligned step's stored hypothesis is within TOLERANCE of the most likely."""
+    scores = step["logprobs"]
+    return scores is not None and scores[step["stored"]] >= max(scores.values()) - TOLERANCE
+
+
 def report(found, total_steps) -> dict:
     replay, log, steps = found["replay"], found["log"], found["steps"]
     aligned = [s for s in steps if s["stored"] is not None]
-    matched = sum(s["logprobs"] is not None and max(s["logprobs"], key=s["logprobs"].get) == s["stored"]
-                  for s in aligned)
+    matched = sum(matches(s) for s in aligned)
     rate = matched / len(aligned) if aligned else None
     reproduced = (replay.calls == total_steps and replay.prompts + replay.other_pair == total_steps
                   and replay.digests == total_steps
@@ -225,6 +233,7 @@ def report(found, total_steps) -> dict:
             "token_digests_identical": replay.digests,
             "v0_identical": log.rows, "admissions_with_unused_steps": log.unused,
             "hypothesis_steps": len(steps), "aligned": len(aligned), "matched": matched, "rate": rate,
+            "tolerance_nats": TOLERANCE,
             "canonical_tokens": sum(s["canonical"] for s in aligned), "unscoreable_length": sum(s["too_long"] for s in steps),
             "outcome": "conforms" if reproduced and rate is not None and rate >= RATE else "investigate"}
 

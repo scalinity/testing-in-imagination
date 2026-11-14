@@ -314,3 +314,14 @@ def test_a_confidence_prompt_no_candidate_pair_builds_is_investigated(tmp_path, 
     _, report, _ = run_probe(tmp_path, rolled, monkeypatch=monkeypatch)
     assert report["outcome"] == "investigate" and report["confidence_other_pair"] == 0
     assert report["rebuilt_identical"] == report["steps"] - 1
+
+
+@pytest.mark.parametrize("gap, matched", [(0.0, True), (9.5e-7, True), (1e-3, True), (0.0019, False), (0.12, False)])
+def test_the_stored_hypothesis_matches_within_the_tolerance_of_the_best(gap, matched):
+    """D-PROBE amendment A1: within 0.001 nats of the most likely is a match; P's bench had gaps of
+    about 1e-6 to 2e-4, one of 0.0019 and two of 0.12 nats."""
+    best = -0.5
+    step = {"stored": "cholecystitis", "logprobs": {"appendicitis": best, "cholecystitis": best - gap,
+                                                     "diverticulitis": -3.0, "pancreatitis": -4.0}}
+    assert probe.matches(step) is matched
+    assert probe.matches({"stored": "cholecystitis", "logprobs": None}) is False

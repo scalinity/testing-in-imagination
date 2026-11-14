@@ -830,3 +830,22 @@ the cluster runtime's Python 3.12.14 and numpy 1.26.4, as the Mac ran. A first s
 import because the vendored snapshot was missing from the export; macOS metadata files the copy
 created were removed before it ran.
 
+### D-PROBE amendment A1, November 14, 2026: a tolerance on the reading
+
+Asked how P's bench should be handled, with the exact gaps (five of about 1e-6 to 2e-4 nats, one of
+0.0019, two of about 0.12), the study lead chose "Add a 0.001-nat tolerance for all".
+
+The rule, for every policy's probe: at an aligned step, the stored greedy hypothesis matches when its
+log probability is within 0.001 nats of the most likely continuation's (tiicee/clinical/probe.py,
+TOLERANCE, matches). Reason: the greedy choice was made by vLLM's decode kernels and the scoring is
+made by its prefill kernels, whose floating-point results differ at about this scale. The 0.99 rate
+is unchanged. The tolerance was chosen after P's result was seen: it is post hoc for P and
+pre-registered for the other twelve policies, whose probes have not run.
+
+P under A1, recomputed from its scores.jsonl: 610 of 613 aligned steps match, rate 0.9951; with its
+exact replay (1,800 of 1,800 prompts and digests, 240 of 240 V0 rows), P conforms under A1 and may be
+used in E4. The approved report export/approved/p-probe.json keeps the result under the rule as first
+written (investigate, 605/613); this entry records the reading under A1 beside it. The remaining
+three disagreements are the step at 0.0019 nats and the two at about 0.12, the length effect
+specification 10.1 anticipates.
+
