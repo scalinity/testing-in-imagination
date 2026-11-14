@@ -717,3 +717,37 @@ and e10-cohort-x after the five fold trainings and rollouts, CPU) was installed 
 160622e; the real e10-folds output holds folds.jsonl with 2,160 lines. Remaining for the training
 track: the per-policy probe conformance of specification 10.1.
 
+### D-PROBE, November 13, 2026: reader probe conformance per policy (specification 10.1), design
+
+Decided before any code. Applies to every trained policy E4 may use: P (its prompt-logged rollout
+p-rollout-val), E8's four seeds, E9's three, E10's five folds; thirteen in all.
+
+What it checks, on the policy's own unguarded rollout (steps.jsonl), with no substitution:
+1. Rebuilt prompts. The probe replays each admission through the same evaluator the rollout ran
+   (tim's V0 evaluator over replication.shim's environment) with a stand-in model that returns, in
+   order, the logged outputs of every role and records the prompts the environment builds. Every
+   rebuilt prompt, of every role, must be byte-identical to the logged one, and the token ids the
+   probe derives from it must reproduce the logged prompt_ids_sha256. Reason: E4 substitutes
+   imagined results through this same replay, so the builder it uses must first reproduce what ran.
+2. The R1 reading. At each hypothesis step, the teacher-forced log probability of each canonical
+   continuation "Hypothesis: d" (d one of the four diseases, tokenized as the environment's label
+   format writes it) after the logged prompt's token ids; the probe's most likely hypothesis must
+   match the stored greedy hypothesis (parsed as the environment parses it) on at least 99% of
+   aligned steps. Aligned: hypothesis steps whose stored hypothesis is one of the four. Also
+   reported: the share of steps where the greedy output's own tokens begin with the canonical
+   continuation's tokens, since a tokenization difference would explain a disagreement.
+Scoring uses the engine the rollout used: gpu.evaluate builds the merged-adapter vLLM engine and
+the probe replaces gpu._evaluate_with_model, as rollout.py does, so model, merge, tokenizer and
+numerics are the rollout's. Log probabilities come from vLLM's prompt log probabilities over the
+concatenated token ids, with one generated token discarded. The five-parameter output calibration
+of the initial belief is not part of conformance; E4 fits it by cross-fitting.
+
+Outcome per policy: "conforms" when every prompt is identical and the rate is at least 0.99;
+otherwise "investigate", with counts, which is studied before any use; a policy that cannot conform
+is excluded from E4 with the reason recorded. The probe reads its rollout's outputs and writes only
+its own (probe.json private; counts, rates and the outcome approved); it never writes to a
+trajectory. Synthetic fixture first: the replay and the scoring arithmetic are tested on CPU with
+tim's scripted policy and an invented tokenizer; then the bench, P's probe, runs before the others.
+Stage clinical_probe, one GPU job per policy after its rollout, charged to the benches allowance
+("Benches and conformance", specification 14.3: 10 GPU-hours); about 0.25 GPU-hours each.
+
