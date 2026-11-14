@@ -816,6 +816,13 @@ max() took the other disease by list order; three matched steps were exact ties 
 way), three near-ties under 0.002 nats, two at 0.12 nats; the stored hypothesis held 36% to 48% of
 the four in each. Decision on tie handling and on P's use is the study lead's.
 
+Correction, 10:45 AM EST: there are no exact ties. The three "0.0" gaps above were values rounded to
+four decimals; compared exactly, no aligned step has a maximum shared by two diseases. The eight
+gaps (best minus stored, nats) are about 9.5e-7, 1.0e-5, 2.6e-5, 6.8e-5, 1.9e-4, 0.0019, 0.118 and
+0.125. The study lead had chosen to count exact ties as matches on the figure 608/613 this
+lead session gave from the rounded values; under exact equality the rate stays 605/613, so that
+choice was not applied, and the question went back to the study lead with the exact gaps.
+
 E1-C: restarted on HiPerGator as the study lead chose (job 51313205, cai6734-b, 1 CPU, 64 GB,
 started 10:18 AM EST) from an export of a4f34bd's tii-cee/tiicee and tii-cee/vendor (78 files,
 checksum-identical to the archive) over the 320 cell files (checksum-identical to the Mac's), with
