@@ -4,7 +4,8 @@ RESEARCH_LEDGER.md, D-PROBE).
 Stage: clinical_probe --backbone nemotron|granite
 Manifest: the roles the policy's rollout bound, "split", "lab_test_mapping" and "adapter" (and
 "backbone_overlay" for Granite), plus "steps" and "v0_rows", the rollout's steps.jsonl and
-rows.jsonl; seed "policy". Job environment: the rollout's (backbone.ROLLOUT_ENVIRONMENT), and
+rows.jsonl; seed "policy". The rollout.json beside steps.jsonl must record the same split, adapter,
+seed and backbone, or the probe refuses to run. Job environment: the rollout's (backbone.ROLLOUT_ENVIRONMENT), and
 gpu.evaluate is called with the rollout's split name and seed, so the engine, the merged adapter,
 the tokenizer and the environment's configuration are the ones the rollout ran with.
 
@@ -35,10 +36,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from tiicee.clinical import admissions, bound, use_prior_studies
+from tiicee.clinical import admissions, bound, sha256, use_prior_studies
 from tiicee.clinical.backbone import BACKBONES, ROLLOUT_ENVIRONMENT, chosen, compose, require_environment, runtime
 from tiicee.clinical.rollout import SPLIT
 from tiicee.pipeline.stages import register
+from tiicee.pipeline.util import tree_digest
 
 RATE = 0.99  # specification 10.1
 BATCH = 64  # hypothesis steps per scoring call, four requests each
@@ -212,6 +214,11 @@ def probe(ctx, backbone, seed, split, mapping, adapter, steps_path, rows_path) -
     stored = {row["patient_id"]: row for row in rows}
     if set(stored) != set(logged):
         raise ValueError("the V0 results do not cover exactly the split's admissions")
+    # The rollout's own record (rollout.json, beside its prompt log) must name the inputs bound here.
+    record = json.loads((Path(steps_path).parent / "rollout.json").read_text())
+    if (record["split_sha256"], record["adapter_sha256"], record["seed"], record["backbone"]) != \
+            (sha256(data), tree_digest(adapter)[0], seed, backbone.model):
+        raise ValueError("the probe's inputs are not the ones its rollout recorded")
 
     use_prior_studies()
     from replication import gpu

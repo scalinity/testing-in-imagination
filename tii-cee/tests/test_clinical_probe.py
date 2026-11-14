@@ -252,3 +252,14 @@ def test_a_log_or_results_listing_an_admission_twice_is_an_error(tmp_path, rolle
     write(rolled.out / "rows.jsonl", [dict(rows[0], reward=rows[0]["reward"] + 1.0)] + rows)
     with pytest.raises(ValueError, match="V0 results list an admission twice"):
         run_probe(tmp_path / "again", rolled, monkeypatch=monkeypatch)
+
+
+@cpu_stack
+@pytest.mark.parametrize("field", ["split_sha256", "adapter_sha256", "seed", "backbone"])
+def test_inputs_other_than_the_rollouts_recorded_ones_are_an_error(tmp_path, rolled, monkeypatch, field):
+    path = rolled.out / "rollout.json"
+    record = json.loads(path.read_text())
+    record[field] = 270 if field == "seed" else "something else"
+    path.write_text(json.dumps(record))
+    with pytest.raises(ValueError, match="not the ones its rollout recorded"):
+        run_probe(tmp_path, rolled, monkeypatch=monkeypatch)
