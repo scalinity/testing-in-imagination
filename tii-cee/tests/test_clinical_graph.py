@@ -1,4 +1,4 @@
-"""The training track's graphs (graph_training_m1.json, m2, m3, then m4), checked against
+"""The training track's graphs (graph_training_m1.json, then m2 to m5), checked against
 the pipeline's own loader and against what each clinical stage reads."""
 import importlib
 import json
@@ -15,15 +15,17 @@ FRAGMENT = ROOT / "tii-cee" / "tiicee" / "clinical" / "graph_training_m1.json"
 SECOND = FRAGMENT.with_name("graph_training_m2.json")
 THIRD = FRAGMENT.with_name("graph_training_m3.json")
 FOURTH = FRAGMENT.with_name("graph_training_m4.json")
+FIFTH = FRAGMENT.with_name("graph_training_m5.json")
 ROLES = {  # the roles and seeds each stage takes from its manifest
     "clinical_data": (set(), set()), "clinical_folds": (set(), set()),
     "clinical_bench": ({"data"}, {"training"}), "clinical_train": ({"data"}, {"training"}),
     "clinical_rollout": ({"split", "lab_test_mapping", "adapter", "train_csv"}, {"policy"}),
     "clinical_acceptance": ({"stored", "regenerated"}, set()),
+    "clinical_probe": ({"split", "lab_test_mapping", "adapter", "steps", "v0_rows"}, {"policy"}),
     "clinical_cohort_x": ({"folds"} | {f"{kind}_f{k}" for kind in ("policy", "rollout") for k in range(5)}, set()),
 }
 ENVIRONMENT = {"clinical_bench": backbone.TRAINING_ENVIRONMENT, "clinical_train": backbone.TRAINING_ENVIRONMENT,
-               "clinical_rollout": backbone.ROLLOUT_ENVIRONMENT}
+               "clinical_rollout": backbone.ROLLOUT_ENVIRONMENT, "clinical_probe": backbone.ROLLOUT_ENVIRONMENT}
 
 
 def load(path):
@@ -35,12 +37,12 @@ def graph():
     return load(FRAGMENT)
 
 
-@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD, FOURTH], ids=["m1", "m2", "m3", "m4"])
+@pytest.fixture(scope="module", params=[FRAGMENT, SECOND, THIRD, FOURTH, FIFTH], ids=["m1", "m2", "m3", "m4", "m5"])
 def either(request):
     return load(request.param)
 
 
-@pytest.fixture(scope="module", params=[SECOND, THIRD, FOURTH], ids=["m2", "m3", "m4"])
+@pytest.fixture(scope="module", params=[SECOND, THIRD, FOURTH, FIFTH], ids=["m2", "m3", "m4", "m5"])
 def trained(request):
     """Each graph that holds trainings."""
     return load(request.param)
@@ -230,3 +232,33 @@ def test_the_cohort_x_check_reads_every_fold_policy_and_rollout_after_they_end()
     assert set(stage["depends_on"]) == {"e10-folds"} | {f"e10-{kind}-f{k}" for kind in ("train", "rollout") for k in FOLDS}
     assert stage["resources"]["gpus"] == 0 and stage["estimate_gpu_hours"] == 0
     assert (stage["experiment"], stage["allowance_key"]) == ("E10", "E10") and stage["gate"] is None
+
+
+# ---- graph_training_m5.json: reader probe conformance per policy ----
+
+ROLLOUTS = ["p-rollout-val"] + [f"e8-rollout-s{s}" for s in E8_SEEDS] + [f"e9-rollout-s{s}" for s in E9_SEEDS] + \
+    [f"e10-rollout-f{k}" for k in FOLDS]
+
+
+def probe_of(rollout):
+    return "p-probe" if rollout == "p-rollout-val" else rollout.replace("-rollout-", "-probe-")
+
+
+def test_the_fifth_graph_keeps_the_fourth_unchanged_and_adds_a_probe_per_policy():
+    fourth, fifth = json.loads(FOURTH.read_text()), json.loads(FIFTH.read_text())
+    assert fifth["stages"][:len(fourth["stages"])] == fourth["stages"] and fifth["gates"] == fourth["gates"]
+    assert [stage["id"] for stage in fifth["stages"][len(fourth["stages"]):]] == [probe_of(r) for r in ROLLOUTS]
+    assert fifth["stage_modules"] == fourth["stage_modules"] + ["tiicee.clinical.probe"]
+
+
+def test_each_probe_reads_its_own_rollout_on_that_rollouts_inputs_after_the_bench():
+    graph = load(FIFTH)
+    for rid in ROLLOUTS:
+        rollout, stage = graph.by_id[rid], graph.by_id[probe_of(rid)]
+        assert stage["command"] == ["clinical_probe", "--backbone", rollout["command"][-1]]
+        same = {role: path for role, path in rollout["bind"].items() if role != "train_csv"}
+        assert stage["bind"] == {**same, "steps": f"$TII/private/stages/{rid}/out/steps.jsonl",
+                                 "v0_rows": f"$TII/private/stages/{rid}/out/rows.jsonl"}
+        assert stage["seeds"] == rollout["seeds"] and stage["env"] == rollout["env"]
+        assert rid in stage["depends_on"] and ("p-probe" in stage["depends_on"]) == (rid != "p-rollout-val")
+        assert stage["allowance_key"] == "benches" and stage["gate"] is None
