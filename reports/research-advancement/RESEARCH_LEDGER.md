@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 14, 2026, about 4:25 PM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 14, 2026, about 6:15 PM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -179,7 +179,7 @@ sacct.
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,416 s | 11.504 |
 | e10-train-f3 | 2 | 51268186 | cai6734 | Nov 14, 4:18 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e10-train-f3 | 3 | 51278844 | cai6734 | Nov 14, 5:12 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e10-train-f3 | 4 | 51335552 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f3 | 4 | 51335552 | cai6734 | Nov 14, 5:59 PM | RUNNING |  |  |  |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,851 s | 11.625 |
 | e10-train-f4 | 2 | 51268187 | cai6734 | Nov 14, 4:19 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f4 | 3 | 51278846 | cai6734 | Nov 14, 5:15 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |

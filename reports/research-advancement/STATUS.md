@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 14, 2026, about 4:25 PM EST. Times are US Eastern.
+Updated November 14, 2026, about 6:15 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -115,7 +115,7 @@ Updated November 14, 2026, about 4:25 PM EST. Times are US Eastern.
 | e10-train-f0, part 2 | 51335549 | cai5724 | RUNNING (moved from cai6734) | 4:23 PM EST |
 | e10-train-f1, part 2 | 51335550 | cai5724 | RUNNING (moved from cai6734) | 4:23 PM EST |
 | e10-train-f2, part 2 | 51335551 | cai5724 | RUNNING (moved from cai6734) | 4:23 PM EST |
-| e10-train-f3, part 2 | 51335552 | cai6734 | PENDING (QOSGrpGRES) | 1:45 PM EST |
+| e10-train-f3, part 2 | 51335552 | cai6734 | RUNNING | 5:59 PM EST |
 | e10-train-f4, part 2 | 51335553 | cai5724 | RUNNING | 1:47 PM EST |
 | e9-train-s269, part 2 | 51335554 | cai5724 | RUNNING | 1:47 PM EST |
 | e9-train-s270, part 2 | 51335561 | cai5724 | RUNNING | 1:51 PM EST |
@@ -123,10 +123,10 @@ Updated November 14, 2026, about 4:25 PM EST. Times are US Eastern.
 | E1-C interval (outside the graph) | 51313205 | cai6734-b | RUNNING | 10:18 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
-Second parts resume from their epoch checkpoints; the eight that started by 4:18 PM EST step (at 4:22 PM
-EST, 1,985 of 3,110 for fold 4, 1,921 to 2,526 of 3,840 for the seeds). Folds 0 to 2 started at 4:23 PM
-EST on cai5724, where 3 GPUs were free (RESEARCH_LEDGER.md, "three E10 folds moved"); they begin with
-the silent initial validation pass. Trainings
+Second parts resume from their epoch checkpoints, and all twelve run and step. At 6:12 PM EST the seeds
+stood at 2,248 to 3,009 of 3,840 and the folds at 1,579 to 2,313 of 3,110. Folds 0 to 2 started at 4:23 PM
+EST on cai5724, where 3 GPUs were free (RESEARCH_LEDGER.md, "three E10 folds moved"); fold 3 started on
+cai6734 at 5:59 PM EST. Trainings
 that wait are held by the class QOS's shared limits of 32 CPUs, 250 GB and 8 GPUs per account, with
 classmates' jobs queued ahead. At 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
 (ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
