@@ -236,3 +236,19 @@ def test_a_log_missing_a_generation_or_an_admission_is_an_error(tmp_path, rolled
     write(rolled.out / "steps.jsonl", entries[:-1])
     with pytest.raises(ValueError, match="prompt log does not cover"):
         run_probe(tmp_path / "again", rolled, monkeypatch=monkeypatch)
+
+
+@cpu_stack
+def test_a_log_or_results_listing_an_admission_twice_is_an_error(tmp_path, rolled, monkeypatch):
+    """A changed copy placed before the real record must not be hidden by it, nor the other way round."""
+    entries = lines(rolled.out / "steps.jsonl")
+    changed = json.loads(json.dumps(entries[0]))
+    changed["steps"][0]["prompt"] += "x"
+    write(rolled.out / "steps.jsonl", [changed] + entries)
+    with pytest.raises(ValueError, match="prompt log lists an admission twice"):
+        run_probe(tmp_path, rolled, monkeypatch=monkeypatch)
+    write(rolled.out / "steps.jsonl", entries)
+    rows = lines(rolled.out / "rows.jsonl")
+    write(rolled.out / "rows.jsonl", [dict(rows[0], reward=rows[0]["reward"] + 1.0)] + rows)
+    with pytest.raises(ValueError, match="V0 results list an admission twice"):
+        run_probe(tmp_path / "again", rolled, monkeypatch=monkeypatch)

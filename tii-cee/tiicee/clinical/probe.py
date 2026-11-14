@@ -198,11 +198,18 @@ def probe(ctx, backbone, seed, split, mapping, adapter, steps_path, rows_path) -
         raise ValueError("the test split is never probed here")
     data = Path(split).read_bytes()
     members = admissions.read(data).admissions
-    by_fingerprint = {entry["fingerprint"]: entry["steps"] for entry in _lines(steps_path)}
+    admissions.require_unique(members)
+    entries, rows = _lines(steps_path), _lines(rows_path)
+    # Duplicates are refused before any lookup is built, so no record can hide behind another.
+    if len({entry["fingerprint"] for entry in entries}) != len(entries):
+        raise ValueError("the prompt log lists an admission twice")
+    if len({row["patient_id"] for row in rows}) != len(rows):
+        raise ValueError("the V0 results list an admission twice")
+    by_fingerprint = {entry["fingerprint"]: entry["steps"] for entry in entries}
     if set(by_fingerprint) != {a.fingerprint for a in members}:
         raise ValueError("the prompt log does not cover exactly the split's admissions")
     logged = {a.patient_id: by_fingerprint[a.fingerprint] for a in members}
-    stored = {row["patient_id"]: row for row in _lines(rows_path)}
+    stored = {row["patient_id"]: row for row in rows}
     if set(stored) != set(logged):
         raise ValueError("the V0 results do not cover exactly the split's admissions")
 
