@@ -151,7 +151,7 @@ retry.
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | RUNNING | | | |
 | e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | RUNNING | | | |
 | e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | RUNNING | | | |
-| e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (stalled before its first step at 2 CPUs) | 0 | 3,181 s | 0.884 |
+| e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (in error, during its initial validation pass) | 0 | 3,181 s | 0.884 |
 | e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | RUNNING | | | |
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
@@ -670,4 +670,21 @@ jobs was then waiting on that pool's limit. At 6:35 PM EST, under the watcher's 
 job was moved to cai5724 (scontrol update Account and QOS) and its saved state's account and QOS
 changed to match; it started at once. Moving a job between the two authorized GPU accounts changes
 none of its resources.
+
+Correction, 7:12 PM EST: fold 2 had not stalled, and the cancel was an error. The replication's
+train() (replication/gpu.py) runs a full validation pass with the untrained policy before
+trainer.train() whenever neither initial-validation.json nor a checkpoint exists; the pass writes no
+progress mark and no log line, runs no backward pass, and keeps the GPU busy generating. In the
+trainings that had passed it, it took 37 to 83 minutes (initial-validation.json times: E10 folds 0,
+1 and 3 55 to 61 minutes, E8 seed 273 83, E9 seed 269 37). The comparison above was wrong: the first
+progress line in fold 0's log carries no time, and fold 0 had spent 58 minutes in the same pass. A
+py-spy dump of attempt 2 (py-spy 0.4.3 installed at /blue/cai6734/daniel.escalante/tools/pyspy, run
+without --locals, so code locations only) showed its main thread in that pass: gpu.py:367,
+trainer.evaluate, shim._evaluate_with_model, Environment.run, vLLM generate. Attempt 1 was cancelled
+at 53 minutes, most likely minutes before its pass ended; the error cost about 0.88 GPU-hours of
+E10's allowance and about 70 minutes of fold 2's schedule. Undone: fold 2's retry budget, since the
+cancel was not a failure of the stage (state retries.other from 1 to 0, under the watcher's lock at
+7:10 PM EST); and the 2-CPU request as the study lead chose it (3a14968, a revert of aa0f9bb,
+installed 7:11 PM EST). Attempt 2 runs with 4 CPUs; its pass should end at about 7:35 PM EST. A
+training is judged stalled only after its stack has been read with py-spy.
 
