@@ -123,9 +123,11 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 13, 2026, about 5:30 PM EST. Times are EST, from the runlog's started events. Exit 10
-is a planned continuation: the scheduler reports it as FAILED, and the watcher does not count it as a
-retry.
+Mirrored November 14, 2026, about 3:30 PM EST. Times are EST, from the runlog's started events; a time
+without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
+the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
+it was submitted to when a pending job was moved. The E9 s271 fourth attempt's start is from sacct; the
+watcher records it on its next cycle.
 
 | Stage | Attempt | Job ID | Account | Started | State | Exit | Elapsed | GPU-hours |
 |---|---|---|---|---|---|---|---|---|
@@ -145,19 +147,57 @@ retry.
 | e9-bench-granite | 2 | 51211050 | cai5724 | 3:16 PM | FAILED (planned continuation) | 10 | 1,171 s | 0.325 |
 | e9-bench-granite | 3 | 51213951 | cai5724 | 3:47 PM | FAILED (planned continuation) | 10 | 1,963 s | 0.545 |
 | e9-bench-granite | 4 | 51219945 | cai5724 | 4:32 PM | COMPLETED | 0 | 155 s | 0.043 |
-| e8-train-s270 | 1 | 51208027 | cai6734 | 2:47 PM | RUNNING | | | |
-| e8-train-s271 | 1 | 51208029 | cai6734 | 3:04 PM | RUNNING | | | |
-| e8-train-s272 | 1 | 51208030 | cai6734 | 3:13 PM | RUNNING | | | |
-| e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | RUNNING | | | |
-| e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | RUNNING | | | |
-| e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | RUNNING | | | |
+| e8-train-s270 | 1 | 51208027 | cai6734 | 2:47 PM | FAILED (planned continuation) | 10 | 51,734 s | 14.371 |
+| e8-train-s270 | 2 | 51282229 | cai6734 | Nov 14, 5:24 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e8-train-s270 | 3 | 51283854 | cai6734 | Nov 14, 5:36 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e8-train-s270 | 4 | 51335545 | cai6734 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e8-train-s271 | 1 | 51208029 | cai6734 | 3:04 PM | FAILED (planned continuation) | 10 | 49,805 s | 13.835 |
+| e8-train-s271 | 2 | 51281321 | cai5724 | Nov 14, 5:04 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e8-train-s271 | 3 | 51282231 | cai6734 | Nov 14, 5:25 AM | FAILED (import error; Operations, November 14) | 1 | 3 s | 0.001 |
+| e8-train-s271 | 4 | 51335546 | cai6734 | Nov 14, 2:05 PM | RUNNING |  |  |  |
+| e8-train-s272 | 1 | 51208030 | cai6734 | 3:13 PM | FAILED (planned continuation) | 10 | 53,566 s | 14.879 |
+| e8-train-s272 | 2 | 51287617 | cai6734 | Nov 14, 6:19 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e8-train-s272 | 3 | 51288722 | cai6734 | Nov 14, 6:34 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e8-train-s272 | 4 | 51335547 | cai6734 | Nov 14, 2:47 PM | RUNNING |  |  |  |
+| e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | FAILED (planned continuation) | 10 | 51,506 s | 14.307 |
+| e8-train-s273 | 2 | 51285177 | cai6734 | Nov 14, 5:52 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e8-train-s273 | 3 | 51286204 | cai6734 | Nov 14, 6:06 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e8-train-s273 | 4 | 51335548 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f0 | 1 | 51208033 | cai6734 | 4:39 PM | FAILED (planned continuation) | 10 | 41,849 s | 11.625 |
+| e10-train-f0 | 2 | 51278842 | cai6734 | Nov 14, 5:10 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f0 | 3 | 51282233 | cai6734 | Nov 14, 5:27 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f0 | 4 | 51335549 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | FAILED (planned continuation) | 10 | 41,565 s | 11.546 |
+| e10-train-f1 | 2 | 51278003 | cai5724 | Nov 14, 4:36 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f1 | 3 | 51280189 | cai5724 | Nov 14, 4:49 AM | FAILED (import error; Operations, November 14) | 1 | 3 s | 0.001 |
+| e10-train-f1 | 4 | 51335550 | cai6734 |  | PENDING |  |  |  |
 | e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (in error, during its initial validation pass) | 0 | 3,181 s | 0.884 |
-| e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | RUNNING | | | |
-| e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | RUNNING | | | |
-| e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | RUNNING | | | |
-| e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | RUNNING | | | |
-| e9-train-s270 | 1 | 51225464 | cai5724 | 5:21 PM | RUNNING | | | |
-| e9-train-s271 | 1 | 51225466 | cai5724 | 5:21 PM | RUNNING | | | |
+| e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | FAILED (planned continuation) | 10 | 37,890 s | 10.525 |
+| e10-train-f2 | 3 | 51282234 | cai6734 | Nov 14, 5:28 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f2 | 4 | 51283855 | cai6734 | Nov 14, 5:37 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f2 | 5 | 51335551 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,416 s | 11.504 |
+| e10-train-f3 | 2 | 51268186 | cai6734 | Nov 14, 4:18 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e10-train-f3 | 3 | 51278844 | cai6734 | Nov 14, 5:12 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f3 | 4 | 51335552 | cai6734 |  | PENDING |  |  |  |
+| e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,851 s | 11.625 |
+| e10-train-f4 | 2 | 51268187 | cai6734 | Nov 14, 4:19 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f4 | 3 | 51278846 | cai6734 | Nov 14, 5:15 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e10-train-f4 | 4 | 51335553 | cai5724 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 41,467 s | 11.519 |
+| e9-train-s269 | 2 | 51281322 | cai5724 | Nov 14, 5:04 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e9-train-s269 | 3 | 51282235 | cai6734 | Nov 14, 5:30 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e9-train-s269 | 4 | 51335554 | cai5724 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e9-train-s270 | 1 | 51225464 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 44,243 s | 12.290 |
+| e9-train-s270 | 2 | 51285178 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
+| e9-train-s270 | 3 | 51286205 | cai6734 | Nov 14, 6:07 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e9-train-s270 | 4 | 51335561 | cai5724 | Nov 14, 1:51 PM | RUNNING |  |  |  |
+| e9-train-s271 | 1 | 51225466 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 44,414 s | 12.337 |
+| e9-train-s271 | 2 | 51285179 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
+| e9-train-s271 | 3 | 51286206 | cai6734 | Nov 14, 6:09 AM | FAILED (import error; Operations, November 14) | 1 | 6 s | 0.002 |
+| e9-train-s271 | 4 | 51335563 | cai5724 | Nov 14, 3:24 PM | RUNNING |  |  |  |
+| p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
+| E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
 
 ## 6. Recorded design decisions
 

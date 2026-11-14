@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 14, 2026, about 2:15 PM EST. Times are US Eastern.
+Updated November 14, 2026, about 3:30 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -110,7 +110,7 @@ Updated November 14, 2026, about 2:15 PM EST. Times are US Eastern.
 |---|---|---|---|---|
 | e8-train-s270, part 2 | 51335545 | cai6734 | RUNNING | 1:47 PM EST |
 | e8-train-s271, part 2 | 51335546 | cai6734 | RUNNING | 2:05 PM EST |
-| e8-train-s272, part 2 | 51335547 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e8-train-s272, part 2 | 51335547 | cai6734 | RUNNING | 2:47 PM EST |
 | e8-train-s273, part 2 | 51335548 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
 | e10-train-f0, part 2 | 51335549 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
 | e10-train-f1, part 2 | 51335550 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
@@ -119,11 +119,12 @@ Updated November 14, 2026, about 2:15 PM EST. Times are US Eastern.
 | e10-train-f4, part 2 | 51335553 | cai5724 | RUNNING | 1:47 PM EST |
 | e9-train-s269, part 2 | 51335554 | cai5724 | RUNNING | 1:47 PM EST |
 | e9-train-s270, part 2 | 51335561 | cai5724 | RUNNING | 1:51 PM EST |
-| e9-train-s271, part 2 | 51335563 | cai5724 | PENDING (QOSGrpGRES) | 1:45 PM EST |
+| e9-train-s271, part 2 | 51335563 | cai5724 | RUNNING | 3:24 PM EST |
 | E1-C interval (outside the graph) | 51313205 | cai6734-b | RUNNING | 10:18 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
-Second parts resumed from their epoch checkpoints (steps 1,596 to 1,991 at 2:07 PM EST). Trainings
+Second parts resume from their epoch checkpoints; all seven running ones step (at 3:27 PM EST, steps
+1,837 of 3,110 for fold 4, 1,921 to 2,308 of 3,840 for the seeds). Trainings
 that wait are held by the class QOS's shared limits of 32 CPUs, 250 GB and 8 GPUs per account, with
 classmates' jobs queued ahead. At 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
 (ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
@@ -136,9 +137,17 @@ evening", and its correction).
 
 ## 6. GPU-hours by experiment
 
-Benches: 3.707 spent of an estimate of 10 and an allowance of 30 (p-rollout-val 0.372; the
-Nemotron bench's five attempts, 1.624, 0.854, 0.410, 0.396 and 0.051), complete. E9: 2.306 on the
-Granite bench's four attempts (1.393, 0.325, 0.545, 0.043), complete; E9's trainings are estimated
-at 28.2 GPU-hours each. E8, E10: none charged yet (a training is charged as each part ends). As of
-5:10 PM EST from the runlog.
+From the runlog's ended jobs at 3:30 PM EST, November 14; a training is charged as each part ends, so
+the running second parts are not yet counted.
+
+| Experiment | Spent | Of which | Estimate | Allowance |
+|---|---|---|---|---|
+| Benches and probe conformance | 3.789 | p-rollout-val 0.372; Nemotron bench 3.335 over five attempts; P probe 0.081 | 10 | 30 |
+| E8 | 57.402 | four first parts 57.392; eight import failures 0.010 | 105 | 210 |
+| E9 | 38.459 | Granite bench 2.306; three first parts 36.146; six import failures 0.008 | 120 | 300 |
+| E10 | 57.720 | five first parts 56.825; fold 2's cancelled attempt 0.884; ten import failures 0.011 | 133 | 270 |
+| Total | 157.370 | | | |
+
+Second parts run about as long as first parts, so E8 will close near 115 GPU-hours before its four
+rollouts: above its estimate, within its allowance.
 Estimates and allowances: AUTHORIZATION.md section 4.
