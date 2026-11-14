@@ -688,3 +688,31 @@ cancel was not a failure of the stage (state retries.other from 1 to 0, under th
 installed 7:11 PM EST). Attempt 2 runs with 4 CPUs; its pass should end at about 7:35 PM EST. A
 training is judged stalled only after its stack has been read with py-spy.
 
+### E10's cohort-X integrity check, November 13, 2026
+
+Built: tii-cee/tiicee/clinical/cohort_x.py, stage clinical_cohort_x (5364f30), the decision rule of
+EXPERIMENT_CARDS/E10.md over what the fold stages wrote. folds.check_folds verified the plan when
+the folds were cut; this stage verifies, by fingerprint, that the fold files still partition the
+cohort and hold it fold by fold as folds.jsonl recorded it; that each fold policy recorded training
+and monitoring on its own fold's files; that each rollout rolled out its fold's held-out file with
+its policy's adapter; and that across the five prompt logs every admission of the recorded cohort
+was scored exactly once and never by a policy that trained on it or monitored it. A failed check
+is the result (outcome "killed" with fixed codes); a missing or unreadable output, a malformed V0
+result among them, is an error. Counts, flags and codes are approved for export.
+
+Review. The Gemini review could not run (that model's quota was exhausted). GPT-6.1 Sol (Codex,
+xhigh, read-only, NativePeers task 675da987) reviewed 5364f30 against 31c4462: no critical
+finding, three warnings, all accepted and fixed, each with a test that fails without the fix:
+
+| Finding | Disposition | Evidence |
+|---|---|---|
+| F001: a truncated or non-JSON V0 record counted as a result | fixed and verified | 64d9b71; each V0 line is parsed and must be an object; two tests |
+| F002: the expected cohort was rebuilt from the files being checked | fixed and verified | 160622e; folds.jsonl anchors the cohort; tests for an admission dropped from every file, added to them, and held out by another fold than recorded |
+| F003: the missing-output test passed for a stage that did nothing | fixed and verified | 7ec0e1a; the stage call stands alone; six missing files; a no-op stage fails all six |
+
+Mutation checks of the module (a weakened leak, partition, digest, count or cohort comparison) each
+fail a test. Suite: 956 passed, 23 skipped. graph_training_m4.json (graph_training_m3.json's stages
+and e10-cohort-x after the five fold trainings and rollouts, CPU) was installed at 7:19 PM EST from
+160622e; the real e10-folds output holds folds.jsonl with 2,160 lines. Remaining for the training
+track: the per-policy probe conformance of specification 10.1.
+
