@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 13, 2026, about 9:15 PM EST. Times are US Eastern.
+Updated November 14, 2026, about 2:15 PM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -15,19 +15,20 @@ Updated November 13, 2026, about 9:15 PM EST. Times are US Eastern.
   admission at every step as the uninterrupted run. Launch check 7.4a is
   accepted: 240 of 240 final answers and digests match (LAUNCH_CHECKS.md). REVIEW-001 (for E3) and
   REVIEW-008 (for E5) are not started.
-- M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval, which the Mac stopped
-  at about 9:08 PM EST, about 15 hours in, for low memory; its restart waits on the study lead. G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
+- M2: E0 COMPLETED, PASS. E1 COMPLETED at a4f34bd except the E1-C interval: the Mac stopped it at
+  about 9:08 PM EST on November 13 for low memory, and it runs again on HiPerGator since 10:18 AM EST
+  (job 51313205, cai6734-b, from an exact export of a4f34bd; about 20 hours or more). G2b MET (projection repairs drift); G2c NOT MET (CEE-Scale stays in the twin;
   charts get projection only, stateful track). G2a waits for E1-C. D-REGIME's coordinate (tau_B at
   the first decision point) is VALIDATED in the twin under W0 and W2 (RESEARCH_LEDGER.md, "D-REGIME
   validation"); for the twin's readers the ordering is an identity. The two open questions are
   decided ("D-REGIME decisions"): E2's scale call is read against R0 with a band of log(1.01), and
   E2, E4 and E7 are amended. The extension with result-dependent readers is SUPPORTED under W0 and
   W2 ("D-REGIME extension"), with a residual dependence on outcome frequencies reported.
-- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8 and E10 IN PROGRESS (data copy and folds
-  done; G_resume met; all nine trainings running, E10 fold 2 on its second attempt since 6:35 PM
-  EST, the first having been cancelled in error);
-  E9 IN PROGRESS (the Granite bench completed 4:35 PM EST with outcome ok and no recipe
-  repair; its three trainings, added in graph_training_m3.json, running since 5:21 PM EST);
+- Experiments: E0 COMPLETED; E1 COMPLETED except E1-C; E8, E9 and E10 IN PROGRESS: all twelve
+  trainings finished their first parts overnight; their second parts failed at import from 4:18 AM
+  EST because graph m4 listed a module their code exports lack, and they stood idle until the fix
+  (graph_training_m6.json, 04513dc) and the reinstalled watcher resubmitted them at 1:45 PM EST
+  (RESEARCH_LEDGER.md, "Operations, November 14"); five run, seven wait on the class pools;
   E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
@@ -35,13 +36,10 @@ Updated November 13, 2026, about 9:15 PM EST. Times are US Eastern.
 - AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
   their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
   unaffected.
-- Next executable actions: the E8, E9 and E10 trainings run, each in two parts of about 14 hours,
-  and each rolls out on its validation or held-out admissions after; E10's cohort-X integrity check
-  is built, reviewed and installed (graph_training_m4.json, 7:19 PM EST) and runs after the five fold
-  rollouts; the per-policy probe conformance of section 10.1 is built, reviewed and installed
-  (graph_training_m5.json, 8:38 PM EST): P's probe runs now as the bench, each other policy's after
-  its rollout; the E1-C interval is restarted (about 20 hours, from a checkout of a4f34bd), then
-  the rules and manifest are re-run and G2a is evaluated; E2's analysis
+- Next executable actions: the twelve second parts of training run (about 13 to 15 hours each),
+  then each policy rolls out, is probed (section 10.1; P's probe conforms under D-PROBE amendment
+  A1, 610/613), and E10's cohort-X check runs after the five fold rollouts; when E1-C ends, its
+  c_intervals.json comes back, the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
 
@@ -110,22 +108,24 @@ Updated November 13, 2026, about 9:15 PM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| e8-train-s270, attempt 1 | 51208027 | cai6734 | RUNNING | 2:47 PM EST |
-| e8-train-s271, attempt 1 | 51208029 | cai6734 | RUNNING | 3:04 PM EST |
-| e8-train-s272, attempt 1 | 51208030 | cai6734 | RUNNING | 3:13 PM EST |
-| e8-train-s273, attempt 1 | 51208032 | cai6734 | RUNNING | 3:28 PM EST |
-| e10-train-f0, attempt 1 | 51208033 | cai6734 | RUNNING | 4:39 PM EST |
-| e10-train-f1, attempt 1 | 51208034 | cai6734 | RUNNING | 4:39 PM EST |
-| e10-train-f2, attempt 2 | 51232421 | cai5724 | RUNNING | 6:35 PM EST |
-| e10-train-f3, attempt 1 | 51208036 | cai5724 | RUNNING | 2:46 PM EST |
-| e10-train-f4, attempt 1 | 51208039 | cai5724 | RUNNING | 2:46 PM EST |
-| e9-train-s269, attempt 1 | 51225455 | cai5724 | RUNNING | 5:21 PM EST |
-| e9-train-s270, attempt 1 | 51225464 | cai5724 | RUNNING | 5:21 PM EST |
-| e9-train-s271, attempt 1 | 51225466 | cai5724 | RUNNING | 5:21 PM EST |
+| e8-train-s270, part 2 | 51335545 | cai6734 | RUNNING | 1:47 PM EST |
+| e8-train-s271, part 2 | 51335546 | cai6734 | RUNNING | 2:05 PM EST |
+| e8-train-s272, part 2 | 51335547 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e8-train-s273, part 2 | 51335548 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e10-train-f0, part 2 | 51335549 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e10-train-f1, part 2 | 51335550 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e10-train-f2, part 2 | 51335551 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e10-train-f3, part 2 | 51335552 | cai6734 | PENDING (QOSGrpMemLimit) | 1:45 PM EST |
+| e10-train-f4, part 2 | 51335553 | cai5724 | RUNNING | 1:47 PM EST |
+| e9-train-s269, part 2 | 51335554 | cai5724 | RUNNING | 1:47 PM EST |
+| e9-train-s270, part 2 | 51335561 | cai5724 | RUNNING | 1:51 PM EST |
+| e9-train-s271, part 2 | 51335563 | cai5724 | PENDING (QOSGrpGRES) | 1:45 PM EST |
+| E1-C interval (outside the graph) | 51313205 | cai6734-b | RUNNING | 10:18 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
-All twelve trainings are running. Trainings that wait are held by the class QOS's shared limits
-of 32 CPUs and 250 GB per account. At 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
+Second parts resumed from their epoch checkpoints (steps 1,596 to 1,991 at 2:07 PM EST). Trainings
+that wait are held by the class QOS's shared limits of 32 CPUs, 250 GB and 8 GPUs per account, with
+classmates' jobs queued ahead. At 5:20 PM EST cai6734 had 29 CPUs and 180 GB in use (ours 24 and 144), cai5724 28 CPUs and 236 GB
 (ours 8 and 80). Each running training uses about 1 CPU on average (sstat AveCPU against elapsed
 time) and 6.4 to 6.8 GB, against a request of 4 CPUs and 16 GB (40 for the four first parts that
 started before the memory change). Every later part of a training asks for 2 CPUs, and E9's for
