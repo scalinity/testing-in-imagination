@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 14, 2026, about 11:50 PM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 12:50 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -196,11 +196,14 @@ sacct.
 | e9-train-s271 | 2 | 51285179 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e9-train-s271 | 3 | 51286206 | cai6734 | Nov 14, 6:09 AM | FAILED (import error; Operations, November 14) | 1 | 6 s | 0.002 |
 | e9-train-s271 | 4 | 51335563 | cai5724 | Nov 14, 3:24 PM | RUNNING |  |  |  |
-| e8-rollout-s270 | 1 | 51398798 | cai5724 | Nov 14, 11:30 PM | RUNNING |  |  |  |
-| e10-rollout-f4 | 1 | 51398862 | cai5724 | Nov 14, 11:30 PM | RUNNING |  |  |  |
+| e8-rollout-s270 | 1 | 51398798 | cai5724 | Nov 14, 11:30 PM | COMPLETED | 0 | 1,582 s | 0.439 |
+| e8-probe-s270 | 1 | 51401255 | cai5724 | Nov 15, 12:40 AM | COMPLETED | 0 | 274 s | 0.076 |
+| e10-rollout-f4 | 1 | 51398862 | cai5724 | Nov 14, 11:30 PM | COMPLETED | 0 | 3,983 s | 1.106 |
+| e10-probe-f4 | 1 | 51406253 | cai5724 | Nov 15, 12:49 AM | RUNNING |  |  |  |
 | e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
 | e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
-| e9-rollout-s270 | 1 | 51391103 | cai5724 |  | PENDING (moved from cai6734) |  |  |  |
+| e9-rollout-s270 | 1 | 51391103 | cai5724 | Nov 14, 11:57 PM | COMPLETED | 0 | 900 s | 0.250 |
+| e9-probe-s270 | 1 | 51402851 | cai5724 | Nov 15, 12:18 AM | COMPLETED | 0 | 181 s | 0.050 |
 | p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
 | E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
 
@@ -928,3 +931,25 @@ frees when E8 seed 270's rollout ends, about midnight. At 11:45 PM EST, under th
 job was checked to be pending on cai6734 with matching stage state, moved with scontrol update
 (Account and QOS cai5724), and its stage state's account and QOS set to cai5724 and read back. It waits
 first in line on cai5724. Same manual step as at 4:23 PM EST.
+
+### Operations, November 15, 2026, about 12:50 AM EST: three probes conform; two probes moved
+
+E9 seed 270's rollout started on cai5724 at 11:57 PM EST, 2 seconds after E8 seed 270's rollout ended
+there, and answered 240 of 240 admissions in 15 minutes. Its probe conforms under D-PROBE amendment
+A1: 418 of 418 aligned steps match, rate 1.0, with exact replay of 1,207 of 1,207 prompts and token
+digests and 240 of 240 V0 rows. E8 seed 270's rollout answered 199 of 240 in 26 minutes; its probe
+conforms: 558 of 558 aligned steps, rate 1.0, exact replay of 1,753 of 1,753 and 240 of 240 V0 rows.
+E10 fold 4's rollout answered 316 of 432 in 66 minutes; its probe runs. With E9 seed 269's (470 of
+474), three of the twelve policies' probes conform (export/approved/, each with tolerance_nats 0.001).
+
+The watcher submitted E8 seed 270's probe (51401255) at 12:01 AM EST and fold 4's (51406253) at 12:48
+AM EST to cai6734, where all 8 GPUs were held and 17 GPU jobs waited, while cai5724 had 2 GPUs free and
+none waiting. Each was moved to cai5724 under the watcher's lock with the same checks as before, at
+12:39 and 12:49 AM EST, and started there 22 and 10 seconds later. The cause is the routing rule:
+authorization.pick_pool takes the first pool in fill order (cai6734 first) where this user's own jobs
+leave room under the limit of 8, and classmates' jobs on the shared QOS are not counted, so a pool the
+class has filled still looks open.
+
+The Mac slept from about 12:40 to 12:44 AM EST. Nothing on HiPerGator depends on it: the keeper missed
+one 5-minute check and resumed at 12:47 AM EST, and the watcher's 12:45 AM cycle started at 12:48 AM
+EST, held by scheduler priority on cai6734-b.
