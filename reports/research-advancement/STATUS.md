@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 15, 2026, about 3:35 AM EST. Times are US Eastern.
+Updated November 15, 2026, about 3:50 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -29,8 +29,8 @@ Updated November 15, 2026, about 3:35 AM EST. Times are US Eastern.
   EST because graph m4 listed a module their code exports lack, and they stood idle until the fix
   (graph_training_m6.json, 04513dc) and the reinstalled watcher resubmitted them at 1:45 PM EST
   (RESEARCH_LEDGER.md, "Operations, November 14"); eleven completed theirs from 9:54 PM to 3:24 AM
-  EST and E10 fold 3 runs; eight probes conform under D-PROBE amendment A1 (all three of
-  E9's, E8 seeds 270 to 272, E10 folds 4 and 2), and the next rollouts and probes run;
+  EST and E10 fold 3 runs; ten probes conform under D-PROBE amendment A1 (all three of
+  E9's, E8 seeds 270 to 272, E10 folds 4, 2, 0 and 1), and the next rollouts and probes run;
   E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
@@ -40,7 +40,7 @@ Updated November 15, 2026, about 3:35 AM EST. Times are US Eastern.
   unaffected.
 - Next executable actions: E10 fold 3's second part runs, to about 3:50 AM
   EST on November 15; each policy then rolls out, is probed (section 10.1; P's probe conforms under D-PROBE amendment
-  A1, 610/613, and so do the first eight policies'), and E10's cohort-X check runs after the five fold rollouts; when E1-C ends, its
+  A1, 610/613, and so do the first ten policies'), and E10's cohort-X check runs after the five fold rollouts; when E1-C ends, its
   c_intervals.json comes back, the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
@@ -112,15 +112,13 @@ Updated November 15, 2026, about 3:35 AM EST. Times are US Eastern.
 |---|---|---|---|---|
 | e8-rollout-s273 | 51421837 | cai6734 | RUNNING | 3:31 AM EST |
 | e10-train-f3, part 2 | 51335552 | cai6734 | RUNNING | 5:59 PM EST |
-| e10-probe-f0 | 51421838 | cai5724 | RUNNING (moved from cai6734) | 3:34 AM EST |
-| e10-probe-f1 | 51421839 | cai5724 | RUNNING (moved from cai6734) | 3:34 AM EST |
 | E1-C interval (outside the graph) | 51313205 | cai6734-b | RUNNING | 10:18 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 Eleven second parts have completed, from 9:54 PM to 3:24 AM EST: all three of E9's, all four of E8's
 and E10 folds 4, 2, 0 and 1. Each policy's rollout (1 GPU, 4 CPUs and 16 GB for up to 2 hours; 15 to
-76 minutes) and probe (3 to 9 minutes) follow, and eight probes conform under D-PROBE amendment A1, all
-three of E9's among them (RESEARCH_LEDGER.md, "Operations, November 15, 2026", 12:50 to 3:35 AM
+76 minutes) and probe (3 to 9 minutes) follow, and ten probes conform under D-PROBE amendment A1, all
+three of E9's among them (RESEARCH_LEDGER.md, "Operations, November 15, 2026", 12:50 to 3:50 AM
 EST). The watcher picks an account only at submission, counting only this user's jobs, so it has sent
 fourteen GPU jobs to cai6734 while classmates held its GPUs; each was moved to cai5724 under its lock and
 started there as soon as a GPU was free, every one since midnight within 3 minutes of its move. E10
@@ -142,16 +140,16 @@ evening", and its correction).
 
 ## 6. GPU-hours by experiment
 
-From the runlog's ended jobs at 3:31 AM EST, November 15; a training is charged as each part ends, so
+From the runlog's ended jobs at 3:43 AM EST, November 15; a training is charged as each part ends, so
 the running second parts are not yet counted.
 
 | Experiment | Spent | Of which | Estimate | Allowance |
 |---|---|---|---|---|
-| Benches and probe conformance | 4.489 | p-rollout-val 0.372; Nemotron bench 3.335 over five attempts; probes: P 0.081, E9 seeds 269 to 271 0.055, 0.050 and 0.056, E8 seeds 270 to 272 0.076, 0.083 and 0.090, E10 folds 4 and 2 0.141 and 0.148 | 10 | 30 |
+| Benches and probe conformance | 4.783 | p-rollout-val 0.372; Nemotron bench 3.335 over five attempts; probes: P 0.081, E9 seeds 269 to 271 0.055, 0.050 and 0.056, E8 seeds 270 to 272 0.076, 0.083 and 0.090, E10 folds 4, 2, 0 and 1 0.141, 0.148, 0.147 and 0.146 | 10 | 30 |
 | E8 | 102.522 | four first parts 57.392; four second parts 43.534; rollouts of seeds 270 to 272 0.439, 0.598 and 0.548; eight import failures 0.010 | 105 | 210 |
 | E9 | 66.171 | Granite bench 2.306; three first parts 36.146; three second parts 26.841; three rollouts 0.870; six import failures 0.008 | 120 | 300 |
 | E10 | 100.488 | five first parts 56.825; second parts of folds 4, 2, 0 and 1 38.020; rollouts of folds 4, 2, 0 and 1 4.748; fold 2's cancelled attempt 0.884; ten import failures 0.011 | 133 | 270 |
-| Total | 273.670 | | | |
+| Total | 273.964 | | | |
 
 Second parts run shorter than first parts (E8's four took 9.677 to 11.454 GPU-hours, against
 14.35 on average for its first parts), so E8 closes near 103 GPU-hours with its last rollout, within

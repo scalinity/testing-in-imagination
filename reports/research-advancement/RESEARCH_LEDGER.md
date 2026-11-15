@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 15, 2026, about 3:35 AM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 3:50 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -208,9 +208,9 @@ sacct.
 | e10-rollout-f2 | 1 | 51412623 | cai5724 | Nov 15, 1:49 AM | COMPLETED | 0 | 4,453 s | 1.237 |
 | e10-probe-f2 | 1 | 51420328 | cai5724 | Nov 15, 3:19 AM | COMPLETED | 0 | 534 s | 0.148 |
 | e10-rollout-f0 | 1 | 51413752 | cai5724 | Nov 15, 2:02 AM | COMPLETED | 0 | 4,569 s | 1.269 |
-| e10-probe-f0 | 1 | 51421838 | cai5724 | Nov 15, 3:34 AM | RUNNING |  |  |  |
+| e10-probe-f0 | 1 | 51421838 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 531 s | 0.147 |
 | e10-rollout-f1 | 1 | 51415241 | cai5724 | Nov 15, 2:19 AM | COMPLETED | 0 | 4,087 s | 1.135 |
-| e10-probe-f1 | 1 | 51421839 | cai5724 | Nov 15, 3:34 AM | RUNNING |  |  |  |
+| e10-probe-f1 | 1 | 51421839 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 527 s | 0.146 |
 | e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
 | e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
 | e9-rollout-s270 | 1 | 51391103 | cai5724 | Nov 14, 11:57 PM | COMPLETED | 0 | 900 s | 0.250 |
@@ -1023,3 +1023,11 @@ The watcher's 3:30 AM cycle sent E8 seed 273's rollout and folds 0 and 1's probe
 rollout started there at once; the probes waited on its shared CPU limit (QOSGrpCpuLimit, 30 of 32
 CPUs in use) while cai5724 had 7 GPUs and 28 CPUs free. Both were moved to cai5724 under the watcher's
 lock at 3:33 AM EST and started at 3:34 AM.
+
+### Operations, November 15, 2026, about 3:50 AM EST: folds 0 and 1's probes conform
+
+E10 folds 0 and 1's probes conform under D-PROBE amendment A1. Fold 0: 1,504 of 1,514 aligned steps
+match, rate 0.9934, with exact replay of 4,547 of 4,547 prompts and token digests and 432 of 432 V0
+rows. Fold 1: 1,474 of 1,482, rate 0.9946, exact replay of 4,486 of 4,486 and 432 of 432. Ten of the
+twelve policies conform; E8 seed 273's probe follows its rollout, which runs on cai6734 since 3:31 AM
+EST, and fold 3's follows its training and rollout.
