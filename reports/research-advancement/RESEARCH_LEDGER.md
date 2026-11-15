@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 15, 2026, about 2:05 AM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 2:20 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -158,7 +158,7 @@ sacct.
 | e8-train-s272 | 1 | 51208030 | cai6734 | 3:13 PM | FAILED (planned continuation) | 10 | 53,566 s | 14.879 |
 | e8-train-s272 | 2 | 51287617 | cai6734 | Nov 14, 6:19 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e8-train-s272 | 3 | 51288722 | cai6734 | Nov 14, 6:34 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e8-train-s272 | 4 | 51335547 | cai6734 | Nov 14, 2:47 PM | RUNNING |  |  |  |
+| e8-train-s272 | 4 | 51335547 | cai6734 | Nov 14, 2:47 PM | COMPLETED | 0 | 41,233 s | 11.454 |
 | e8-train-s273 | 1 | 51208032 | cai6734 | 3:28 PM | FAILED (planned continuation) | 10 | 51,506 s | 14.307 |
 | e8-train-s273 | 2 | 51285177 | cai6734 | Nov 14, 5:52 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e8-train-s273 | 3 | 51286204 | cai6734 | Nov 14, 6:06 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
@@ -170,7 +170,7 @@ sacct.
 | e10-train-f1 | 1 | 51208034 | cai6734 | 4:39 PM | FAILED (planned continuation) | 10 | 41,565 s | 11.546 |
 | e10-train-f1 | 2 | 51278003 | cai5724 | Nov 14, 4:36 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f1 | 3 | 51280189 | cai5724 | Nov 14, 4:49 AM | FAILED (import error; Operations, November 14) | 1 | 3 s | 0.001 |
-| e10-train-f1 | 4 | 51335550 | cai5724 | Nov 14, 4:23 PM | RUNNING |  |  |  |
+| e10-train-f1 | 4 | 51335550 | cai5724 | Nov 14, 4:23 PM | COMPLETED | 0 | 35,163 s | 9.768 |
 | e10-train-f2 | 1 | 51208035 | cai6734 | 5:26 PM | CANCELLED (in error, during its initial validation pass) | 0 | 3,181 s | 0.884 |
 | e10-train-f2 | 2 | 51232421 | cai5724 | 6:35 PM | FAILED (planned continuation) | 10 | 37,890 s | 10.525 |
 | e10-train-f2 | 3 | 51282234 | cai6734 | Nov 14, 5:28 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
@@ -198,17 +198,20 @@ sacct.
 | e9-train-s271 | 4 | 51335563 | cai5724 | Nov 14, 3:24 PM | COMPLETED | 0 | 35,650 s | 9.903 |
 | e8-rollout-s270 | 1 | 51398798 | cai5724 | Nov 14, 11:30 PM | COMPLETED | 0 | 1,582 s | 0.439 |
 | e8-probe-s270 | 1 | 51401255 | cai5724 | Nov 15, 12:40 AM | COMPLETED | 0 | 274 s | 0.076 |
-| e8-rollout-s271 | 1 | 51410796 | cai5724 | Nov 15, 1:40 AM | RUNNING |  |  |  |
+| e8-rollout-s271 | 1 | 51410796 | cai5724 | Nov 15, 1:40 AM | COMPLETED | 0 | 2,152 s | 0.598 |
+| e8-probe-s271 | 1 | 51415243 | cai5724 | Nov 15, 2:20 AM | RUNNING |  |  |  |
+| e8-rollout-s272 | 1 | 51415240 | cai5724 | Nov 15, 2:19 AM | RUNNING |  |  |  |
 | e10-rollout-f4 | 1 | 51398862 | cai5724 | Nov 14, 11:30 PM | COMPLETED | 0 | 3,983 s | 1.106 |
 | e10-probe-f4 | 1 | 51406253 | cai5724 | Nov 15, 12:49 AM | COMPLETED | 0 | 509 s | 0.141 |
 | e10-rollout-f2 | 1 | 51412623 | cai5724 | Nov 15, 1:49 AM | RUNNING |  |  |  |
 | e10-rollout-f0 | 1 | 51413752 | cai5724 | Nov 15, 2:02 AM | RUNNING |  |  |  |
+| e10-rollout-f1 | 1 | 51415241 | cai5724 | Nov 15, 2:19 AM | RUNNING |  |  |  |
 | e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
 | e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
 | e9-rollout-s270 | 1 | 51391103 | cai5724 | Nov 14, 11:57 PM | COMPLETED | 0 | 900 s | 0.250 |
 | e9-probe-s270 | 1 | 51402851 | cai5724 | Nov 15, 12:18 AM | COMPLETED | 0 | 181 s | 0.050 |
 | e9-rollout-s271 | 1 | 51410797 | cai5724 | Nov 15, 1:40 AM | COMPLETED | 0 | 1,110 s | 0.308 |
-| e9-probe-s271 | 1 | 51413779 | cai5724 | Nov 15, 2:02 AM | RUNNING |  |  |  |
+| e9-probe-s271 | 1 | 51413779 | cai5724 | Nov 15, 2:02 AM | COMPLETED | 0 | 203 s | 0.056 |
 | p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
 | E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
 
@@ -972,3 +975,16 @@ The watcher sent all five GPU jobs it submitted from 1:31 to 2:01 AM EST to cai6
 cai6734's GPUs were held and 13 GPU jobs waited there, while cai5724 had 4 GPUs free and none waiting.
 Each job was moved to cai5724 under the watcher's lock with the same checks, at 1:38, 1:48 and 2:02 AM
 EST, and started there within 90 seconds of its move.
+
+### Operations, November 15, 2026, about 2:20 AM EST: E9's three probes conform; three more jobs moved
+
+E10 fold 1 (2:09 AM EST) and E8 seed 272 (2:14 AM) completed their second parts with exit 0; ten of
+the twelve are done, and E8 seed 273 and fold 3 run. E9 seed 271's probe conforms under D-PROBE
+amendment A1: 493 of 496 aligned steps match, rate 0.9940, with exact replay of 1,437 of 1,437
+prompts and token digests and 240 of 240 V0 rows. All three of E9's policies now conform, and five
+policies in all. E8 seed 271's rollout answered 192 of 240 admissions in 36 minutes.
+
+The watcher's 2:15 AM cycle, which started at 2:18 AM EST, sent E8 seed 272's and fold 1's rollouts
+and E8 seed 271's probe to cai6734, whose 8 GPUs and 32 CPUs were all in use; cai5724 had 5 GPUs free
+and none waiting. All three were moved to cai5724 under the watcher's lock at 2:18 AM EST. The
+rollouts started at 2:19 AM and the probe, after waiting briefly for a free node, at 2:20 AM.

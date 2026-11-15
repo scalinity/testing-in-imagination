@@ -1,6 +1,6 @@
 # STATUS, study TII-CEE-1
 
-Updated November 15, 2026, about 2:05 AM EST. Times are US Eastern.
+Updated November 15, 2026, about 2:20 AM EST. Times are US Eastern.
 
 ## 1. Where the study is
 
@@ -28,10 +28,9 @@ Updated November 15, 2026, about 2:05 AM EST. Times are US Eastern.
   trainings finished their first parts overnight; their second parts failed at import from 4:18 AM
   EST because graph m4 listed a module their code exports lack, and they stood idle until the fix
   (graph_training_m6.json, 04513dc) and the reinstalled watcher resubmitted them at 1:45 PM EST
-  (RESEARCH_LEDGER.md, "Operations, November 14"); eight completed theirs from 9:54 PM to 1:49 AM EST
-  (all three of E9's, E8 seeds 270 and 271, E10 folds 4, 2 and 0) and four run; four probes conform
-  under D-PROBE amendment A1 (E9 seeds 269 and 270, E8 seed 270, E10 fold 4), and the next rollouts
-  and probes run;
+  (RESEARCH_LEDGER.md, "Operations, November 14"); ten completed theirs from 9:54 PM to 2:14 AM EST
+  and two run (E8 seed 273, E10 fold 3); five probes conform under D-PROBE amendment A1 (all three of
+  E9's, E8 seed 270, E10 fold 4), and the next rollouts and probes run;
   E11 SKIPPED (accepted gap, not run); all others PLANNED.
 - Scientific outcome: NOT EVALUATED for every experiment.
 - Open BLOCKED items: none. Accepted gap: BLOCKED-002, no independent cohort, so E11 does not run
@@ -39,9 +38,9 @@ Updated November 15, 2026, about 2:05 AM EST. Times are US Eastern.
 - AI workers: the Cloudflare 403 of 4:47 AM was cleared by a fresh login. Fable 5.2 workers are at
   their weekly limit until November 18, 5 AM EST; the lead session and the HiPerGator watcher are
   unaffected.
-- Next executable actions: the four remaining second parts run, the last (E10 fold 3) to about 3:45 AM
+- Next executable actions: the two remaining second parts run, the last (E10 fold 3) to about 3:45 AM
   EST on November 15; each policy then rolls out, is probed (section 10.1; P's probe conforms under D-PROBE amendment
-  A1, 610/613, and so do the first four policies'), and E10's cohort-X check runs after the five fold rollouts; when E1-C ends, its
+  A1, 610/613, and so do the first five policies'), and E10's cohort-X check runs after the five fold rollouts; when E1-C ends, its
   c_intervals.json comes back, the rules and manifest are re-run and G2a is evaluated; E2's analysis
   code (the relative scale call, the W4 rules and the per-result-kind slopes of amendment A1);
   REVIEW-001 and REVIEW-008.
@@ -111,29 +110,27 @@ Updated November 15, 2026, about 2:05 AM EST. Times are US Eastern.
 
 | Stage | Job ID | Account | State | Since |
 |---|---|---|---|---|
-| e8-train-s272, part 2 | 51335547 | cai6734 | RUNNING | 2:47 PM EST |
 | e8-train-s273, part 2 | 51335548 | cai6734 | RUNNING | 4:18 PM EST |
-| e10-train-f1, part 2 | 51335550 | cai5724 | RUNNING (moved from cai6734) | 4:23 PM EST |
 | e10-train-f3, part 2 | 51335552 | cai6734 | RUNNING | 5:59 PM EST |
-| e8-rollout-s271 | 51410796 | cai5724 | RUNNING (moved from cai6734) | 1:40 AM EST |
+| e8-probe-s271 | 51415243 | cai5724 | RUNNING (moved from cai6734) | 2:20 AM EST |
+| e8-rollout-s272 | 51415240 | cai5724 | RUNNING (moved from cai6734) | 2:19 AM EST |
 | e10-rollout-f2 | 51412623 | cai5724 | RUNNING (moved from cai6734) | 1:49 AM EST |
 | e10-rollout-f0 | 51413752 | cai5724 | RUNNING (moved from cai6734) | 2:02 AM EST |
-| e9-probe-s271 | 51413779 | cai5724 | RUNNING (moved from cai6734) | 2:02 AM EST |
+| e10-rollout-f1 | 51415241 | cai5724 | RUNNING (moved from cai6734) | 2:19 AM EST |
 | E1-C interval (outside the graph) | 51313205 | cai6734-b | RUNNING | 10:18 AM EST |
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
-Eight second parts have completed, from 9:54 PM to 1:49 AM EST: all three of E9's, E8 seeds 270 and
-271 and E10 folds 4, 2 and 0. Each policy's rollout (1 GPU, 4 CPUs and 16 GB for up to 2 hours; 15 to
-66 minutes) and probe (3 to 9 minutes) follow, and four probes conform under D-PROBE amendment A1
-(RESEARCH_LEDGER.md, "Operations, November 15, 2026", 12:50 and 2:05 AM EST). The watcher picks an
-account only at submission, counting only this user's jobs, so it has sent eight GPU jobs to cai6734
-while classmates held its GPUs and 13 to 17 GPU jobs waited there; each was moved to cai5724 under its
-lock and started there as soon as a GPU was free, every one since midnight within 90 seconds. Four
-trainings run: E8 seed 272 and E10 fold 1 are in their final validation pass, and at 1:49 AM EST E8
-seed 273 stood at 3,706 of 3,840 and fold 3 at 2,913 of 3,110. A training ends one silent validation
-pass after its last step, shorter than the pass before step 1: so far about 26 to 32 minutes for E9,
-42 to 63 for E8 and 50 to 56 for E10. E8 seed 272 and fold 1 should end about 2:15 AM EST, E8 seed
-273 about 3:20 AM and fold 3, the last, about 3:45 AM. Folds 0 to 2 started at 4:23 PM
+Ten second parts have completed, from 9:54 PM to 2:14 AM EST: all three of E9's, E8 seeds 270 to 272
+and E10 folds 4, 2, 0 and 1. Each policy's rollout (1 GPU, 4 CPUs and 16 GB for up to 2 hours; 15 to
+66 minutes) and probe (3 to 9 minutes) follow, and five probes conform under D-PROBE amendment A1, all
+three of E9's among them (RESEARCH_LEDGER.md, "Operations, November 15, 2026", 12:50, 2:05 and 2:20 AM
+EST). The watcher picks an account only at submission, counting only this user's jobs, so it has sent
+eleven GPU jobs to cai6734 while classmates held its GPUs; each was moved to cai5724 under its lock and
+started there as soon as a GPU was free, every one since midnight within 3 minutes of its move. Two
+trainings run: at 2:16 AM EST E8 seed 273 stood at 3,812 of 3,840 and E10 fold 3 at 3,008 of 3,110. A
+training ends one silent validation pass after its last step, shorter than the pass before step 1: so
+far about 26 to 32 minutes for E9, 42 to 63 for E8 and 44 to 56 for E10. E8 seed 273 should end about
+3:05 to 3:25 AM EST and fold 3, the last, about 3:30 to 3:45 AM. Folds 0 to 2 started at 4:23 PM
 EST on cai5724, where 3 GPUs were free (RESEARCH_LEDGER.md, "three E10 folds moved"); fold 3 started on
 cai6734 at 5:59 PM EST. Jobs
 that wait are held by the class QOS's shared limits of 32 CPUs, 250 GB and 8 GPUs per account, with
@@ -148,18 +145,18 @@ evening", and its correction).
 
 ## 6. GPU-hours by experiment
 
-From the runlog's ended jobs at 2:01 AM EST, November 15; a training is charged as each part ends, so
+From the runlog's ended jobs at 2:18 AM EST, November 15; a training is charged as each part ends, so
 the running second parts are not yet counted.
 
 | Experiment | Spent | Of which | Estimate | Allowance |
 |---|---|---|---|---|
-| Benches and probe conformance | 4.111 | p-rollout-val 0.372; Nemotron bench 3.335 over five attempts; probes: P 0.081, E9 seeds 269 and 270 0.055 and 0.050, E8 seed 270 0.076, E10 fold 4 0.141 | 10 | 30 |
-| E8 | 78.822 | four first parts 57.392; second parts of seeds 270 and 271 9.677 and 11.304; seed 270's rollout 0.439; eight import failures 0.010 | 105 | 210 |
+| Benches and probe conformance | 4.168 | p-rollout-val 0.372; Nemotron bench 3.335 over five attempts; probes: P 0.081, E9 seeds 269 to 271 0.055, 0.050 and 0.056, E8 seed 270 0.076, E10 fold 4 0.141 | 10 | 30 |
+| E8 | 90.873 | four first parts 57.392; second parts of seeds 270 to 272 9.677, 11.304 and 11.454; rollouts of seeds 270 and 271 0.439 and 0.598; eight import failures 0.010 | 105 | 210 |
 | E9 | 66.171 | Granite bench 2.306; three first parts 36.146; three second parts 26.841; three rollouts 0.870; six import failures 0.008 | 120 | 300 |
-| E10 | 87.079 | five first parts 56.825; second parts of folds 4, 2 and 0 28.253; fold 4's rollout 1.106; fold 2's cancelled attempt 0.884; ten import failures 0.011 | 133 | 270 |
-| Total | 236.183 | | | |
+| E10 | 96.847 | five first parts 56.825; second parts of folds 4, 2, 0 and 1 38.020; fold 4's rollout 1.106; fold 2's cancelled attempt 0.884; ten import failures 0.011 | 133 | 270 |
+| Total | 258.059 | | | |
 
-Second parts run shorter than first parts (E8 seeds 270 and 271 took 9.677 and 11.304 GPU-hours,
-against 14.35 on average for E8's first parts), so E8 should close near 102 GPU-hours with its four
+Second parts run shorter than first parts (E8 seeds 270 to 272 took 9.677 to 11.454 GPU-hours,
+against 14.35 on average for E8's first parts), so E8 should close near 103 GPU-hours with its four
 rollouts, within its estimate. Probes are charged to the benches allowance (D-PROBE), rollouts to their experiment.
 Estimates and allowances: AUTHORIZATION.md section 4.
