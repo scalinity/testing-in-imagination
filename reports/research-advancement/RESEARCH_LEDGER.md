@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 14, 2026, about 10:50 PM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 14, 2026, about 11:50 PM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -150,7 +150,7 @@ sacct.
 | e8-train-s270 | 1 | 51208027 | cai6734 | 2:47 PM | FAILED (planned continuation) | 10 | 51,734 s | 14.371 |
 | e8-train-s270 | 2 | 51282229 | cai6734 | Nov 14, 5:24 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e8-train-s270 | 3 | 51283854 | cai6734 | Nov 14, 5:36 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
-| e8-train-s270 | 4 | 51335545 | cai6734 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e8-train-s270 | 4 | 51335545 | cai6734 | Nov 14, 1:47 PM | COMPLETED | 0 | 34,838 s | 9.677 |
 | e8-train-s271 | 1 | 51208029 | cai6734 | 3:04 PM | FAILED (planned continuation) | 10 | 49,805 s | 13.835 |
 | e8-train-s271 | 2 | 51281321 | cai5724 | Nov 14, 5:04 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e8-train-s271 | 3 | 51282231 | cai6734 | Nov 14, 5:25 AM | FAILED (import error; Operations, November 14) | 1 | 3 s | 0.001 |
@@ -183,7 +183,7 @@ sacct.
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,851 s | 11.625 |
 | e10-train-f4 | 2 | 51268187 | cai6734 | Nov 14, 4:19 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f4 | 3 | 51278846 | cai6734 | Nov 14, 5:15 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e10-train-f4 | 4 | 51335553 | cai5724 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e10-train-f4 | 4 | 51335553 | cai5724 | Nov 14, 1:47 PM | COMPLETED | 0 | 34,551 s | 9.598 |
 | e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 41,467 s | 11.519 |
 | e9-train-s269 | 2 | 51281322 | cai5724 | Nov 14, 5:04 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e9-train-s269 | 3 | 51282235 | cai6734 | Nov 14, 5:30 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
@@ -196,8 +196,11 @@ sacct.
 | e9-train-s271 | 2 | 51285179 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e9-train-s271 | 3 | 51286206 | cai6734 | Nov 14, 6:09 AM | FAILED (import error; Operations, November 14) | 1 | 6 s | 0.002 |
 | e9-train-s271 | 4 | 51335563 | cai5724 | Nov 14, 3:24 PM | RUNNING |  |  |  |
-| e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | RUNNING |  |  |  |
-| e9-rollout-s270 | 1 | 51391103 | cai6734 |  | PENDING |  |  |  |
+| e8-rollout-s270 | 1 | 51398798 | cai5724 | Nov 14, 11:30 PM | RUNNING |  |  |  |
+| e10-rollout-f4 | 1 | 51398862 | cai5724 | Nov 14, 11:30 PM | RUNNING |  |  |  |
+| e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
+| e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
+| e9-rollout-s270 | 1 | 51391103 | cai5724 |  | PENDING (moved from cai6734) |  |  |  |
 | p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
 | E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
 
@@ -902,3 +905,26 @@ stage state's account and QOS set to cai5724 and read back. All three started at
 (51335552) waits on cai6734. This is the same manual step used for fold 2 and the P probe on November
 13; the watcher's routing chooses an account only at submission.
 
+### Operations, November 14, 2026, about 11:45 PM EST: the first rollouts and probe; E9 seed 270's rollout moved
+
+Four second parts completed with exit 0: E9 seeds 270 and 269 at 9:54 and 10:40 PM EST, E10 fold 4
+at 11:22 PM and E8 seed 270 at 11:27 PM. Each ended one silent validation pass after its last step,
+and that pass ran shorter than the one before step 1: from the progress marks, about 26 to 30 minutes
+for E9 (37 before step 1), 50 for fold 4 (55 to 61) and 42 for E8 seed 270 (83).
+
+The watcher then ran each policy's next stages. E9 seed 269's validation rollout (51394748, cai5724)
+ran from 10:46 to 11:05 PM EST and answered 232 of 240 admissions. Its probe (51397602) ran from 11:17
+to 11:20 PM EST and conforms under D-PROBE amendment A1, the first probe run under the rule as
+pre-registered: exact replay of 1,407 of 1,407 prompts and token digests and 240 of 240 V0 rows, and
+470 of 474 aligned steps match within 0.001 nats, rate 0.9916 (export/approved/e9-probe-s269.json,
+tolerance_nats 0.001). E8 seed 270's rollout (51398798) and fold 4's (51398862, 432 admissions) were
+submitted to cai5724 at 11:30 PM EST and started at once.
+
+E9 seed 270's rollout (51391103) was submitted to cai6734 at 10:03 PM EST and waited on its shared GPU
+limit (QOSGrpGRES): all 8 GPUs were held, 4 by our trainings, and at 11:44 PM EST ten classmates' GPU
+jobs with higher scheduler priority waited ahead of it (five at about 69,000, five within a few points
+of its 59,119). cai5724 also had all 8 GPUs in use, but no job of anyone's waiting, and its next GPU
+frees when E8 seed 270's rollout ends, about midnight. At 11:45 PM EST, under the watcher's lock, the
+job was checked to be pending on cai6734 with matching stage state, moved with scontrol update
+(Account and QOS cai5724), and its stage state's account and QOS set to cai5724 and read back. It waits
+first in line on cai5724. Same manual step as at 4:23 PM EST.
