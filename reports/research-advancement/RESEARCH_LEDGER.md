@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 14, 2026, about 6:15 PM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 14, 2026, about 10:50 PM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -187,15 +187,17 @@ sacct.
 | e9-train-s269 | 1 | 51225455 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 41,467 s | 11.519 |
 | e9-train-s269 | 2 | 51281322 | cai5724 | Nov 14, 5:04 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e9-train-s269 | 3 | 51282235 | cai6734 | Nov 14, 5:30 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e9-train-s269 | 4 | 51335554 | cai5724 | Nov 14, 1:47 PM | RUNNING |  |  |  |
+| e9-train-s269 | 4 | 51335554 | cai5724 | Nov 14, 1:47 PM | COMPLETED | 0 | 32,019 s | 8.894 |
 | e9-train-s270 | 1 | 51225464 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 44,243 s | 12.290 |
 | e9-train-s270 | 2 | 51285178 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e9-train-s270 | 3 | 51286205 | cai6734 | Nov 14, 6:07 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e9-train-s270 | 4 | 51335561 | cai5724 | Nov 14, 1:51 PM | RUNNING |  |  |  |
+| e9-train-s270 | 4 | 51335561 | cai5724 | Nov 14, 1:51 PM | COMPLETED | 0 | 28,960 s | 8.044 |
 | e9-train-s271 | 1 | 51225466 | cai5724 | 5:21 PM | FAILED (planned continuation) | 10 | 44,414 s | 12.337 |
 | e9-train-s271 | 2 | 51285179 | cai6734 | Nov 14, 5:54 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e9-train-s271 | 3 | 51286206 | cai6734 | Nov 14, 6:09 AM | FAILED (import error; Operations, November 14) | 1 | 6 s | 0.002 |
 | e9-train-s271 | 4 | 51335563 | cai5724 | Nov 14, 3:24 PM | RUNNING |  |  |  |
+| e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | RUNNING |  |  |  |
+| e9-rollout-s270 | 1 | 51391103 | cai6734 |  | PENDING |  |  |  |
 | p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
 | E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
 
