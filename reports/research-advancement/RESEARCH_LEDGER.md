@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 15, 2026, about 4:25 AM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 5:35 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -212,7 +212,9 @@ sacct.
 | e10-probe-f0 | 1 | 51421838 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 531 s | 0.147 |
 | e10-rollout-f1 | 1 | 51415241 | cai5724 | Nov 15, 2:19 AM | COMPLETED | 0 | 4,087 s | 1.135 |
 | e10-probe-f1 | 1 | 51421839 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 527 s | 0.146 |
-| e10-rollout-f3 | 1 | 51423564 | cai5724 | Nov 15, 4:04 AM | RUNNING |  |  |  |
+| e10-rollout-f3 | 1 | 51423564 | cai5724 | Nov 15, 4:04 AM | COMPLETED | 0 | 4,101 s | 1.139 |
+| e10-probe-f3 | 1 | 51429704 | cai6734 | Nov 15, 5:20 AM | COMPLETED | 0 | 528 s | 0.147 |
+| e10-cohort-x | 1 | 51429693 | cai6734 | Nov 15, 5:20 AM | COMPLETED | 0 | 40 s | 0.000 |
 | e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
 | e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
 | e9-rollout-s270 | 1 | 51391103 | cai5724 | Nov 14, 11:57 PM | COMPLETED | 0 | 900 s | 0.250 |
@@ -1051,3 +1053,20 @@ with exact replay of 1,986 of 1,986 prompts and token digests and 240 of 240 V0 
 E8's policies conform and E8's stages are complete, at 103.104 GPU-hours against an estimate of 105;
 eleven of the twelve policies conform. The probe's end is from sacct; the runlog records it at the
 watcher's 4:30 AM cycle.
+
+### Operations, November 15, 2026, about 5:35 AM EST: fold 3's probe conforms, cohort X is intact and the training graph is complete
+
+E10 fold 3's rollout answered 293 of 432 held-out admissions in 68 minutes on cai5724 (4:04 to 5:12
+AM EST, 1.139 GPU-hours). The watcher's 5:15 AM cycle, which started at 5:17 AM EST, submitted fold
+3's probe and E10's cohort-X check to cai6734, which then had 5 GPUs and 20 CPUs free, so neither was
+moved; both started at 5:20 AM EST. The probe conforms under D-PROBE amendment A1: 1,433 of 1,435
+aligned steps match, rate 0.9986, with exact replay of 4,591 of 4,591 prompts and token digests and
+432 of 432 V0 rows (528 s, 0.147 GPU-hours). All twelve policies conform. The cohort-X check (CPU
+only, 40 s) reports cohort X intact: 2,160 admissions, each scored exactly once; in each of the five
+folds 432 held-out admissions, 432 scored, 432 V0 results and 0 leaks, with the policy-data,
+rollout-adapter and rollout-split checks passing. E10's decision rule (integrity only) is met. At its
+5:30 AM EST cycle the watcher recorded "study completed", 44 of 44 stages COMPLETED, and disabled its
+scrontab entry, its only line; a later graph needs the entry reinstalled from
+tii-cee/tiicee/pipeline/scrontab_entry.txt. E1-C runs outside the graph and is unaffected. E10 closed
+at 111.510 GPU-hours against an estimate of 133; benches and probe conformance stand at 5.015 and the
+study at 285.799.
