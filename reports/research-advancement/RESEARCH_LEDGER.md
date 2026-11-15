@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 15, 2026, about 4:05 AM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 4:25 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -202,7 +202,8 @@ sacct.
 | e8-probe-s271 | 1 | 51415243 | cai5724 | Nov 15, 2:20 AM | COMPLETED | 0 | 299 s | 0.083 |
 | e8-rollout-s272 | 1 | 51415240 | cai5724 | Nov 15, 2:19 AM | COMPLETED | 0 | 1,974 s | 0.548 |
 | e8-probe-s272 | 1 | 51419050 | cai6734 | Nov 15, 3:02 AM | COMPLETED | 0 | 325 s | 0.090 |
-| e8-rollout-s273 | 1 | 51421837 | cai6734 | Nov 15, 3:31 AM | RUNNING |  |  |  |
+| e8-rollout-s273 | 1 | 51421837 | cai6734 | Nov 15, 3:31 AM | COMPLETED | 0 | 2,096 s | 0.582 |
+| e8-probe-s273 | 1 | 51424435 | cai6734 | Nov 15, 4:16 AM | COMPLETED | 0 | 304 s | 0.084 |
 | e10-rollout-f4 | 1 | 51398862 | cai5724 | Nov 14, 11:30 PM | COMPLETED | 0 | 3,983 s | 1.106 |
 | e10-probe-f4 | 1 | 51406253 | cai5724 | Nov 15, 12:49 AM | COMPLETED | 0 | 509 s | 0.141 |
 | e10-rollout-f2 | 1 | 51412623 | cai5724 | Nov 15, 1:49 AM | COMPLETED | 0 | 4,453 s | 1.237 |
@@ -1041,3 +1042,12 @@ complete, the second part of each ending from 9:54 PM to 3:52 AM EST. Fold 3's r
 was submitted to cai6734 at 4:03 AM EST, where all 32 CPUs were in use, while cai5724 had 7 GPUs and
 28 CPUs free; it was moved to cai5724 under the watcher's lock at 4:03 AM EST and started at 4:04
 AM. E8 seed 273's rollout, the other one running, stood at 223 of 240 at 4:04 AM EST.
+
+### Operations, November 15, 2026, about 4:25 AM EST: E8's four probes conform
+
+E8 seed 273's rollout answered 193 of 240 admissions in 35 minutes. Its probe ran on cai6734 from 4:16
+to 4:21 AM EST and conforms under D-PROBE amendment A1: 638 of 640 aligned steps match, rate 0.9969,
+with exact replay of 1,986 of 1,986 prompts and token digests and 240 of 240 V0 rows. All four of
+E8's policies conform and E8's stages are complete, at 103.104 GPU-hours against an estimate of 105;
+eleven of the twelve policies conform. The probe's end is from sacct; the runlog records it at the
+watcher's 4:30 AM cycle.
