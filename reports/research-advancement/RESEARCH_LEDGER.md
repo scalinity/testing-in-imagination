@@ -123,7 +123,7 @@ df467ea, all unchanged since the review.
 Every attempt, completed or not, with job ID, state, elapsed time, GPU-hours from the scheduler and
 exit code. The watcher's runlog.jsonl on HiPerGator is the primary record; this table mirrors it.
 
-Mirrored November 15, 2026, about 3:50 AM EST. Times are EST, from the runlog's started events; a time
+Mirrored November 15, 2026, about 4:05 AM EST. Times are EST, from the runlog's started events; a time
 without a date is November 13. Exit 10 is a planned continuation: the scheduler reports it as FAILED, and
 the watcher does not count it as a retry. The account is the one a job ran on, which can differ from the one
 it was submitted to when a pending job was moved. Starts the runlog had not yet recorded are from
@@ -179,7 +179,7 @@ sacct.
 | e10-train-f3 | 1 | 51208036 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,416 s | 11.504 |
 | e10-train-f3 | 2 | 51268186 | cai6734 | Nov 14, 4:18 AM | FAILED (import error; Operations, November 14) | 1 | 5 s | 0.001 |
 | e10-train-f3 | 3 | 51278844 | cai6734 | Nov 14, 5:12 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
-| e10-train-f3 | 4 | 51335552 | cai6734 | Nov 14, 5:59 PM | RUNNING |  |  |  |
+| e10-train-f3 | 4 | 51335552 | cai6734 | Nov 14, 5:59 PM | COMPLETED | 0 | 35,577 s | 9.883 |
 | e10-train-f4 | 1 | 51208039 | cai5724 | 2:46 PM | FAILED (planned continuation) | 10 | 41,851 s | 11.625 |
 | e10-train-f4 | 2 | 51268187 | cai6734 | Nov 14, 4:19 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
 | e10-train-f4 | 3 | 51278846 | cai6734 | Nov 14, 5:15 AM | FAILED (import error; Operations, November 14) | 1 | 4 s | 0.001 |
@@ -211,6 +211,7 @@ sacct.
 | e10-probe-f0 | 1 | 51421838 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 531 s | 0.147 |
 | e10-rollout-f1 | 1 | 51415241 | cai5724 | Nov 15, 2:19 AM | COMPLETED | 0 | 4,087 s | 1.135 |
 | e10-probe-f1 | 1 | 51421839 | cai5724 | Nov 15, 3:34 AM | COMPLETED | 0 | 527 s | 0.146 |
+| e10-rollout-f3 | 1 | 51423564 | cai5724 | Nov 15, 4:04 AM | RUNNING |  |  |  |
 | e9-rollout-s269 | 1 | 51394748 | cai5724 | Nov 14, 10:46 PM | COMPLETED | 0 | 1,123 s | 0.312 |
 | e9-probe-s269 | 1 | 51397602 | cai5724 | Nov 14, 11:17 PM | COMPLETED | 0 | 197 s | 0.055 |
 | e9-rollout-s270 | 1 | 51391103 | cai5724 | Nov 14, 11:57 PM | COMPLETED | 0 | 900 s | 0.250 |
@@ -1031,3 +1032,12 @@ match, rate 0.9934, with exact replay of 4,547 of 4,547 prompts and token digest
 rows. Fold 1: 1,474 of 1,482, rate 0.9946, exact replay of 4,486 of 4,486 and 432 of 432. Ten of the
 twelve policies conform; E8 seed 273's probe follows its rollout, which runs on cai6734 since 3:31 AM
 EST, and fold 3's follows its training and rollout.
+
+### Operations, November 15, 2026, about 4:05 AM EST: all twelve trainings complete; fold 3's rollout moved
+
+E10 fold 3 completed its second part with exit 0 at 3:52 AM EST (35,577 s, 9.883 GPU-hours),
+following its plan: 3,110 optimizer steps over 2 parts. All twelve trainings of E8, E9 and E10 are
+complete, the second part of each ending from 9:54 PM to 3:52 AM EST. Fold 3's rollout (51423564)
+was submitted to cai6734 at 4:03 AM EST, where all 32 CPUs were in use, while cai5724 had 7 GPUs and
+28 CPUs free; it was moved to cai5724 under the watcher's lock at 4:03 AM EST and started at 4:04
+AM. E8 seed 273's rollout, the other one running, stood at 223 of 240 at 4:04 AM EST.
