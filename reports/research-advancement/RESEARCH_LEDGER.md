@@ -223,6 +223,7 @@ sacct.
 | e9-probe-s271 | 1 | 51413779 | cai5724 | Nov 15, 2:02 AM | COMPLETED | 0 | 203 s | 0.056 |
 | p-probe | 1 | 51244543 | cai5724 | 9:06 PM | COMPLETED | 0 | 292 s | 0.081 |
 | E1-C interval (outside the watcher, CPU) | 1 | 51313205 | cai6734-b | Nov 14, 10:18 AM | RUNNING |  |  |  |
+| E1-C interval backup (outside the watcher, CPU; out-backup) | 1 | 51586271 | cai6734 | Nov 16, 9:12 AM | PENDING |  |  |  |
 
 ## 6. Recorded design decisions
 
@@ -1070,3 +1071,9 @@ scrontab entry, its only line; a later graph needs the entry reinstalled from
 tii-cee/tiicee/pipeline/scrontab_entry.txt. E1-C runs outside the graph and is unaffected. E10 closed
 at 111.510 GPU-hours against an estimate of 133; benches and probe conformance stand at 5.015 and the
 study at 285.799.
+
+November 16, 2026, 9:12 AM EST: E1-C (51313205) cannot outlive its 3-day limit (10:19 AM EST November 17)
+unless an administrator raises it; the user's `scontrol update` was refused. Its stage saves no partial
+work. Backup 51586271 was submitted on the investment QOS cai6734 (1 CPU, 16 GB, 7 days), same command,
+export a4f34bd and cells, output to e1c/out-backup. The first to finish supplies c_intervals.json; the
+other is cancelled.
