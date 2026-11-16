@@ -36,3 +36,15 @@ them to that file as committed:
 | File | Commit | SHA-256 |
 | --- | --- | --- |
 | reports/research-advancement/AUTHORIZATION_ADDENDUM_1.md | c5902ea4eb2e7d739bf73b83366e877f05dd32f2 | f59cd6fa638d00b2d1bc9bdc4848ba9ae412f9abecb7cdfcfa83cb4475e05658 |
+
+## Authorization of a push to GitHub (AUTHORIZATION.md section 9)
+
+Daniel Escalante's statement in the launch session of November 16, 2026, at about 9:30 AM EST,
+recorded verbatim:
+
+> push everything available to github so that claude duet can see the progress and help me put together a list of discussion topics for my meeting with Dr. Liu tomorrow
+
+It authorizes pushing the committed study branch tii-cee-1/2026-11-13 to origin, a fast-forward of
+the existing remote branch, and nothing else in section 9 or 11: no merge, force-push, tag or release,
+and no untracked or ignored file. Before the push the 43 files it adds were checked for patient
+identifiers, secrets and size; they hold code, synthetic-twin rows and aggregate records only.
