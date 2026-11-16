@@ -1077,3 +1077,6 @@ unless an administrator raises it; the user's `scontrol update` was refused. Its
 work. Backup 51586271 was submitted on the investment QOS cai6734 (1 CPU, 16 GB, 7 days), same command,
 export a4f34bd and cells, output to e1c/out-backup. The first to finish supplies c_intervals.json; the
 other is cancelled.
+
+November 16, 2026, 9:22 AM EST: UFRC request 85688, "Time extension for job 51313205", asks to raise
+E1-C's limit from 3 days to the cai6734-b maximum of 4 days (status New at submission).

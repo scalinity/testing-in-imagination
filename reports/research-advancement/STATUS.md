@@ -121,6 +121,8 @@ returned "Access/permission denied" at 9:06 AM EST November 16). Backup 51586271
 from the same export and cells on the investment QOS cai6734 (1 CPU, 16 GB, 7 days; E1-C's peak is 5.9 GB),
 writing to e1c/out-backup so the two never share a file. Whichever finishes second is cancelled. CPU only:
 no GPU-hours.
+UFRC request 85688 ("Time extension for job 51313205", submitted 9:22 AM EST November 16, status New)
+asks an administrator to raise E1-C's limit to the QOS maximum of 4 days.
 
 Every attempt so far: RESEARCH_LEDGER.md section 5.
 Every stage of the training graph has completed: at its 5:30 AM EST cycle on November 15 the
