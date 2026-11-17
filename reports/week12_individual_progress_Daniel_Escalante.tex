@@ -1,0 +1,153 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setstretch{0.98}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.22em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=0.22em,topsep=0.25em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{0.65em}{0.25em}
+\titlespacing*{\subsection}{0pt}{0.45em}{0.15em}
+\hyphenation{splitter}
+
+\title{\textbf{CAI6734 Week~12 Individual Progress Report}\\[0.35em]
+\large Testing in Imagination:\\
+World-Model Planning for Language Agents\\
+in Sequential Clinical Diagnosis}
+\author{Daniel Escalante\\[0.4em]
+\small Course: CAI6734 (University of Florida)\\
+Advisor: Xuefeng Liu}
+\date{November 17, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\noindent
+This report covers my individual work for Week~12 (November 11--17, 2026), from the repository and my mailbox as of November~17. It also covers my November 9--10 extension work (pull requests \#5 and \#6, already on \texttt{main}), which the Week~11 report left out because its records stopped at November~8. The baseline is my Nemotron replication attempt, 73.09\% mean class recall, which Dr.~Liu confirmed on November~9 as the team's shared baseline. It is a replication attempt, not a reproduction of the paper. The test split was examined before this work, so all new development this week used the validation split only. Every figure is an aggregate. No patient rows, identifiers, note text, or generations appear here. Each number is traceable to a pull request or a file named in the text. One policy seed and 240 validation admissions limit every claim, and explanations I have not tested are labeled as hypotheses.
+
+\section{Meaningful technical progress and methods}
+\begin{itemize}
+  \item \textbf{Commit guards and chart-availability reranking (PRs \#5, \#6; merged November 9--10).} The extension is preregistered and was evaluated once on the test split under a frozen protocol. Guard G1 replaces an invalid action with the policy's own highest-scoring valid one. G2 commits to a diagnosis at the step or length budget. G3 falls back to the hypothesis agent's latest answer. V3 combines all three; V1 uses G3 alone. Phase~B adds a per-test model of chart availability, given the history of present illness, and reranks the policy's test requests. Merge commits are \texttt{1ad9e40} and \texttt{b5a0c78}.
+  \item \textbf{Validation diagnostics (PR \#8, merged \texttt{3a564dd}).} I asked whether Phase~B's null came from the planner or from the availability signal. Amendment A4 fixed the contrasts before the stage read any row. A5 added a sensitivity check and an exploratory check of whether the added results repeated what the policy already believed (check~H). No test admission was read.
+  \item \textbf{Corruption dose-response (PR \#10, merged \texttt{e5ad93f}).} I wrote and tested the slope analysis first (\texttt{e637745}), recorded that commit in amendment A6 before any run, and only then ran nine validation jobs. The analysis is an OLS slope of validation T5 on the corruption level $\alpha$ with a 95\% class-stratified bootstrap. A7 changed only the headline's wording, after the results were known, and says so.
+  \item \textbf{Content world-model spec and fit (PRs \#7 and \#9, open, not merged).} The spec fixes a lab-result world model and a planner that imagines lab results and picks the panel with the highest expected information gain per dollar. It also fixes one primary contrast (learned world model versus V3), a Holm family of four, a four-gate validation decision rule written before any run, and a frozen test protocol that stays unrun until validation passes and I approve. Milestone~1 (CPU only) fits the lab-value bins on the training split alone, calibrates on validation, and publishes aggregates with a leakage audit.
+  \item \textbf{Follow-on mechanism study (branch \texttt{tii-cee-1/2026-11-13}, no pull request, not merged).} This is the repository's TII-CEE-1 study, which asks whether a conservation-of-expected-evidence audit separates test choice from belief reading and stopping. By the November~16 status file it holds the pre-registered experiment cards, an exact synthetic twin built on Edwin's synthetic study (PR~\#1), and completed first-stage runs. On its synthetic twin, the projection repair passed its gate (G2b met) and the scale repair did not (G2c not met), per \texttt{GATE\_DECISIONS}; no clinical outcome has been evaluated. It is unmerged and unreviewed, so I report no clinical numbers from it.
+\end{itemize}
+
+\section{Reasoning, what I learned, and why the project is moving this way}
+\begin{itemize}
+  \item \textbf{The commit-guard gain is mostly converting non-answers into answers.} The trained policy ended 29 of 240 episodes with no diagnosis. Adding only the hypothesis fallback (V1) gave +11.37; adding the online guards on top (V3~$-$~V1) changed T5 by an amount that is not significant. I therefore treat the gain as better commit behavior, not better test selection, and it may be specific to this backbone.
+  \item \textbf{An availability signal does not appear to help this planner.} The availability model is accurate, yet the privileged oracle's gain over uniform weights was small and not significant, and corrupting the signal did not measurably hurt. That points at the planner as the limit. This holds for one fixed planner and one policy seed; it does not show that no availability model could help. The rule for the verdict, and its threshold, were written after the validation point estimates were visible, and the diagnostics say so.
+  \item \textbf{Why a content model.} Knowing whether a test exists is not the same as predicting what it would show. That motivates the testing-in-imagination step: predict the lab result, then choose the test by expected information gain. Check~H is consistent with, but does not test, a hypothesis that the limit may lie in how the policy updates on results rather than in which tests it orders. I list that as an open question the content planner can address, not as a finding.
+  \item \textbf{What I learned about process.} Fixing the analysis code and verdict rule before the runs made a null result easy to defend. A flat curve with a wide interval means ``no detectable effect,'' not ``no effect,'' and the headline now says so.
+\end{itemize}
+
+\section{What I personally contributed}
+I designed the experiments, wrote preregistration amendments A4--A6 and C1 before the code or runs they govern (A7 came after the results and says so), implemented the diagnostics, dose-response, world-model, and planner code with tests written first, ran every cluster job, and wrote the analysis and the pull-request descriptions. For the team, I shared my setup, deviation log, and cautions about patient data with Hugo and Edwin on November~9. I wrote to Dr.~Liu on November~11 with the Phase~A/B results and my proposed priorities for the January ICML 2027 deadline: the lab-result model and planner first, then at least three training seeds, then a Llama-3.1-8B backbone ablation. He replied on November~13 asking for meeting times; on November~17 I met Hugo and Edwin, and I have asked Dr.~Liu for another time. Seeds and the Llama ablation remain unapproved, and both would need course staff approval.
+
+\section{Results and evidence}
+
+\subsection{Phase A/B on the test split (previously examined; merged work)}
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.94}
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Arm or contrast & T5 / $\Delta$T5 & 95\% interval, note \\
+\midrule
+Trained policy, official rows & 73.09 & 29/240 without a diagnosis \\
+V1, fallback only & 84.45 & $\Delta = +11.37$ [7.28, 15.96] \\
+V3, G1 + G2 + G3 & 81.83 & $\Delta = +8.75$ [4.67, 13.35], $p<0.0001$ \\
+V3 $-$ V1 & $-2.62$ & [$-6.16$, 0.76], not significant \\
+Learned availability $-$ V3 & $+1.08$ & [$-1.69$, 4.23], descriptive \\
+Oracle availability $-$ V3 & $+3.70$ & [0.15, 7.77], descriptive, privileged \\
+Family~B contrasts (3) & & Holm $p = 0.9375$ for all three \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent
+Source: \texttt{WRITEUP.md}, \texttt{phase-a/metrics.json}. V3 answered all 29 previously undiagnosed admissions, 21 of them correctly; 2 admissions the policy had right became wrong. The availability model's test AUROC is 0.959 and ECE 0.024 (\texttt{phase-b/wm\_quality.json}). The paper's 81.30 is a descriptive reference only.
+
+\subsection{Validation diagnostics and dose-response (PRs \#8, \#10)}
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.94}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Validation arm & T5 & Requested & Provided & Unavailable \\
+\midrule
+P0 = V3, no reranking & 83.12 & 601 & 394 & 207 \\
+B-uniform & 84.70 & 594 & 391 & 203 \\
+B-learned (seed 0) & 82.92 & 588 & 435 & 153 \\
+B-oracle & 84.59 & 559 & 493 & 66 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent
+B-oracle $-$ B-uniform is $-0.11$ [$-2.56$, 2.38], Holm $p = 0.9736$, against a smallest detectable effect of 4.15 points at 80\% power. The planner does act on the signal (unavailable requests fall from 203 to 66), yet recall does not move. The dose-response primary slope is $-2.46$ [$-7.28$, 2.26] T5 points per unit $\alpha$, read as flat; the secondary ($T = 0.25$) slope is $-0.68$ [$-10.85$, 9.79]. Mean T5 at $\alpha = 0, 0.1, 0.3, 0.5$ is 84.59, 85.12, 84.44, and 83.65. Scaled to the tested range, my own arithmetic gives $-1.23$ [$-3.64$, 1.13] points. We cannot tell this from zero, and we cannot rule out a decline of a few points. The headline is therefore \textbf{``Planner bottleneck (no detectable effect).''} The nine jobs all completed and used 4.384 GPU-hours against my 4.122 estimate. Sources: \texttt{DIAGNOSTICS.md}, \texttt{diagnostics.json}, \texttt{dose\_response.json}.
+
+\medskip
+\noindent
+\textbf{Sensitivity S1 (exploratory).} Counting urinalysis and radiographs as relevant, which the fixed guideline map does not, changes B-uniform, B-learned, and B-oracle net relevant results from $-4/+6/+37$ to $-1/+17/+66$. \textbf{Check H (exploratory).} Of B-oracle's 61 added relevant results, 38 arrived while the hypothesis agent already held the labeled disease and 23 while it held another. Only 7 changed its hypothesis, 3 toward and 3 away from the label. These counts fit the hypothesis but do not test it (\texttt{hypothesis\_check.json}).
+
+\subsection{Content world model, validation only (PR \#9; CPU)}
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.94}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Check (240 validation admissions) & First fit & After amendment C1 \\
+\midrule
+Gate 1: admissions with a V3 lab request (floor 24) & 68 & 68 \\
+Gate 2: content log-loss skill over the train marginal & +0.047 & +0.043 \\
+Gate 2: EIG-calibration Spearman over 10 deciles & 0.952 & 1.0 \\
+Brier skill / item ECE & 0.032 / 0.013 & 0.025 / 0.009 \\
+Diagnosis posterior after all labs: log-loss & 2.485 & 0.637 \\
+Diagnosis posterior after all labs: ECE & 0.295 & 0.070 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent
+The HPI-only prior scores log-loss 0.690 and ECE 0.046. Amendment C1 compared three posteriors (none, A, A+B) by log-loss, with ECE second, under a rule written first. Dropping ``absent'' items alone gave 2.221 and 0.287. Adding one likelihood temperature, chosen by five-fold cross-validation inside validation, gave the numbers above; the rule picked it, with $\tau = 13$ in all five folds. Both gates pass. The leakage audit found 20 admissions that name a lab item next to a number; their log-loss is 0.569 against 0.548 for the rest, so no sign of copying. One caution: after the fix, 4 of the 10 deciles of predicted information gain are negative, which an expected entropy reduction cannot be. I do not yet know whether this reflects how the gain is defined or a mismatch between how results are imagined and how they are scored (a hypothesis), and I will investigate it before any GPU run. Source: \texttt{content\_wm.json} on the PR~\#9 branch. Tests: 208 pass on \texttt{main} after PR~\#10 and 245 on PR~\#9; \texttt{check-git} passes.
+
+\medskip
+\noindent
+\textbf{Compute status.} PRs \#5, \#6, \#8, and \#10 are merged; \#7 and \#9 are open. The content study's GPU requests are drafted and not approved. My estimates are about 0.094 GPU-hours per bench job and 0.458 per validation arm (2 bench and 5 validation jobs, 2.478 in all), from the bench-b timings and addendum~B's per-arm budget. They are estimates, not measurements, and nothing has been submitted.
+
+\section{Setbacks and how I addressed them}
+\begin{itemize}
+  \item \textbf{A job failed at import.} The first \texttt{wm-fit-c} job (50912571) failed in 16\,s because the new cluster worktree lacked the upstream submodule. I initialized it and retried once under my retry-once rule; the retry (50913048) passed.
+  \item \textbf{A test had to change.} After I committed the dose-response approval, the submitter test that expected an unapproved \texttt{dose-val-b} to be refused stopped being true. I changed it to use a stage with its cap spent and recorded why in the pull request.
+  \item \textbf{The posterior was badly overconfident.} After all labs, log-loss rose from 0.690 to 2.485, probably because many item results, many of them ``absent,'' were treated as independent evidence. I wrote amendment C1 before any code, compared the two fixes on validation, and cut log-loss to 0.637 without touching the test split. The cause is still a hypothesis.
+  \item \textbf{A rebase needed a force-with-lease push.} PR~\#9 needed one on its own branch only, pinned to its old head, after \#8 merged; all 150 result files were byte-identical before and after, and nothing was force-pushed to \texttt{main}. One earlier commit on it was pushed while \texttt{check-git} flagged a missing block; the next bundle fixed that, and the pull request records it.
+  \item \textbf{A missed meeting.} Dr.~Liu and I did not connect at our planned time on November~17. I apologized and offered new times.
+\end{itemize}
+
+\section{Next steps}
+\begin{enumerate}
+  \item Investigate the negative predicted-information-gain deciles on validation (CPU only), and confirm that gate~2 still holds after any change.
+  \item Review and merge PRs \#7 and \#9 once I am satisfied, then decide on the small content-study GPU batches (about 2.5 GPU-hours as estimated above). Nothing runs before that decision.
+  \item Hold seeds (about 211 further GPU-hours for three in total) and the Llama ablation (about 110) until I have Dr.~Liu's feedback and course staff approval.
+  \item Meet Dr.~Liu to settle the ICML priorities, my role, and the team's split of work; share the class slides with Hugo and Edwin for review.
+  \item Coordinate with Edwin on a shared interface for the synthetic environment and the content planner's \texttt{WorldModel} and \texttt{Selector} protocols, without changing PR~\#1, and finish the follow-on study's pending synthetic interval.
+\end{enumerate}
+
+\end{document}
